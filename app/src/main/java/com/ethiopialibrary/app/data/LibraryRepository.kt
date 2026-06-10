@@ -1,6 +1,8 @@
 package com.ethiopialibrary.app.data
 
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import java.time.Clock
 import java.util.UUID
 
@@ -61,6 +63,21 @@ class LibraryRepository(
         )
         db.bookDao().insert(book)
         enqueueSync("book", book.id)
+        book
+    }
+
+    /** Cataloging is atomic: a power cut can never leave a book with missing copies. */
+    suspend fun addBookWithCopies(
+        title: String,
+        author: String,
+        category: String,
+        language: String,
+        isbn: String? = null,
+        notes: String? = null,
+        copies: Int,
+    ): BookEntity = db.withTransaction {
+        val book = addBook(title, author, category, language, isbn, notes)
+        repeat(copies.coerceAtLeast(1)) { addCopy(book.id) }
         book
     }
 
@@ -170,6 +187,71 @@ class LibraryRepository(
 
     suspend fun pendingSyncEntries(): List<SyncQueueEntity> =
         db.syncQueueDao().pending()
+
+    // ---------- reactive queries for the UI ----------
+
+    fun booksWithCounts(query: String): Flow<List<BookWithCounts>> =
+        db.bookDao().withCounts(query.trim())
+
+    fun copiesForBook(bookId: String): Flow<List<CopyRow>> =
+        db.bookCopyDao().copiesForBook(bookId)
+
+    fun membersWithLoanCounts(query: String): Flow<List<MemberWithLoanCount>> =
+        db.memberDao().withLoanCounts(query.trim())
+
+    fun overdueLoansDetailed(): Flow<List<LoanWithDetails>> =
+        db.loanDao().overdueDetailed(now())
+
+    fun activeLoansForMember(memberId: String): Flow<List<LoanWithDetails>> =
+        db.loanDao().activeForMemberDetailed(memberId)
+
+    fun dashboardStats(): Flow<DashboardStats> = combine(
+        db.bookDao().count(),
+        db.memberDao().count(),
+        db.loanDao().activeCount(),
+        db.loanDao().overdueCount(now()),
+    ) { books, members, active, overdue ->
+        DashboardStats(
+            totalBooks = books,
+            totalMembers = members,
+            activeLoans = active,
+            overdueCount = overdue,
+        )
+    }
+
+    suspend fun copyWithBook(copyCode: String): CopyWithBook? =
+        db.bookCopyDao().withBook(copyCode.trim())
+
+    suspend fun memberByCode(code: String): MemberEntity? =
+        db.memberDao().byCode(code.trim())
+
+    suspend fun activeLoanDetailedForCopy(copyCode: String): LoanWithDetails? =
+        db.loanDao().activeForCopyDetailed(copyCode.trim())
+
+    suspend fun updateBook(book: BookEntity) {
+        db.withTransaction {
+            db.bookDao().update(book.copy(updatedAt = now()))
+            enqueueSync("book", book.id)
+        }
+    }
+
+    suspend fun updateMember(member: MemberEntity) {
+        db.withTransaction {
+            db.memberDao().update(member.copy(updatedAt = now()))
+            enqueueSync("member", member.id)
+        }
+    }
+
+    suspend fun loanPeriodDays(): Int =
+        db.settingsDao().get(KEY_LOAN_PERIOD)?.toIntOrNull() ?: DEFAULT_LOAN_PERIOD_DAYS
+
+    suspend fun bookById(id: String): BookEntity? = db.bookDao().byId(id)
+
+    suspend fun memberById(id: String): MemberEntity? = db.memberDao().byId(id)
+
+    suspend fun copyLabelRows(): List<LabelRow> = db.bookCopyDao().labelRows()
+
+    suspend fun memberLabelRows(): List<LabelRow> = db.memberDao().labelRows()
 
     /** Must be called inside a transaction: read-use-increment is not atomic on its own. */
     private suspend fun nextSequence(key: String): Int {

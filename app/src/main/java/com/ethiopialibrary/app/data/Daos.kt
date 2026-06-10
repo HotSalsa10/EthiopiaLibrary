@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookDao {
@@ -16,6 +17,28 @@ interface BookDao {
 
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun byId(id: String): BookEntity?
+
+    @Query(
+        """
+        SELECT b.*,
+            (SELECT COUNT(*) FROM book_copies c
+             WHERE c.bookId = b.id AND c.isDeleted = 0 AND c.status = 'IN_SERVICE') AS totalCopies,
+            (SELECT COUNT(*) FROM book_copies c
+             WHERE c.bookId = b.id AND c.isDeleted = 0 AND c.status = 'IN_SERVICE'
+               AND NOT EXISTS (
+                   SELECT 1 FROM loans l
+                   WHERE l.copyId = c.id AND l.returnedAt IS NULL AND l.isDeleted = 0
+               )) AS availableCopies
+        FROM books b
+        WHERE b.isDeleted = 0
+          AND (:query = '' OR b.title LIKE '%' || :query || '%' OR b.author LIKE '%' || :query || '%')
+        ORDER BY b.title
+        """,
+    )
+    fun withCounts(query: String): Flow<List<BookWithCounts>>
+
+    @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
+    fun count(): Flow<Int>
 }
 
 @Dao
@@ -45,6 +68,41 @@ interface BookCopyDao {
         """,
     )
     suspend fun availableCount(bookId: String): Int
+
+    @Query(
+        """
+        SELECT c.*,
+            EXISTS(SELECT 1 FROM loans l
+                   WHERE l.copyId = c.id AND l.returnedAt IS NULL AND l.isDeleted = 0) AS onLoan
+        FROM book_copies c
+        WHERE c.bookId = :bookId AND c.isDeleted = 0
+        ORDER BY c.copyCode
+        """,
+    )
+    fun copiesForBook(bookId: String): Flow<List<CopyRow>>
+
+    @Query(
+        """
+        SELECT c.*, b.title AS bookTitle, b.author AS bookAuthor,
+            EXISTS(SELECT 1 FROM loans l
+                   WHERE l.copyId = c.id AND l.returnedAt IS NULL AND l.isDeleted = 0) AS onLoan
+        FROM book_copies c
+        JOIN books b ON b.id = c.bookId
+        WHERE c.copyCode = :copyCode AND c.isDeleted = 0
+        """,
+    )
+    suspend fun withBook(copyCode: String): CopyWithBook?
+
+    @Query(
+        """
+        SELECT c.copyCode AS code, b.title AS title
+        FROM book_copies c
+        JOIN books b ON b.id = c.bookId
+        WHERE c.isDeleted = 0 AND c.status = 'IN_SERVICE'
+        ORDER BY c.copyCode
+        """,
+    )
+    suspend fun labelRows(): List<LabelRow>
 }
 
 @Dao
@@ -60,6 +118,25 @@ interface MemberDao {
 
     @Query("SELECT * FROM members WHERE memberCode = :code AND isDeleted = 0")
     suspend fun byCode(code: String): MemberEntity?
+
+    @Query(
+        """
+        SELECT m.*,
+            (SELECT COUNT(*) FROM loans l
+             WHERE l.memberId = m.id AND l.returnedAt IS NULL AND l.isDeleted = 0) AS activeLoans
+        FROM members m
+        WHERE m.isDeleted = 0
+          AND (:query = '' OR m.fullName LIKE '%' || :query || '%' OR m.memberCode LIKE '%' || :query || '%')
+        ORDER BY m.fullName
+        """,
+    )
+    fun withLoanCounts(query: String): Flow<List<MemberWithLoanCount>>
+
+    @Query("SELECT COUNT(*) FROM members WHERE isDeleted = 0")
+    fun count(): Flow<Int>
+
+    @Query("SELECT memberCode AS code, fullName AS title FROM members WHERE isDeleted = 0 ORDER BY memberCode")
+    suspend fun labelRows(): List<LabelRow>
 }
 
 @Dao
@@ -75,6 +152,54 @@ interface LoanDao {
 
     @Query("SELECT * FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0 ORDER BY dueAt")
     suspend fun overdue(now: Long): List<LoanEntity>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE l.returnedAt IS NULL AND l.dueAt < :now AND l.isDeleted = 0
+        ORDER BY l.dueAt
+        """,
+    )
+    fun overdueDetailed(now: Long): Flow<List<LoanWithDetails>>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE l.memberId = :memberId AND l.returnedAt IS NULL AND l.isDeleted = 0
+        ORDER BY l.dueAt
+        """,
+    )
+    fun activeForMemberDetailed(memberId: String): Flow<List<LoanWithDetails>>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE c.copyCode = :copyCode AND l.returnedAt IS NULL AND l.isDeleted = 0
+        LIMIT 1
+        """,
+    )
+    suspend fun activeForCopyDetailed(copyCode: String): LoanWithDetails?
+
+    @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND isDeleted = 0")
+    fun activeCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0")
+    fun overdueCount(now: Long): Flow<Int>
 }
 
 @Dao

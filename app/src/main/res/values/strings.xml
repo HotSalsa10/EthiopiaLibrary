@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default locale: Amharic (project requirement). -->
+<resources>
+    <string name="app_name">ቤተ መጻሕፍት</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">ዋና ገጽ</string>
+    <string name="nav_books">መጻሕፍት</string>
+    <string name="nav_members">አባላት</string>
+    <string name="nav_checkout">መዋስ</string>
+    <string name="nav_return">መመለስ</string>
+    <string name="nav_settings">ቅንብሮች</string>
+    <string name="back">ተመለስ</string>
+
+    <!-- Dashboard -->
+    <string name="stat_total_books">ጠቅላላ መጻሕፍት</string>
+    <string name="stat_total_members">ጠቅላላ አባላት</string>
+    <string name="stat_active_loans">የተዋሱ መጻሕፍት</string>
+    <string name="stat_overdue">የዘገዩ</string>
+    <string name="overdue_title">የዘገዩ መጻሕፍት</string>
+    <string name="no_overdue">ምንም የዘገየ መጽሐፍ የለም</string>
+
+    <!-- Books -->
+    <string name="search_hint">ፈልግ…</string>
+    <string name="add_book">መጽሐፍ ጨምር</string>
+    <string name="field_title">ርዕስ</string>
+    <string name="field_author">ደራሲ</string>
+    <string name="field_category">ምድብ</string>
+    <string name="field_language">ቋንቋ</string>
+    <string name="field_isbn">ISBN (አማራጭ)</string>
+    <string name="field_copies">የቅጂዎች ብዛት</string>
+    <string name="available_of_total">%1$d ከ %2$d ይገኛል</string>
+    <string name="export_labels">የQR መለያዎችን አውጣ (PDF)</string>
+    <string name="add_copy">ቅጂ ጨምር</string>
+    <string name="copy_status_in_service">አገልግሎት ላይ</string>
+    <string name="copy_status_lost">ጠፍቷል</string>
+    <string name="copy_status_damaged">ተበላሽቷል</string>
+    <string name="copy_status_retired">ከአገልግሎት ውጭ</string>
+    <string name="on_loan">ተውሷል</string>
+    <string name="available">ይገኛል</string>
+
+    <!-- Members -->
+    <string name="add_member">አባል ጨምር</string>
+    <string name="field_full_name">ሙሉ ስም</string>
+    <string name="field_phone">ስልክ (አማራጭ)</string>
+    <string name="member_active_loans">የተዋሱ መጻሕፍት፦ %1$d</string>
+    <string name="suspend_member">አባል አግድ</string>
+    <string name="activate_member">አባል አንቃ</string>
+    <string name="member_card">የአባልነት ካርድ</string>
+    <string name="export_member_cards">የአባል ካርዶችን አውጣ (PDF)</string>
+
+    <!-- Checkout -->
+    <string name="checkout_title">መጽሐፍ መዋስ</string>
+    <string name="enter_copy_code">የቅጂ ኮድ ያስገቡ (ለምሳሌ B-0001)</string>
+    <string name="enter_member_code">የአባል ኮድ ያስገቡ (ለምሳሌ M-0001)</string>
+    <string name="find">ፈልግ</string>
+    <string name="scan">ቃኝ</string>
+    <string name="stop_scan">ቃኝን አቁም</string>
+    <string name="copy_code">የቅጂ ኮድ</string>
+    <string name="member_code">የአባል ኮድ</string>
+    <string name="confirm_checkout">መዋሱን አረጋግጥ</string>
+    <string name="due_date">የመመለሻ ቀን</string>
+    <string name="checkout_success">በተሳካ ሁኔታ ተውሷል</string>
+    <string name="new_checkout">አዲስ መዋስ</string>
+
+    <!-- Return -->
+    <string name="return_title">መጽሐፍ መመለስ</string>
+    <string name="confirm_return">መመለሱን አረጋግጥ</string>
+    <string name="return_success">መጽሐፉ ተመልሷል</string>
+    <string name="return_was_overdue">ማስታወሻ፦ መጽሐፉ ዘግይቶ ተመልሷል</string>
+    <string name="new_return">አዲስ መመለስ</string>
+    <string name="borrowed_by">የተዋሰው፦ %1$s (%2$s)</string>
+
+    <!-- Errors -->
+    <string name="error_copy_not_found">ቅጂው አልተገኘም</string>
+    <string name="error_copy_not_available">ቅጂው አሁን አይገኝም</string>
+    <string name="error_member_not_found">አባሉ አልተገኘም</string>
+    <string name="error_member_not_active">አባሉ ታግዷል</string>
+    <string name="error_no_active_loan">ይህ ቅጂ አልተዋሰም</string>
+
+    <!-- Scanner -->
+    <string name="camera_permission_needed">ለመቃኘት የካሜራ ፈቃድ ያስፈልጋል</string>
+    <string name="point_camera">ካሜራውን ወደ QR ኮዱ ያነጣጥሩ</string>
+
+    <!-- Settings -->
+    <string name="settings_language">የመተግበሪያ ቋንቋ</string>
+    <string name="settings_loan_period">የመዋስ ጊዜ (በቀናት)</string>
+    <string name="save">አስቀምጥ</string>
+    <string name="cancel">ሰርዝ</string>
+    <string name="labels_exported">PDF ተፈጥሯል</string>
+
+    <!-- Language names stay in their own script everywhere -->
+    <string name="lang_amharic" translatable="false">አማርኛ</string>
+    <string name="lang_arabic" translatable="false">العربية</string>
+    <string name="lang_english" translatable="false">English</string>
+</resources>

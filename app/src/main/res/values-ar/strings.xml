@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">المكتبة</string>
+
+    <string name="nav_dashboard">الرئيسية</string>
+    <string name="nav_books">الكتب</string>
+    <string name="nav_members">الأعضاء</string>
+    <string name="nav_checkout">إعارة</string>
+    <string name="nav_return">إرجاع</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="back">رجوع</string>
+
+    <string name="stat_total_books">إجمالي الكتب</string>
+    <string name="stat_total_members">إجمالي الأعضاء</string>
+    <string name="stat_active_loans">كتب معارة</string>
+    <string name="stat_overdue">متأخرة</string>
+    <string name="overdue_title">الكتب المتأخرة</string>
+    <string name="no_overdue">لا توجد كتب متأخرة</string>
+
+    <string name="search_hint">بحث…</string>
+    <string name="add_book">إضافة كتاب</string>
+    <string name="field_title">العنوان</string>
+    <string name="field_author">المؤلف</string>
+    <string name="field_category">التصنيف</string>
+    <string name="field_language">اللغة</string>
+    <string name="field_isbn">‏ISBN (اختياري)</string>
+    <string name="field_copies">عدد النسخ</string>
+    <string name="available_of_total">‏%1$d من %2$d متاح</string>
+    <string name="export_labels">تصدير ملصقات QR ‏(PDF)</string>
+    <string name="add_copy">إضافة نسخة</string>
+    <string name="copy_status_in_service">في الخدمة</string>
+    <string name="copy_status_lost">مفقودة</string>
+    <string name="copy_status_damaged">تالفة</string>
+    <string name="copy_status_retired">خارج الخدمة</string>
+    <string name="on_loan">معارة</string>
+    <string name="available">متاحة</string>
+
+    <string name="add_member">إضافة عضو</string>
+    <string name="field_full_name">الاسم الكامل</string>
+    <string name="field_phone">الهاتف (اختياري)</string>
+    <string name="member_active_loans">الكتب المعارة: %1$d</string>
+    <string name="suspend_member">إيقاف العضو</string>
+    <string name="activate_member">تفعيل العضو</string>
+    <string name="member_card">بطاقة العضوية</string>
+    <string name="export_member_cards">تصدير بطاقات الأعضاء (PDF)</string>
+
+    <string name="checkout_title">إعارة كتاب</string>
+    <string name="enter_copy_code">أدخل رمز النسخة (مثال B-0001)</string>
+    <string name="enter_member_code">أدخل رمز العضو (مثال M-0001)</string>
+    <string name="find">بحث</string>
+    <string name="scan">مسح</string>
+    <string name="stop_scan">إيقاف المسح</string>
+    <string name="copy_code">رمز النسخة</string>
+    <string name="member_code">رمز العضو</string>
+    <string name="confirm_checkout">تأكيد الإعارة</string>
+    <string name="due_date">تاريخ الإرجاع</string>
+    <string name="checkout_success">تمت الإعارة بنجاح</string>
+    <string name="new_checkout">إعارة جديدة</string>
+
+    <string name="return_title">إرجاع كتاب</string>
+    <string name="confirm_return">تأكيد الإرجاع</string>
+    <string name="return_success">تم إرجاع الكتاب</string>
+    <string name="return_was_overdue">ملاحظة: أُرجع هذا الكتاب متأخراً</string>
+    <string name="new_return">إرجاع جديد</string>
+    <string name="borrowed_by">المستعير: %1$s ‏(%2$s)</string>
+
+    <string name="error_copy_not_found">النسخة غير موجودة</string>
+    <string name="error_copy_not_available">النسخة غير متاحة حالياً</string>
+    <string name="error_member_not_found">العضو غير موجود</string>
+    <string name="error_member_not_active">العضو موقوف</string>
+    <string name="error_no_active_loan">هذه النسخة غير معارة</string>
+
+    <string name="camera_permission_needed">إذن الكاميرا مطلوب للمسح</string>
+    <string name="point_camera">وجّه الكاميرا نحو رمز QR</string>
+
+    <string name="settings_language">لغة التطبيق</string>
+    <string name="settings_loan_period">مدة الإعارة (بالأيام)</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="labels_exported">تم إنشاء PDF</string>
+</resources>
