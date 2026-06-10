@@ -1,0 +1,17 @@
+I have initialized the CLAUDE.md file in my root directory. Please read it carefully.
+
+Before writing any application code, I need you to act as our Lead Software Architect. Complete the "Explore & Plan" phase of our EPIC development sequence by providing a comprehensive system proposal.
+
+Address the following points in your response:
+
+Tech Stack Recommendation: Propose the absolute most lightweight, battery-efficient, and performant tech stack for this app (e.g., Native Android with Kotlin/Jetpack Compose/Room, or Flutter with SQLite/Drift). Explain exactly why this stack is the safest option for a cheap, low-end Android tablet.
+
+Crash & Power Loss Resilience: Because the tablet is cheap and might experience sudden power outages, explain how you will configure our local SQLite/Room database (e.g., using Write-Ahead Logging/WAL mode and Synchronous NORMAL settings) to prevent database corruption.
+
+Intermittent Sync Strategy: How will the system gracefully handle background backups to a secure database without freezing the tablet or requiring active user intervention when internet access is briefly restored?
+
+Trilingual UI Handling: Explain how the chosen UI framework will handle Amharic (Unicode script rendering) and Arabic (Right-to-Left / RTL layout support) seamlessly.
+
+Proposed Local DB Schema: Outline the tables and relationships (Books, Members, and Transactions) needed to support our MVP features (including tracking who borrowed what, due dates, and automated overdue tracking).
+
+CRITICAL: Do not generate any code files yet. Propose this architecture, explain your reasoning, and ask me 2-3 targeted architectural questions to refine our plan. Wait for my explicit approval.
