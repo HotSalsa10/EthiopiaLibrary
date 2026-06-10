@@ -18,6 +18,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun byId(id: String): BookEntity?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<BookEntity>)
+
     @Query(
         """
         SELECT b.*,
@@ -103,6 +106,12 @@ interface BookCopyDao {
         """,
     )
     suspend fun labelRows(): List<LabelRow>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<BookCopyEntity>)
+
+    @Query("SELECT copyCode FROM book_copies")
+    suspend fun allCopyCodes(): List<String>
 }
 
 @Dao
@@ -137,6 +146,12 @@ interface MemberDao {
 
     @Query("SELECT memberCode AS code, fullName AS title FROM members WHERE isDeleted = 0 ORDER BY memberCode")
     suspend fun labelRows(): List<LabelRow>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<MemberEntity>)
+
+    @Query("SELECT memberCode FROM members")
+    suspend fun allMemberCodes(): List<String>
 }
 
 @Dao
@@ -200,6 +215,12 @@ interface LoanDao {
 
     @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0")
     fun overdueCount(now: Long): Flow<Int>
+
+    @Query("SELECT * FROM loans WHERE id = :id")
+    suspend fun byId(id: String): LoanEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<LoanEntity>)
 }
 
 @Dao
@@ -209,12 +230,24 @@ interface SyncQueueDao {
 
     @Query("SELECT * FROM sync_queue WHERE syncedAt IS NULL ORDER BY localId")
     suspend fun pending(): List<SyncQueueEntity>
+
+    @Query("SELECT COUNT(*) FROM sync_queue WHERE syncedAt IS NULL")
+    fun pendingCount(): Flow<Int>
+
+    @Query("UPDATE sync_queue SET syncedAt = :at WHERE localId = :id")
+    suspend fun markSynced(id: Long, at: Long)
+
+    @Query("UPDATE sync_queue SET attemptCount = attemptCount + 1 WHERE localId = :id")
+    suspend fun recordAttempt(id: Long)
 }
 
 @Dao
 interface SettingsDao {
     @Query("SELECT `value` FROM settings WHERE `key` = :key")
     suspend fun get(key: String): String?
+
+    @Query("SELECT `value` FROM settings WHERE `key` = :key")
+    fun watch(key: String): Flow<String?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(setting: SettingEntity)

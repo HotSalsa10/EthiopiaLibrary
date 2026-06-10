@@ -89,6 +89,23 @@
     <string name="cancel">ሰርዝ</string>
     <string name="labels_exported">PDF ተፈጥሯል</string>
 
+    <!-- Cloud backup -->
+    <string name="cloud_backup">የደመና ምትኬ</string>
+    <string name="cloud_not_configured">የደመና ምትኬ አልተዋቀረም (google-services.json ያስፈልጋል)</string>
+    <string name="email">ኢሜይል</string>
+    <string name="password">የይለፍ ቃል</string>
+    <string name="sign_in">ግባ</string>
+    <string name="sign_out">ውጣ</string>
+    <string name="backup_now">አሁን ምትኬ ያዝ</string>
+    <string name="restore_from_cloud">ከደመና መልስ</string>
+    <string name="restore_confirm">ይህ ከደመናው ያለውን መረጃ ወደዚህ ጡባዊ ይመልሳል። ይቀጥሉ?</string>
+    <string name="restore_done">መልሶ ማግኘት ተጠናቋል</string>
+    <string name="last_backup">የመጨረሻ ምትኬ</string>
+    <string name="never_backed_up">ምትኬ ገና አልተያዘም</string>
+    <string name="pending_changes">%1$d ለውጦች በመጠባበቅ ላይ</string>
+    <string name="backup_started">ምትኬ ተጀምሯል</string>
+    <string name="sign_in_failed">መግባት አልተሳካም</string>
+
     <!-- Language names stay in their own script everywhere -->
     <string name="lang_amharic" translatable="false">አማርኛ</string>
     <string name="lang_arabic" translatable="false">العربية</string>

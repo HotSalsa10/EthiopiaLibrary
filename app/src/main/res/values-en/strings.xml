@@ -78,4 +78,20 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="labels_exported">PDF created</string>
+
+    <string name="cloud_backup">Cloud backup</string>
+    <string name="cloud_not_configured">Cloud backup is not configured (google-services.json required)</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_out">Sign out</string>
+    <string name="backup_now">Back up now</string>
+    <string name="restore_from_cloud">Restore from cloud</string>
+    <string name="restore_confirm">This will restore the cloud data onto this tablet. Continue?</string>
+    <string name="restore_done">Restore complete</string>
+    <string name="last_backup">Last backup</string>
+    <string name="never_backed_up">Never backed up yet</string>
+    <string name="pending_changes">%1$d changes waiting</string>
+    <string name="backup_started">Backup started</string>
+    <string name="sign_in_failed">Sign-in failed</string>
 </resources>

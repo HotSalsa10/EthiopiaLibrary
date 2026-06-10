@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.data
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.util.UUID
 
@@ -32,9 +33,6 @@ class LibraryRepository(
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
         private const val MILLIS_PER_DAY = 86_400_000L
-        private const val KEY_LOAN_PERIOD = "loan_period_days"
-        private const val KEY_NEXT_COPY_SEQ = "next_copy_seq"
-        private const val KEY_NEXT_MEMBER_SEQ = "next_member_seq"
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
@@ -87,7 +85,7 @@ class LibraryRepository(
             val copy = BookCopyEntity(
                 id = newId(),
                 bookId = bookId,
-                copyCode = "B-%04d".format(nextSequence(KEY_NEXT_COPY_SEQ)),
+                copyCode = "B-%04d".format(nextSequence(SettingKeys.NEXT_COPY_SEQ)),
                 shelfLocation = shelfLocation,
                 acquiredAt = t,
                 createdAt = t,
@@ -103,7 +101,7 @@ class LibraryRepository(
             val t = now()
             val member = MemberEntity(
                 id = newId(),
-                memberCode = "M-%04d".format(nextSequence(KEY_NEXT_MEMBER_SEQ)),
+                memberCode = "M-%04d".format(nextSequence(SettingKeys.NEXT_MEMBER_SEQ)),
                 fullName = fullName,
                 phone = phone,
                 joinedAt = t,
@@ -132,7 +130,10 @@ class LibraryRepository(
     }
 
     suspend fun setLoanPeriodDays(days: Int) {
-        db.settingsDao().put(SettingEntity(KEY_LOAN_PERIOD, days.toString()))
+        db.withTransaction {
+            db.settingsDao().put(SettingEntity(SettingKeys.LOAN_PERIOD_DAYS, days.toString()))
+            enqueueSync("setting", SettingKeys.LOAN_PERIOD_DAYS)
+        }
     }
 
     suspend fun checkout(copyCode: String, memberCode: String): CheckoutResult =
@@ -151,7 +152,7 @@ class LibraryRepository(
                 return@withTransaction CheckoutResult.CopyNotAvailable
             }
             val t = now()
-            val periodDays = db.settingsDao().get(KEY_LOAN_PERIOD)?.toIntOrNull()
+            val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
                 ?: DEFAULT_LOAN_PERIOD_DAYS
             val loan = LoanEntity(
                 id = newId(),
@@ -243,7 +244,12 @@ class LibraryRepository(
     }
 
     suspend fun loanPeriodDays(): Int =
-        db.settingsDao().get(KEY_LOAN_PERIOD)?.toIntOrNull() ?: DEFAULT_LOAN_PERIOD_DAYS
+        db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull() ?: DEFAULT_LOAN_PERIOD_DAYS
+
+    fun pendingSyncCount(): Flow<Int> = db.syncQueueDao().pendingCount()
+
+    fun lastSyncAt(): Flow<Long?> =
+        db.settingsDao().watch(SettingKeys.LAST_SYNC_AT).map { it?.toLongOrNull() }
 
     suspend fun bookById(id: String): BookEntity? = db.bookDao().byId(id)
 

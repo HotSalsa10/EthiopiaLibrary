@@ -33,6 +33,8 @@ import java.util.Locale
 fun DashboardScreen(vm: DashboardViewModel, onNavigate: (String) -> Unit) {
     val stats by vm.stats.collectAsStateWithLifecycle()
     val overdue by vm.overdue.collectAsStateWithLifecycle()
+    val pendingSync by vm.pendingSync.collectAsStateWithLifecycle()
+    val lastBackupAt by vm.lastBackupAt.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
 
     Column(
@@ -78,8 +80,27 @@ fun DashboardScreen(vm: DashboardViewModel, onNavigate: (String) -> Unit) {
                     highlight = s.overdueCount > 0,
                 )
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
         }
+
+        val backupText = buildString {
+            append(stringResource(R.string.last_backup))
+            append(": ")
+            append(
+                lastBackupAt?.let { DualCalendarFormatter.format(it, locale) }
+                    ?: stringResource(R.string.never_backed_up),
+            )
+            if (pendingSync > 0) {
+                append(" • ")
+                append(stringResource(R.string.pending_changes, pendingSync))
+            }
+        }
+        Text(
+            backupText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(20.dp))
 
         Text(stringResource(R.string.overdue_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))

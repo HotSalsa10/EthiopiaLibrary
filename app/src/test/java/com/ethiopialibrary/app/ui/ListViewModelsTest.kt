@@ -107,6 +107,28 @@ class ListViewModelsTest {
     }
 
     @Test
+    fun `dashboard exposes backup status`() {
+        runBlocking {
+            repo.addBook(title = "Oromay", author = "A", category = "C", language = "am")
+        }
+        val vm = DashboardViewModel(repo)
+
+        awaitValue(vm.pendingSync) { it > 0 }
+        assertEquals(null, vm.lastBackupAt.value)
+
+        runBlocking {
+            com.ethiopialibrary.app.sync.SyncEngine(
+                db,
+                com.ethiopialibrary.app.sync.FakeCloudStore(),
+                clock,
+            ).drainOutbox()
+        }
+
+        awaitValue(vm.pendingSync) { it == 0 }
+        awaitValue(vm.lastBackupAt) { it != null }
+    }
+
+    @Test
     fun `settings loads and updates loan period`() {
         val vm = SettingsViewModel(repo)
 

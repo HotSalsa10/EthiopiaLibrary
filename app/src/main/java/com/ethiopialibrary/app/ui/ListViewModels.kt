@@ -79,6 +79,14 @@ class DashboardViewModel(repo: LibraryRepository) : ViewModel() {
 
     val overdue: StateFlow<List<LoanWithDetails>> = repo.overdueLoansDetailed()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Changes waiting to reach the cloud mirror. */
+    val pendingSync: StateFlow<Int> = repo.pendingSyncCount()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    /** Epoch millis of the last successful backup, null if never. */
+    val lastBackupAt: StateFlow<Long?> = repo.lastSyncAt()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 }
 
 class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {

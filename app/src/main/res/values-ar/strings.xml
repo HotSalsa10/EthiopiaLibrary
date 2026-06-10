@@ -78,4 +78,20 @@
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>
     <string name="labels_exported">تم إنشاء PDF</string>
+
+    <string name="cloud_backup">النسخ الاحتياطي السحابي</string>
+    <string name="cloud_not_configured">النسخ الاحتياطي غير مُعدّ (يلزم ملف google-services.json)</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="sign_in">تسجيل الدخول</string>
+    <string name="sign_out">تسجيل الخروج</string>
+    <string name="backup_now">انسخ احتياطياً الآن</string>
+    <string name="restore_from_cloud">استعادة من السحابة</string>
+    <string name="restore_confirm">سيؤدي هذا إلى استعادة بيانات السحابة إلى هذا الجهاز. هل تريد المتابعة؟</string>
+    <string name="restore_done">اكتملت الاستعادة</string>
+    <string name="last_backup">آخر نسخة احتياطية</string>
+    <string name="never_backed_up">لم يتم النسخ الاحتياطي بعد</string>
+    <string name="pending_changes">%1$d تغييرات قيد الانتظار</string>
+    <string name="backup_started">بدأ النسخ الاحتياطي</string>
+    <string name="sign_in_failed">فشل تسجيل الدخول</string>
 </resources>
