@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "376524024004",
+    "project_id": "ethiopia-library",
+    "storage_bucket": "ethiopia-library.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:376524024004:android:a5ce4fddb181214f590191",
+        "android_client_info": {
+          "package_name": "com.ethiopialibrary.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7LTOiDc0jmI9uPCm-9pxqFlI9v_cWk5s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
