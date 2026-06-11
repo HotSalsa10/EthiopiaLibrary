@@ -26,6 +26,7 @@ import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.CheckoutViewModel
 import com.ethiopialibrary.app.ui.CodeEntry
 
@@ -78,7 +79,11 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                BigButton(stringResource(R.string.new_checkout)) { vm.reset() }
+                BigButton(stringResource(R.string.borrow_another)) {
+                    vm.startAnotherForSameMember()
+                }
+                Spacer(Modifier.height(8.dp))
+                BigOutlinedButton(stringResource(R.string.new_checkout)) { vm.reset() }
             }
 
             state.copy == null -> {

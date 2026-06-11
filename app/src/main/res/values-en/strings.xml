@@ -94,4 +94,22 @@
     <string name="pending_changes">%1$d changes waiting</string>
     <string name="backup_started">Backup started</string>
     <string name="sign_in_failed">Sign-in failed</string>
+
+    <string name="edit_book">Edit book</string>
+    <string name="edit_member">Edit member</string>
+    <string name="edit">Edit</string>
+
+    <string name="renew">Renew</string>
+    <string name="renew_done">Renewed — new due date set</string>
+
+    <string name="borrow_another">Borrow another book for this member</string>
+
+    <string name="staff_pin">Staff PIN</string>
+    <string name="set_pin">Set PIN</string>
+    <string name="change_pin">Change PIN</string>
+    <string name="enter_pin">Enter PIN</string>
+    <string name="pin_hint">PIN (4–6 digits)</string>
+    <string name="wrong_pin">Wrong PIN</string>
+    <string name="pin_saved">PIN saved</string>
+    <string name="ok">OK</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.ethiopialibrary.app.ui.screens
 
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,33 +10,131 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.SettingsViewModel
+import kotlinx.coroutines.launch
+
+/**
+ * Settings hold the destructive actions (restore from cloud, language,
+ * loan period), so the whole screen sits behind the staff PIN once one
+ * has been set.
+ */
+@Composable
+fun SettingsScreen(vm: SettingsViewModel, repo: LibraryRepository, onBack: () -> Unit) {
+    var pinRefresh by remember { mutableIntStateOf(0) }
+    var unlocked by remember { mutableStateOf(false) }
+    val hasPin by produceState<Boolean?>(null, pinRefresh) { value = repo.hasStaffPin() }
+
+    when {
+        hasPin == null -> Unit // brief load; avoids flashing locked/unlocked UI
+        hasPin == true && !unlocked -> PinGate(
+            repo = repo,
+            onBack = onBack,
+            onUnlocked = { unlocked = true },
+        )
+        else -> SettingsContent(
+            vm = vm,
+            repo = repo,
+            onBack = onBack,
+            hasPin = hasPin == true,
+            onPinChanged = { pinRefresh++ },
+        )
+    }
+}
 
 @Composable
-fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit) {
+private fun PinGate(repo: LibraryRepository, onBack: () -> Unit, onUnlocked: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var pin by remember { mutableStateOf("") }
+    var wrong by remember { mutableStateOf(false) }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
+        AppTopBar(stringResource(R.string.nav_settings), onBack)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(stringResource(R.string.enter_pin), style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = pin,
+                onValueChange = {
+                    pin = it.filter(Char::isDigit).take(6)
+                    wrong = false
+                },
+                modifier = Modifier.widthIn(max = 280.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                visualTransformation = PasswordVisualTransformation(),
+                isError = wrong,
+            )
+            if (wrong) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.wrong_pin),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            BigButton(stringResource(R.string.ok), Modifier.widthIn(max = 280.dp)) {
+                scope.launch {
+                    if (repo.verifyStaffPin(pin)) onUnlocked() else wrong = true
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsContent(
+    vm: SettingsViewModel,
+    repo: LibraryRepository,
+    onBack: () -> Unit,
+    hasPin: Boolean,
+    onPinChanged: () -> Unit,
+) {
     val loanDays by vm.loanPeriodDays.collectAsStateWithLifecycle()
     var daysText by remember(loanDays) { mutableStateOf(loanDays?.toString().orEmpty()) }
+    var showSetPin by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         Modifier
@@ -75,6 +174,55 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
 
+        Text(stringResource(R.string.staff_pin), style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        BigOutlinedButton(
+            stringResource(if (hasPin) R.string.change_pin else R.string.set_pin),
+        ) { showSetPin = true }
+        Spacer(Modifier.height(24.dp))
+
         CloudBackupSection()
     }
+
+    if (showSetPin) {
+        SetPinDialog(
+            onDismiss = { showSetPin = false },
+            onSave = { pin ->
+                showSetPin = false
+                scope.launch {
+                    repo.setStaffPin(pin)
+                    Toast.makeText(context, R.string.pin_saved, Toast.LENGTH_SHORT).show()
+                    onPinChanged()
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SetPinDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var pin by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.set_pin)) },
+        text = {
+            OutlinedTextField(
+                value = pin,
+                onValueChange = { pin = it.filter(Char::isDigit).take(6) },
+                label = { Text(stringResource(R.string.pin_hint)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                enabled = pin.length in 4..6,
+                onClick = { onSave(pin) },
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }

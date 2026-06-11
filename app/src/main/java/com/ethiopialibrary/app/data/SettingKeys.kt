@@ -5,4 +5,5 @@ object SettingKeys {
     const val NEXT_COPY_SEQ = "next_copy_seq"
     const val NEXT_MEMBER_SEQ = "next_member_seq"
     const val LAST_SYNC_AT = "last_sync_at"
+    const val STAFF_PIN_HASH = "staff_pin_hash"
 }

@@ -94,4 +94,22 @@
     <string name="pending_changes">%1$d تغييرات قيد الانتظار</string>
     <string name="backup_started">بدأ النسخ الاحتياطي</string>
     <string name="sign_in_failed">فشل تسجيل الدخول</string>
+
+    <string name="edit_book">تعديل الكتاب</string>
+    <string name="edit_member">تعديل العضو</string>
+    <string name="edit">تعديل</string>
+
+    <string name="renew">تجديد</string>
+    <string name="renew_done">تم التجديد — تم تحديد تاريخ إرجاع جديد</string>
+
+    <string name="borrow_another">إعارة كتاب آخر لنفس العضو</string>
+
+    <string name="staff_pin">رمز PIN للموظفين</string>
+    <string name="set_pin">تعيين رمز PIN</string>
+    <string name="change_pin">تغيير رمز PIN</string>
+    <string name="enter_pin">أدخل رمز PIN</string>
+    <string name="pin_hint">رمز PIN (4–6 أرقام)</string>
+    <string name="wrong_pin">رمز PIN غير صحيح</string>
+    <string name="pin_saved">تم حفظ رمز PIN</string>
+    <string name="ok">موافق</string>
 </resources>

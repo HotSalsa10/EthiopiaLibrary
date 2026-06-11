@@ -11,17 +11,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -44,15 +52,21 @@ import kotlinx.coroutines.launch
 @Composable
 fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val book by produceState<BookEntity?>(null, bookId) { value = repo.bookById(bookId) }
+    var refresh by remember { mutableIntStateOf(0) }
+    val book by produceState<BookEntity?>(null, bookId, refresh) { value = repo.bookById(bookId) }
     val copies by repo.copiesForBook(bookId).collectAsStateWithLifecycle(emptyList())
+    var showEdit by remember { mutableStateOf(false) }
 
     Column(
         Modifier
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        AppTopBar(book?.title.orEmpty(), onBack)
+        AppTopBar(book?.title.orEmpty(), onBack) {
+            IconButton(onClick = { showEdit = true }) {
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_book))
+            }
+        }
         book?.let { b ->
             Text(b.author, style = MaterialTheme.typography.titleMedium)
             b.isbn?.let { Text("ISBN: $it", style = MaterialTheme.typography.bodyMedium) }
@@ -70,6 +84,75 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             }
         }
     }
+
+    val current = book
+    if (showEdit && current != null) {
+        EditBookDialog(
+            book = current,
+            onDismiss = { showEdit = false },
+            onSave = { updated ->
+                showEdit = false
+                scope.launch {
+                    repo.updateBook(updated)
+                    refresh++
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun EditBookDialog(
+    book: BookEntity,
+    onDismiss: () -> Unit,
+    onSave: (BookEntity) -> Unit,
+) {
+    var title by remember { mutableStateOf(book.title) }
+    var author by remember { mutableStateOf(book.author) }
+    var category by remember { mutableStateOf(book.category) }
+    var isbn by remember { mutableStateOf(book.isbn.orEmpty()) }
+    var language by remember { mutableStateOf(book.language) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_book)) },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
+                OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.field_author)) }, singleLine = true)
+                OutlinedTextField(category, { category = it }, label = { Text(stringResource(R.string.field_category)) }, singleLine = true)
+                Text(stringResource(R.string.field_language), style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(language == "am", { language = "am" }, label = { Text(stringResource(R.string.lang_amharic)) })
+                    FilterChip(language == "ar", { language = "ar" }, label = { Text(stringResource(R.string.lang_arabic)) })
+                    FilterChip(language == "en", { language = "en" }, label = { Text(stringResource(R.string.lang_english)) })
+                }
+                OutlinedTextField(isbn, { isbn = it }, label = { Text(stringResource(R.string.field_isbn)) }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = title.isNotBlank() && author.isNotBlank(),
+                onClick = {
+                    onSave(
+                        book.copy(
+                            title = title.trim(),
+                            author = author.trim(),
+                            category = category.trim(),
+                            language = language,
+                            isbn = isbn.trim().ifBlank { null },
+                        ),
+                    )
+                },
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }
 
 @Composable

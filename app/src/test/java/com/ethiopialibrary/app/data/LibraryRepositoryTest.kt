@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -228,6 +229,81 @@ class LibraryRepositoryTest {
         val (book, copies) = addBookWithCopies(2)
         repo.setCopyStatus(copies[1].id, CopyStatus.LOST)
         assertEquals(1, repo.availableCopyCount(book.id))
+    }
+
+    // ---------- renew ----------
+
+    @Test
+    fun `renewing an active loan extends due date from today`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        clock.advanceDays(10)
+        val result = repo.renewLoan(loan.id)
+
+        assertTrue(result is RenewResult.Success)
+        val renewed = (result as RenewResult.Success).loan
+        assertEquals(clock.instant().plus(14, ChronoUnit.DAYS).toEpochMilli(), renewed.dueAt)
+        assertNull(renewed.returnedAt)
+    }
+
+    @Test
+    fun `renewing clears overdue status`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        clock.advanceDays(20)
+        assertEquals(1, repo.overdueLoans().size)
+
+        repo.renewLoan(loan.id)
+
+        assertEquals(0, repo.overdueLoans().size)
+    }
+
+    @Test
+    fun `renewing a returned loan reports NotActive`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        repo.returnBook(copies[0].copyCode)
+
+        assertTrue(repo.renewLoan(loan.id) is RenewResult.NotActive)
+        assertTrue(repo.renewLoan("no-such-loan") is RenewResult.NotActive)
+    }
+
+    @Test
+    fun `renewing writes loan to sync outbox`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        val loanEntriesBefore = repo.pendingSyncEntries().count { it.entityType == "loan" }
+
+        repo.renewLoan(loan.id)
+
+        assertEquals(loanEntriesBefore + 1, repo.pendingSyncEntries().count { it.entityType == "loan" })
+    }
+
+    // ---------- staff PIN ----------
+
+    @Test
+    fun `staff pin can be set verified and rejected`() = runBlocking {
+        assertFalse(repo.hasStaffPin())
+
+        repo.setStaffPin("1234")
+
+        assertTrue(repo.hasStaffPin())
+        assertTrue(repo.verifyStaffPin("1234"))
+        assertFalse(repo.verifyStaffPin("9999"))
+        assertFalse(repo.verifyStaffPin(""))
+    }
+
+    @Test
+    fun `staff pin is not stored in plain text`() = runBlocking {
+        repo.setStaffPin("1234")
+        val stored = db.settingsDao().get("staff_pin_hash")
+        assertNotNull(stored)
+        assertFalse(stored == "1234")
     }
 
     // ---------- sync outbox ----------
