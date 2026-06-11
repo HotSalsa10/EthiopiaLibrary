@@ -146,6 +146,40 @@ class CheckoutReturnViewModelTest {
         }
     }
 
+    @Test
+    fun `same member can borrow several books in sequence`() {
+        val book = runBlocking {
+            repo.addBookWithCopies(title = "Oromay", author = "A", category = "C", language = "am", copies = 2)
+        }
+        val codes = runBlocking { repo.copyLabelRows().map { it.code } }
+        val member = seedMember()
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(codes[0])
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.completedLoan != null }
+
+        vm.startAnotherForSameMember()
+
+        val ready = awaitValue(vm.state) { it.completedLoan == null }
+        assertEquals(member.id, ready.member?.id)
+        assertEquals(null, ready.copy)
+        assertEquals(null, ready.error)
+
+        vm.submitCopyCode(codes[1])
+        awaitValue(vm.state) { it.copy != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.completedLoan != null }
+
+        runBlocking {
+            assertEquals(2, repo.activeLoansForMember(member.id).first().size)
+        }
+        assertEquals("Oromay", book.title)
+    }
+
     // ---------- return ----------
 
     @Test

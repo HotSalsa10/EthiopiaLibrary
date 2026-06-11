@@ -21,6 +21,11 @@ sealed interface ReturnResult {
     data object CopyNotFound : ReturnResult
 }
 
+sealed interface RenewResult {
+    data class Success(val loan: LoanEntity) : RenewResult
+    data object NotActive : RenewResult
+}
+
 /**
  * All mutations run inside a single Room transaction that also writes the
  * sync outbox entry, so a power cut can never leave data and sync queue
@@ -181,6 +186,22 @@ class LibraryRepository(
             ReturnResult.Success(returned, wasOverdue = t > active.dueAt)
         }
 
+    /** "Can I keep it another week?" - extends the due date from today. */
+    suspend fun renewLoan(loanId: String): RenewResult =
+        db.withTransaction {
+            val loan = db.loanDao().byId(loanId)
+            if (loan == null || loan.returnedAt != null || loan.isDeleted) {
+                return@withTransaction RenewResult.NotActive
+            }
+            val t = now()
+            val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
+                ?: DEFAULT_LOAN_PERIOD_DAYS
+            val renewed = loan.copy(dueAt = t + periodDays * MILLIS_PER_DAY, updatedAt = t)
+            db.loanDao().update(renewed)
+            enqueueSync("loan", renewed.id)
+            RenewResult.Success(renewed)
+        }
+
     suspend fun overdueLoans(): List<LoanEntity> = db.loanDao().overdue(now())
 
     suspend fun availableCopyCount(bookId: String): Int =
@@ -250,6 +271,23 @@ class LibraryRepository(
 
     fun lastSyncAt(): Flow<Long?> =
         db.settingsDao().watch(SettingKeys.LAST_SYNC_AT).map { it?.toLongOrNull() }
+
+    // ---------- staff PIN (guards destructive settings) ----------
+
+    suspend fun setStaffPin(pin: String) {
+        db.settingsDao().put(SettingEntity(SettingKeys.STAFF_PIN_HASH, hashPin(pin)))
+    }
+
+    suspend fun verifyStaffPin(pin: String): Boolean =
+        db.settingsDao().get(SettingKeys.STAFF_PIN_HASH) == hashPin(pin)
+
+    suspend fun hasStaffPin(): Boolean =
+        db.settingsDao().get(SettingKeys.STAFF_PIN_HASH) != null
+
+    private fun hashPin(pin: String): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest("ethiopialibrary:$pin".toByteArray())
+            .joinToString("") { "%02x".format(it) }
 
     suspend fun bookById(id: String): BookEntity? = db.bookDao().byId(id)
 

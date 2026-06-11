@@ -1,6 +1,7 @@
 package com.ethiopialibrary.app.ui
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,9 +22,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ethiopialibrary.app.R
 
-/** Top bar with logical (RTL-safe) back arrow. */
+/** Top bar with logical (RTL-safe) back arrow and an optional actions slot. */
 @Composable
-fun AppTopBar(title: String, onBack: (() -> Unit)? = null) {
+fun AppTopBar(
+    title: String,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -39,7 +44,12 @@ fun AppTopBar(title: String, onBack: (() -> Unit)? = null) {
             }
             Spacer(Modifier.width(4.dp))
         }
-        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.weight(1f),
+        )
+        actions()
     }
 }
 

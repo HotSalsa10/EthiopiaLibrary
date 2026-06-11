@@ -10,32 +10,44 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import android.widget.Toast
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.DashboardViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(vm: DashboardViewModel, onNavigate: (String) -> Unit) {
+fun DashboardScreen(
+    vm: DashboardViewModel,
+    repo: LibraryRepository,
+    onNavigate: (String) -> Unit,
+) {
     val stats by vm.stats.collectAsStateWithLifecycle()
     val overdue by vm.overdue.collectAsStateWithLifecycle()
     val pendingSync by vm.pendingSync.collectAsStateWithLifecycle()
     val lastBackupAt by vm.lastBackupAt.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         Modifier
@@ -108,7 +120,12 @@ fun DashboardScreen(vm: DashboardViewModel, onNavigate: (String) -> Unit) {
             Text(stringResource(R.string.no_overdue), style = MaterialTheme.typography.bodyLarge)
         } else {
             overdue.forEach { loan ->
-                OverdueCard(loan, locale)
+                OverdueCard(loan, locale) {
+                    scope.launch {
+                        repo.renewLoan(loan.loan.id)
+                        Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -133,7 +150,7 @@ private fun StatCard(value: Int, label: String, modifier: Modifier, highlight: B
 }
 
 @Composable
-private fun OverdueCard(item: LoanWithDetails, locale: Locale) {
+private fun OverdueCard(item: LoanWithDetails, locale: Locale, onRenew: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -152,6 +169,9 @@ private fun OverdueCard(item: LoanWithDetails, locale: Locale) {
                     DualCalendarFormatter.format(item.loan.dueAt, locale),
                 style = MaterialTheme.typography.bodyMedium,
             )
+            TextButton(onClick = onRenew) {
+                Text(stringResource(R.string.renew))
+            }
         }
     }
 }

@@ -106,6 +106,28 @@
     <string name="backup_started">ምትኬ ተጀምሯል</string>
     <string name="sign_in_failed">መግባት አልተሳካም</string>
 
+    <!-- Editing -->
+    <string name="edit_book">መጽሐፍ አርትዕ</string>
+    <string name="edit_member">አባል አርትዕ</string>
+    <string name="edit">አርትዕ</string>
+
+    <!-- Renew -->
+    <string name="renew">አድስ</string>
+    <string name="renew_done">ታድሷል — አዲስ የመመለሻ ቀን ተቀምጧል</string>
+
+    <!-- Multi-book checkout -->
+    <string name="borrow_another">ለዚሁ አባል ሌላ መጽሐፍ አውስ</string>
+
+    <!-- Staff PIN -->
+    <string name="staff_pin">የሰራተኛ ፒን</string>
+    <string name="set_pin">ፒን አዘጋጅ</string>
+    <string name="change_pin">ፒን ቀይር</string>
+    <string name="enter_pin">ፒን ያስገቡ</string>
+    <string name="pin_hint">ፒን (4–6 አሃዞች)</string>
+    <string name="wrong_pin">የተሳሳተ ፒን</string>
+    <string name="pin_saved">ፒን ተቀምጧል</string>
+    <string name="ok">እሺ</string>
+
     <!-- Language names stay in their own script everywhere -->
     <string name="lang_amharic" translatable="false">አማርኛ</string>
     <string name="lang_arabic" translatable="false">العربية</string>

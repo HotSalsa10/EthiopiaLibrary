@@ -26,6 +26,7 @@ fun LibraryNavHost(repo: LibraryRepository) {
         composable("dashboard") {
             DashboardScreen(
                 vm = viewModel(factory = factory),
+                repo = repo,
                 onNavigate = { route -> nav.navigate(route) },
             )
         }
@@ -66,7 +67,7 @@ fun LibraryNavHost(repo: LibraryRepository) {
             ReturnScreen(vm = viewModel(factory = factory), onBack = back)
         }
         composable("settings") {
-            SettingsScreen(vm = viewModel(factory = factory), onBack = back)
+            SettingsScreen(vm = viewModel(factory = factory), repo = repo, onBack = back)
         }
     }
 }

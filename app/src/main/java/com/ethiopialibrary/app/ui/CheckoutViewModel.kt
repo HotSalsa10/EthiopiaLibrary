@@ -86,4 +86,9 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     fun reset() {
         _state.value = UiState()
     }
+
+    /** Desk speed: keep the member locked in and just scan the next book. */
+    fun startAnotherForSameMember() {
+        _state.update { UiState(member = it.member) }
+    }
 }
