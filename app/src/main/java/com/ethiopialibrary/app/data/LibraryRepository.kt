@@ -13,6 +13,7 @@ sealed interface CheckoutResult {
     data object CopyNotAvailable : CheckoutResult
     data object MemberNotFound : CheckoutResult
     data object MemberNotActive : CheckoutResult
+    data object LimitReached : CheckoutResult
 }
 
 sealed interface ReturnResult {
@@ -156,6 +157,10 @@ class LibraryRepository(
             if (db.loanDao().activeLoanForCopy(copy.id) != null) {
                 return@withTransaction CheckoutResult.CopyNotAvailable
             }
+            val limit = db.settingsDao().get(SettingKeys.MAX_BOOKS_PER_MEMBER)?.toIntOrNull() ?: 3
+            if (limit > 0 && db.loanDao().countActiveForMember(member.id) >= limit) {
+                return@withTransaction CheckoutResult.LimitReached
+            }
             val t = now()
             val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
                 ?: DEFAULT_LOAN_PERIOD_DAYS
@@ -271,6 +276,62 @@ class LibraryRepository(
 
     fun lastSyncAt(): Flow<Long?> =
         db.settingsDao().watch(SettingKeys.LAST_SYNC_AT).map { it?.toLongOrNull() }
+
+    // ---------- borrowing limit, due-soon, history, statistics ----------
+
+    suspend fun maxBooksPerMember(): Int =
+        db.settingsDao().get(SettingKeys.MAX_BOOKS_PER_MEMBER)?.toIntOrNull() ?: 3
+
+    suspend fun setMaxBooksPerMember(value: Int) {
+        db.withTransaction {
+            db.settingsDao().put(SettingEntity(SettingKeys.MAX_BOOKS_PER_MEMBER, value.toString()))
+            enqueueSync("setting", SettingKeys.MAX_BOOKS_PER_MEMBER)
+        }
+    }
+
+    suspend fun dueSoonDays(): Int =
+        db.settingsDao().get(SettingKeys.DUE_SOON_DAYS)?.toIntOrNull() ?: 3
+
+    suspend fun setDueSoonDays(value: Int) {
+        db.withTransaction {
+            db.settingsDao().put(SettingEntity(SettingKeys.DUE_SOON_DAYS, value.toString()))
+            enqueueSync("setting", SettingKeys.DUE_SOON_DAYS)
+        }
+    }
+
+    /** Active loans falling due within the configured window (not yet overdue). */
+    suspend fun dueSoonLoans(): Flow<List<LoanWithDetails>> {
+        val start = now()
+        val until = start + dueSoonDays() * MILLIS_PER_DAY
+        return db.loanDao().dueSoonDetailed(start, until)
+    }
+
+    fun memberHistory(memberId: String): Flow<List<LoanWithDetails>> =
+        db.loanDao().memberHistoryDetailed(memberId)
+
+    fun bookHistory(bookId: String): Flow<List<LoanWithDetails>> =
+        db.loanDao().bookHistoryDetailed(bookId)
+
+    suspend fun computeStatistics(): LibraryStatistics {
+        val now = now()
+        val d30 = 30L * MILLIS_PER_DAY
+        return LibraryStatistics(
+            totalTitles = db.bookDao().titleCount(),
+            totalCopies = db.bookCopyDao().copyCount(),
+            totalMembers = db.memberDao().memberCount(),
+            activeLoans = db.loanDao().countActive(),
+            overdue = db.loanDao().countOverdue(now),
+            checkoutsLast30 = db.loanDao().checkoutsBetween(now - d30, now + 1),
+            checkoutsPrev30 = db.loanDao().checkoutsBetween(now - 2 * d30, now - d30),
+            returnsLast30 = db.loanDao().returnsBetween(now - d30, now + 1),
+            newMembersLast30 = db.memberDao().newMembersBetween(now - d30, now + 1),
+            topBooks = db.loanDao().topBooks(5),
+            topMembers = db.loanDao().topMembers(5),
+            byCategory = db.bookDao().categoryCounts(),
+            byLanguage = db.bookDao().languageCounts(),
+            monthlyLoans = db.loanDao().monthlyLoans(now - 6L * d30),
+        )
+    }
 
     // ---------- staff PIN (guards destructive settings) ----------
 

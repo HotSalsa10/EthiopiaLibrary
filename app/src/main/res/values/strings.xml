@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Default locale: Amharic (project requirement). -->
 <resources>
-    <string name="app_name">ቤተ መጻሕፍት</string>
+    <string name="app_name">የቁርኣንና የሱና ዕውቀቶች ቤተ መጻሕፍት</string>
 
     <!-- Navigation -->
     <string name="nav_dashboard">ዋና ገጽ</string>
@@ -77,6 +77,31 @@
     <string name="error_member_not_found">አባሉ አልተገኘም</string>
     <string name="error_member_not_active">አባሉ ታግዷል</string>
     <string name="error_no_active_loan">ይህ ቅጂ አልተዋሰም</string>
+    <string name="error_limit_reached">አባሉ የመዋስ ጣሪያ ላይ ደርሷል</string>
+
+    <!-- Statistics, due-soon, history, limits -->
+    <string name="nav_statistics">ስታቲስቲክስ</string>
+    <string name="stat_titles">ርዕሶች</string>
+    <string name="stat_copies">ቅጂዎች</string>
+    <string name="activity_title">እንቅስቃሴ (ያለፉት 30 ቀናት)</string>
+    <string name="stat_checkouts">ውሰቶች</string>
+    <string name="stat_returns">መመለሶች</string>
+    <string name="stat_new_members">አዲስ አባላት</string>
+    <string name="prev_in_brackets">%1$d (ቀዳሚ %2$d)</string>
+    <string name="most_borrowed">በብዛት የተዋሱ መጻሕፍት</string>
+    <string name="most_active">በጣም ንቁ አባላት</string>
+    <string name="by_category">በምድብ</string>
+    <string name="by_language">በቋንቋ</string>
+    <string name="monthly_loans">በወር ውሰቶች</string>
+    <string name="export_csv">CSV አውጣ</string>
+    <string name="no_data">ገና መረጃ የለም</string>
+    <string name="due_soon_title">በቅርቡ የሚመለሱ</string>
+    <string name="history_title">ታሪክ</string>
+    <string name="settings_max_books">በአባል ከፍተኛ መጻሕፍት (0 = ያልተገደበ)</string>
+    <string name="settings_due_soon">የቅርብ መመለሻ ጊዜ (ቀናት)</string>
+    <string name="returned_on">ተመልሷል: %1$s</string>
+    <string name="overdue_notif_title">የዘገዩ መጻሕፍት</string>
+    <string name="overdue_notif_text">%1$d መጻሕፍት ዘግይተዋል</string>
 
     <!-- Scanner -->
     <string name="camera_permission_needed">ለመቃኘት የካሜራ ፈቃድ ያስፈልጋል</string>

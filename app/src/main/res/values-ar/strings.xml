@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">المكتبة</string>
+    <string name="app_name">مكتبة علوم الكتاب والسنة</string>
 
     <string name="nav_dashboard">الرئيسية</string>
     <string name="nav_books">الكتب</string>
@@ -69,6 +69,30 @@
     <string name="error_member_not_found">العضو غير موجود</string>
     <string name="error_member_not_active">العضو موقوف</string>
     <string name="error_no_active_loan">هذه النسخة غير معارة</string>
+    <string name="error_limit_reached">وصل العضو إلى الحد الأقصى للإعارة</string>
+
+    <string name="nav_statistics">الإحصائيات</string>
+    <string name="stat_titles">العناوين</string>
+    <string name="stat_copies">النسخ</string>
+    <string name="activity_title">النشاط (آخر 30 يوماً)</string>
+    <string name="stat_checkouts">الإعارات</string>
+    <string name="stat_returns">الإرجاعات</string>
+    <string name="stat_new_members">أعضاء جدد</string>
+    <string name="prev_in_brackets">%1$d (السابق %2$d)</string>
+    <string name="most_borrowed">الأكثر استعارة</string>
+    <string name="most_active">الأعضاء الأكثر نشاطاً</string>
+    <string name="by_category">حسب التصنيف</string>
+    <string name="by_language">حسب اللغة</string>
+    <string name="monthly_loans">الإعارات حسب الشهر</string>
+    <string name="export_csv">تصدير CSV</string>
+    <string name="no_data">لا توجد بيانات بعد</string>
+    <string name="due_soon_title">تستحق قريباً</string>
+    <string name="history_title">السجل</string>
+    <string name="settings_max_books">الحد الأقصى للكتب لكل عضو (0 = غير محدود)</string>
+    <string name="settings_due_soon">نافذة الاستحقاق القريب (أيام)</string>
+    <string name="returned_on">أُرجع: %1$s</string>
+    <string name="overdue_notif_title">كتب متأخرة</string>
+    <string name="overdue_notif_text">%1$d كتاب متأخر</string>
 
     <string name="camera_permission_needed">إذن الكاميرا مطلوب للمسح</string>
     <string name="point_camera">وجّه الكاميرا نحو رمز QR</string>

@@ -132,6 +132,10 @@ private fun SettingsContent(
 ) {
     val loanDays by vm.loanPeriodDays.collectAsStateWithLifecycle()
     var daysText by remember(loanDays) { mutableStateOf(loanDays?.toString().orEmpty()) }
+    val maxBooks by vm.maxBooks.collectAsStateWithLifecycle()
+    var maxBooksText by remember(maxBooks) { mutableStateOf(maxBooks?.toString().orEmpty()) }
+    val dueSoonDays by vm.dueSoonDays.collectAsStateWithLifecycle()
+    var dueSoonText by remember(dueSoonDays) { mutableStateOf(dueSoonDays?.toString().orEmpty()) }
     var showSetPin by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -171,6 +175,36 @@ private fun SettingsContent(
         Spacer(Modifier.height(12.dp))
         BigButton(stringResource(R.string.save)) {
             daysText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setLoanPeriodDays)
+        }
+        Spacer(Modifier.height(24.dp))
+
+        Text(stringResource(R.string.settings_max_books), style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = maxBooksText,
+            onValueChange = { maxBooksText = it.filter(Char::isDigit) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        Spacer(Modifier.height(12.dp))
+        BigButton(stringResource(R.string.save)) {
+            maxBooksText.toIntOrNull()?.takeIf { it >= 0 }?.let(vm::setMaxBooks)
+        }
+        Spacer(Modifier.height(24.dp))
+
+        Text(stringResource(R.string.settings_due_soon), style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = dueSoonText,
+            onValueChange = { dueSoonText = it.filter(Char::isDigit) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        Spacer(Modifier.height(12.dp))
+        BigButton(stringResource(R.string.save)) {
+            dueSoonText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setDueSoonDays)
         }
         Spacer(Modifier.height(24.dp))
 

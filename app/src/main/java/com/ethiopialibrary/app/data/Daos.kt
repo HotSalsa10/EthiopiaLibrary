@@ -42,6 +42,15 @@ interface BookDao {
 
     @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
     fun count(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
+    suspend fun titleCount(): Int
+
+    @Query("SELECT category AS label, COUNT(*) AS count FROM books WHERE isDeleted = 0 GROUP BY category ORDER BY count DESC, category")
+    suspend fun categoryCounts(): List<LabelCount>
+
+    @Query("SELECT language AS label, COUNT(*) AS count FROM books WHERE isDeleted = 0 GROUP BY language ORDER BY count DESC, language")
+    suspend fun languageCounts(): List<LabelCount>
 }
 
 @Dao
@@ -112,6 +121,9 @@ interface BookCopyDao {
 
     @Query("SELECT copyCode FROM book_copies")
     suspend fun allCopyCodes(): List<String>
+
+    @Query("SELECT COUNT(*) FROM book_copies WHERE isDeleted = 0 AND status = 'IN_SERVICE'")
+    suspend fun copyCount(): Int
 }
 
 @Dao
@@ -152,6 +164,12 @@ interface MemberDao {
 
     @Query("SELECT memberCode FROM members")
     suspend fun allMemberCodes(): List<String>
+
+    @Query("SELECT COUNT(*) FROM members WHERE isDeleted = 0")
+    suspend fun memberCount(): Int
+
+    @Query("SELECT COUNT(*) FROM members WHERE isDeleted = 0 AND joinedAt >= :start AND joinedAt < :end")
+    suspend fun newMembersBetween(start: Long, end: Long): Int
 }
 
 @Dao
@@ -221,6 +239,92 @@ interface LoanDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LoanEntity>)
+
+    @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND isDeleted = 0")
+    suspend fun countActive(): Int
+
+    @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0")
+    suspend fun countOverdue(now: Long): Int
+
+    @Query("SELECT COUNT(*) FROM loans WHERE memberId = :memberId AND returnedAt IS NULL AND isDeleted = 0")
+    suspend fun countActiveForMember(memberId: String): Int
+
+    @Query("SELECT COUNT(*) FROM loans WHERE borrowedAt >= :start AND borrowedAt < :end AND isDeleted = 0")
+    suspend fun checkoutsBetween(start: Long, end: Long): Int
+
+    @Query("SELECT COUNT(*) FROM loans WHERE returnedAt >= :start AND returnedAt < :end AND isDeleted = 0")
+    suspend fun returnsBetween(start: Long, end: Long): Int
+
+    @Query(
+        """
+        SELECT b.title AS label, COUNT(*) AS count
+        FROM loans l JOIN book_copies c ON c.id = l.copyId JOIN books b ON b.id = c.bookId
+        WHERE l.isDeleted = 0
+        GROUP BY b.id ORDER BY count DESC, b.title LIMIT :limit
+        """,
+    )
+    suspend fun topBooks(limit: Int): List<LabelCount>
+
+    @Query(
+        """
+        SELECT m.fullName AS label, COUNT(*) AS count
+        FROM loans l JOIN members m ON m.id = l.memberId
+        WHERE l.isDeleted = 0
+        GROUP BY m.id ORDER BY count DESC, m.fullName LIMIT :limit
+        """,
+    )
+    suspend fun topMembers(limit: Int): List<LabelCount>
+
+    @Query(
+        """
+        SELECT strftime('%Y-%m', l.borrowedAt / 1000, 'unixepoch') AS label, COUNT(*) AS count
+        FROM loans l WHERE l.borrowedAt >= :since AND l.isDeleted = 0
+        GROUP BY label ORDER BY label
+        """,
+    )
+    suspend fun monthlyLoans(since: Long): List<LabelCount>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE l.returnedAt IS NULL AND l.dueAt >= :now AND l.dueAt <= :until AND l.isDeleted = 0
+        ORDER BY l.dueAt
+        """,
+    )
+    fun dueSoonDetailed(now: Long, until: Long): Flow<List<LoanWithDetails>>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE l.memberId = :memberId AND l.returnedAt IS NOT NULL AND l.isDeleted = 0
+        ORDER BY l.returnedAt DESC
+        """,
+    )
+    fun memberHistoryDetailed(memberId: String): Flow<List<LoanWithDetails>>
+
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE c.bookId = :bookId AND l.returnedAt IS NOT NULL AND l.isDeleted = 0
+        ORDER BY l.returnedAt DESC
+        """,
+    )
+    fun bookHistoryDetailed(bookId: String): Flow<List<LoanWithDetails>>
 }
 
 @Dao

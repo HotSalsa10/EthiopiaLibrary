@@ -15,6 +15,7 @@ import com.ethiopialibrary.app.ui.screens.MemberDetailScreen
 import com.ethiopialibrary.app.ui.screens.MembersScreen
 import com.ethiopialibrary.app.ui.screens.ReturnScreen
 import com.ethiopialibrary.app.ui.screens.SettingsScreen
+import com.ethiopialibrary.app.ui.screens.StatisticsScreen
 
 @Composable
 fun LibraryNavHost(repo: LibraryRepository) {
@@ -68,6 +69,9 @@ fun LibraryNavHost(repo: LibraryRepository) {
         }
         composable("settings") {
             SettingsScreen(vm = viewModel(factory = factory), repo = repo, onBack = back)
+        }
+        composable("statistics") {
+            StatisticsScreen(vm = viewModel(factory = factory), onBack = back)
         }
     }
 }

@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     enum class CheckoutUiError {
-        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE,
+        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED,
     }
 
     data class UiState(
@@ -78,6 +78,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
                 CheckoutResult.MemberNotFound -> CheckoutUiError.MEMBER_NOT_FOUND
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
+                CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
             }
             _state.update { it.copy(error = error) }
         }
