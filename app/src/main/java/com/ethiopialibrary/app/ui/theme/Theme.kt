@@ -1,28 +1,53 @@
 package com.ethiopialibrary.app.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import com.ethiopialibrary.app.R
 
+// Palette sampled from the library logo: forest green, gold, warm parchment.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF2E7D32),
+    primary = Color(0xFF2E5B3E),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFB9E4BB),
-    onPrimaryContainer = Color(0xFF0A3D0C),
-    secondary = Color(0xFF795548),
+    primaryContainer = Color(0xFFCDE3D2),
+    onPrimaryContainer = Color(0xFF0C2C18),
+    secondary = Color(0xFFB8902F),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE7D6CF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF93000A),
-    background = Color(0xFFF8F6F2),
+    secondaryContainer = Color(0xFFF3E7CC),
+    onSecondaryContainer = Color(0xFF4A3A12),
+    tertiary = Color(0xFF8C6D3F),
     surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F1B16),
+    surfaceVariant = Color(0xFFEDE6D8),
+    onSurfaceVariant = Color(0xFF5B5648),
+    background = Color(0xFFF4EEE2),
+    onBackground = Color(0xFF1F1B16),
+    error = Color(0xFFC62828),
+    errorContainer = Color(0xFFFBE3DF),
+    onErrorContainer = Color(0xFF8C1D18),
+    outline = Color(0xFFBCAE97),
+    outlineVariant = Color(0xFFDED4C0),
 )
+
+/** Stat-tile accents, harmonized with the logo (green / gold / bronze; red kept for overdue). */
+object LibraryAccents {
+    val books = Color(0xFF2E6B43)
+    val booksBg = Color(0xFFDDEBE0)
+    val members = Color(0xFFB8902F)
+    val membersBg = Color(0xFFF4E9CF)
+    val loans = Color(0xFF8C6D3F)
+    val loansBg = Color(0xFFEDE3D0)
+    val overdue = Color(0xFFC62828)
+    val overdueBg = Color(0xFFFBE3DF)
+}
 
 /**
  * Bundled Noto fonts guarantee identical Ethiopic/Arabic rendering even on
@@ -55,9 +80,17 @@ fun EthiopiaLibraryTheme(content: @Composable () -> Unit) {
         labelMedium = base.labelMedium.copy(fontFamily = fontFamily),
         labelSmall = base.labelSmall.copy(fontFamily = fontFamily),
     )
+    // Single locked light theme: paint the background so the device's dark
+    // mode never bleeds through, and content colors stay consistent on every
+    // tablet (a shared kiosk should look identical everywhere).
     MaterialTheme(
         colorScheme = LightColors,
         typography = typography,
-        content = content,
-    )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            content = content,
+        )
+    }
 }

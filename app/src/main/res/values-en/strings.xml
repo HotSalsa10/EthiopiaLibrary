@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Library</string>
+    <string name="app_name">Library of the Sciences of the Qur\'an and Sunnah</string>
 
     <string name="nav_dashboard">Home</string>
     <string name="nav_books">Books</string>
@@ -69,6 +69,30 @@
     <string name="error_member_not_found">Member not found</string>
     <string name="error_member_not_active">Member is suspended</string>
     <string name="error_no_active_loan">This copy is not on loan</string>
+    <string name="error_limit_reached">Member has reached the borrowing limit</string>
+
+    <string name="nav_statistics">Statistics</string>
+    <string name="stat_titles">Titles</string>
+    <string name="stat_copies">Copies</string>
+    <string name="activity_title">Activity (last 30 days)</string>
+    <string name="stat_checkouts">Checkouts</string>
+    <string name="stat_returns">Returns</string>
+    <string name="stat_new_members">New members</string>
+    <string name="prev_in_brackets">%1$d (prev %2$d)</string>
+    <string name="most_borrowed">Most borrowed books</string>
+    <string name="most_active">Most active members</string>
+    <string name="by_category">Books by category</string>
+    <string name="by_language">Books by language</string>
+    <string name="monthly_loans">Loans by month</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="no_data">No data yet</string>
+    <string name="due_soon_title">Due soon</string>
+    <string name="history_title">History</string>
+    <string name="settings_max_books">Max books per member (0 = unlimited)</string>
+    <string name="settings_due_soon">Due-soon window (days)</string>
+    <string name="returned_on">Returned: %1$s</string>
+    <string name="overdue_notif_title">Overdue books</string>
+    <string name="overdue_notif_text">%1$d book(s) overdue</string>
 
     <string name="camera_permission_needed">Camera permission is needed to scan</string>
     <string name="point_camera">Point the camera at the QR code</string>

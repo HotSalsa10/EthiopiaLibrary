@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ethiopialibrary.app.data.BookWithCounts
 import com.ethiopialibrary.app.data.DashboardStats
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.data.LibraryStatistics
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.MemberWithLoanCount
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,7 +13,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -80,6 +83,10 @@ class DashboardViewModel(repo: LibraryRepository) : ViewModel() {
     val overdue: StateFlow<List<LoanWithDetails>> = repo.overdueLoansDetailed()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** Loans falling due within the configured window (not yet overdue). */
+    val dueSoon: StateFlow<List<LoanWithDetails>> = flow { emitAll(repo.dueSoonLoans()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     /** Changes waiting to reach the cloud mirror. */
     val pendingSync: StateFlow<Int> = repo.pendingSyncCount()
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
@@ -94,8 +101,18 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
     private val _loanPeriodDays = MutableStateFlow<Int?>(null)
     val loanPeriodDays: StateFlow<Int?> = _loanPeriodDays.asStateFlow()
 
+    private val _maxBooks = MutableStateFlow<Int?>(null)
+    val maxBooks: StateFlow<Int?> = _maxBooks.asStateFlow()
+
+    private val _dueSoonDays = MutableStateFlow<Int?>(null)
+    val dueSoonDays: StateFlow<Int?> = _dueSoonDays.asStateFlow()
+
     init {
-        viewModelScope.launch { _loanPeriodDays.value = repo.loanPeriodDays() }
+        viewModelScope.launch {
+            _loanPeriodDays.value = repo.loanPeriodDays()
+            _maxBooks.value = repo.maxBooksPerMember()
+            _dueSoonDays.value = repo.dueSoonDays()
+        }
     }
 
     fun setLoanPeriodDays(days: Int) {
@@ -103,5 +120,29 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
             repo.setLoanPeriodDays(days)
             _loanPeriodDays.value = days
         }
+    }
+
+    fun setMaxBooks(value: Int) {
+        viewModelScope.launch {
+            repo.setMaxBooksPerMember(value)
+            _maxBooks.value = value
+        }
+    }
+
+    fun setDueSoonDays(value: Int) {
+        viewModelScope.launch {
+            repo.setDueSoonDays(value)
+            _dueSoonDays.value = value
+        }
+    }
+}
+
+class StatisticsViewModel(private val repo: LibraryRepository) : ViewModel() {
+
+    private val _stats = MutableStateFlow<LibraryStatistics?>(null)
+    val stats: StateFlow<LibraryStatistics?> = _stats.asStateFlow()
+
+    init {
+        viewModelScope.launch { _stats.value = repo.computeStatistics() }
     }
 }

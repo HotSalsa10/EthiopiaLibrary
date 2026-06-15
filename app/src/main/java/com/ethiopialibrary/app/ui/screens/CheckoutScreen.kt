@@ -158,5 +158,6 @@ private fun checkoutErrorText(error: CheckoutViewModel.CheckoutUiError): String 
         CheckoutViewModel.CheckoutUiError.COPY_NOT_AVAILABLE -> R.string.error_copy_not_available
         CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND -> R.string.error_member_not_found
         CheckoutViewModel.CheckoutUiError.MEMBER_NOT_ACTIVE -> R.string.error_member_not_active
+        CheckoutViewModel.CheckoutUiError.LIMIT_REACHED -> R.string.error_limit_reached
     },
 )
