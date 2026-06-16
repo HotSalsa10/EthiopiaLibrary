@@ -28,6 +28,7 @@ import com.ethiopialibrary.app.sync.SyncLocator
 import com.ethiopialibrary.app.sync.SyncWorker
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.SectionHeader
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -40,7 +41,7 @@ import kotlinx.coroutines.launch
 fun CloudBackupSection() {
     val context = LocalContext.current
 
-    Text(stringResource(R.string.cloud_backup), style = MaterialTheme.typography.titleLarge)
+    SectionHeader(stringResource(R.string.cloud_backup))
     Spacer(Modifier.height(12.dp))
 
     if (FirebaseApp.getApps(context).isEmpty()) {

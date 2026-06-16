@@ -41,6 +41,7 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -81,7 +82,7 @@ private fun PinGate(repo: LibraryRepository, onBack: () -> Unit, onUnlocked: () 
     Column(
         Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(20.dp),
     ) {
         AppTopBar(stringResource(R.string.nav_settings), onBack)
         Column(
@@ -144,11 +145,11 @@ private fun SettingsContent(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(20.dp),
     ) {
         AppTopBar(stringResource(R.string.nav_settings), onBack)
 
-        Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.settings_language))
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigOutlinedButton(stringResource(R.string.lang_amharic), Modifier.weight(1f)) {
@@ -163,7 +164,7 @@ private fun SettingsContent(
         }
         Spacer(Modifier.height(24.dp))
 
-        Text(stringResource(R.string.settings_loan_period), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.settings_loan_period))
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = daysText,
@@ -178,7 +179,7 @@ private fun SettingsContent(
         }
         Spacer(Modifier.height(24.dp))
 
-        Text(stringResource(R.string.settings_max_books), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.settings_max_books))
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = maxBooksText,
@@ -193,7 +194,7 @@ private fun SettingsContent(
         }
         Spacer(Modifier.height(24.dp))
 
-        Text(stringResource(R.string.settings_due_soon), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.settings_due_soon))
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = dueSoonText,
@@ -208,7 +209,7 @@ private fun SettingsContent(
         }
         Spacer(Modifier.height(24.dp))
 
-        Text(stringResource(R.string.staff_pin), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.staff_pin))
         Spacer(Modifier.height(12.dp))
         BigOutlinedButton(
             stringResource(if (hasPin) R.string.change_pin else R.string.set_pin),

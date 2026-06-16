@@ -13,12 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LabelCount
 import com.ethiopialibrary.app.data.buildStatisticsCsv
+import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.StatisticsViewModel
@@ -52,7 +50,7 @@ fun StatisticsScreen(vm: StatisticsViewModel, onBack: () -> Unit) {
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(20.dp),
     ) {
         AppTopBar(stringResource(R.string.nav_statistics), onBack)
 
@@ -108,17 +106,10 @@ fun StatisticsScreen(vm: StatisticsViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            content()
-        }
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        content()
     }
 }
 
