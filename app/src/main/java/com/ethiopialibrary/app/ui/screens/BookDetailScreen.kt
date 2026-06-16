@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,11 +55,14 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     var refresh by remember { mutableIntStateOf(0) }
     val book by produceState<BookEntity?>(null, bookId, refresh) { value = repo.bookById(bookId) }
     val copies by repo.copiesForBook(bookId).collectAsStateWithLifecycle(emptyList())
+    val history by repo.bookHistory(bookId).collectAsStateWithLifecycle(emptyList())
+    val locale = LocalConfiguration.current.locales[0]
     var showEdit by remember { mutableStateOf(false) }
 
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
         AppTopBar(book?.title.orEmpty(), onBack) {
@@ -76,14 +78,16 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
         BigButton(stringResource(R.string.add_copy)) {
             scope.launch { repo.addCopy(bookId) }
         }
-        Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(copies, key = { it.copy.id }) { row ->
-                CopyCard(row) { status ->
-                    scope.launch { repo.setCopyStatus(row.copy.id, status) }
-                }
+        Spacer(Modifier.height(16.dp))
+        copies.forEach { row ->
+            CopyCard(row) { status ->
+                scope.launch { repo.setCopyStatus(row.copy.id, status) }
             }
+            Spacer(Modifier.height(8.dp))
         }
+
+        Spacer(Modifier.height(16.dp))
+        BorrowingHistorySection(history, locale) { "${it.memberName} (${it.memberCode})" }
     }
 
     val current = book
