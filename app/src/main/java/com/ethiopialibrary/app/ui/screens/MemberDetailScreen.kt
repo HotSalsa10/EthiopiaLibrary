@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +35,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
@@ -44,9 +44,11 @@ import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.data.MemberStatus
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.labels.LabelGenerator
+import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.SectionHeader
 import kotlinx.coroutines.launch
 
 @Composable
@@ -66,7 +68,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(20.dp),
     ) {
         AppTopBar(member?.fullName.orEmpty(), onBack) {
             IconButton(onClick = { showEdit = true }) {
@@ -78,19 +80,18 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
             m.phone?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
             Spacer(Modifier.height(12.dp))
 
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(stringResource(R.string.member_card), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.member_card), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
                     val qr = remember(m.memberCode) {
                         LabelGenerator.qrBitmap(m.memberCode, 320).asImageBitmap()
                     }
                     Image(qr, contentDescription = m.memberCode, Modifier.size(180.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(m.memberCode, style = MaterialTheme.typography.titleMedium)
                 }
             }
@@ -114,30 +115,28 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
         }
         Spacer(Modifier.height(16.dp))
 
-        Text(stringResource(R.string.stat_active_loans), style = MaterialTheme.typography.titleLarge)
+        SectionHeader(stringResource(R.string.stat_active_loans))
         Spacer(Modifier.height(8.dp))
         loans.forEach { item ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("${item.bookTitle} — ${item.copyCode}", style = MaterialTheme.typography.titleMedium)
-                    val overdue = item.loan.dueAt < System.currentTimeMillis()
-                    Text(
-                        "${stringResource(R.string.due_date)}: " +
-                            DualCalendarFormatter.format(item.loan.dueAt, locale),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (overdue) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                    )
-                    TextButton(onClick = {
-                        scope.launch {
-                            repo.renewLoan(item.loan.id)
-                            Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
-                        }
-                    }) { Text(stringResource(R.string.renew)) }
-                }
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Text("${item.bookTitle} — ${item.copyCode}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                val overdue = item.loan.dueAt < System.currentTimeMillis()
+                Text(
+                    "${stringResource(R.string.due_date)}: " +
+                        DualCalendarFormatter.format(item.loan.dueAt, locale),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (overdue) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                TextButton(onClick = {
+                    scope.launch {
+                        repo.renewLoan(item.loan.id)
+                        Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text(stringResource(R.string.renew)) }
             }
             Spacer(Modifier.height(8.dp))
         }

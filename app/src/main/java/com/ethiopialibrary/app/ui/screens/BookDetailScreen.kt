@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -38,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
@@ -45,6 +45,7 @@ import com.ethiopialibrary.app.data.BookEntity
 import com.ethiopialibrary.app.data.CopyRow
 import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import kotlinx.coroutines.launch
@@ -60,7 +61,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     Column(
         Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(20.dp),
     ) {
         AppTopBar(book?.title.orEmpty(), onBack) {
             IconButton(onClick = { showEdit = true }) {
@@ -158,14 +159,11 @@ private fun EditBookDialog(
 @Composable
 private fun CopyCard(row: CopyRow, onSetStatus: (CopyStatus) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(row.copy.copyCode, style = MaterialTheme.typography.titleMedium)
-                Text(statusText(row.copy.status), style = MaterialTheme.typography.bodyMedium)
+                Text(row.copy.copyCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(statusText(row.copy.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     stringResource(if (row.onLoan) R.string.on_loan else R.string.available),
                     style = MaterialTheme.typography.bodyMedium,

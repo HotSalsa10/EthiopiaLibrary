@@ -7,6 +7,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
@@ -47,6 +48,23 @@ object LibraryAccents {
     val loansBg = Color(0xFFEDE3D0)
     val overdue = Color(0xFFC62828)
     val overdueBg = Color(0xFFFBE3DF)
+
+    // Tints for soft, "lifted" shadow depth (API 28+ honours these on Modifier.shadow).
+    val shadowGreen = Color(0xFF1F4A30)
+    val shadowSoft = Color(0x14000000)
+    val shadowCard = Color(0x1A000000)
+}
+
+/**
+ * Gradient fills that give surfaces a tactile, lit-from-above quality instead of
+ * flat blocks of colour. Defined once so every premium control stays consistent.
+ */
+object LibraryBrushes {
+    // Rich forest-green for primary actions: lighter at the top-start, deepening
+    // toward the bottom-end so the pill reads as a real, pressable surface.
+    val primaryButton = Brush.linearGradient(
+        colors = listOf(Color(0xFF3C7C52), Color(0xFF234A30)),
+    )
 }
 
 /**
