@@ -25,6 +25,7 @@ import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.CheckoutViewModel
 import com.ethiopialibrary.app.ui.CodeEntry
@@ -72,7 +73,7 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                     }
                     Text(
                         "${stringResource(R.string.due_date)}: " +
-                            DualCalendarFormatter.format(loan.dueAt, locale),
+                            DualCalendarFormatter.format(loan.dueAt, locale, LocalCalendarMode.current),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )

@@ -98,6 +98,10 @@
     <string name="point_camera">وجّه الكاميرا نحو رمز QR</string>
 
     <string name="settings_language">لغة التطبيق</string>
+    <string name="settings_calendar">عرض التاريخ</string>
+    <string name="calendar_dual">كلاهما</string>
+    <string name="calendar_ethiopian">إثيوبي</string>
+    <string name="calendar_gregorian">ميلادي</string>
     <string name="settings_loan_period">مدة الإعارة (بالأيام)</string>
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>

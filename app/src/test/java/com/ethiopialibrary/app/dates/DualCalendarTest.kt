@@ -1,6 +1,7 @@
 package com.ethiopialibrary.app.dates
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,5 +58,27 @@ class DualCalendarTest {
         val text = DualCalendarFormatter.format(epoch, Locale("ar"))
         assertTrue("expected both years in: $text", text.contains("2026") && text.contains("2018"))
         assertTrue("Gregorian must come first in Arabic: $text", text.indexOf("2026") < text.indexOf("2018"))
+    }
+
+    @Test
+    fun `ethiopian mode shows only the ethiopian date`() {
+        // English locale would normally lead with Gregorian; ETHIOPIAN must drop it.
+        val text = DualCalendarFormatter.format(epoch, Locale.ENGLISH, CalendarMode.ETHIOPIAN)
+        assertTrue("expected Ethiopian year in: $text", text.contains("2018"))
+        assertFalse("Gregorian year must be absent: $text", text.contains("2026"))
+    }
+
+    @Test
+    fun `gregorian mode shows only the gregorian date`() {
+        // Amharic locale would normally lead with Ethiopian; GREGORIAN must drop it.
+        val text = DualCalendarFormatter.format(epoch, Locale("am"), CalendarMode.GREGORIAN)
+        assertTrue("expected Gregorian year in: $text", text.contains("2026"))
+        assertFalse("Ethiopian year must be absent: $text", text.contains("2018"))
+    }
+
+    @Test
+    fun `dual is the default and shows both dates`() {
+        val text = DualCalendarFormatter.format(epoch, Locale.ENGLISH)
+        assertTrue("expected both calendars: $text", text.contains("2026") && text.contains("2018"))
     }
 }

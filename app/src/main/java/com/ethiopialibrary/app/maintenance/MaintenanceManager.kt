@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.maintenance
 import com.ethiopialibrary.app.data.IntegrityChecker
 import com.ethiopialibrary.app.data.LibraryDatabase
 import com.ethiopialibrary.app.data.SnapshotManager
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.time.Clock
 import java.time.ZoneOffset
@@ -12,6 +13,7 @@ data class MaintenanceResult(
     val databaseHealthy: Boolean,
     val snapshot: File,
     val prunedCount: Int,
+    val overdueCount: Int,
 )
 
 /**
@@ -41,10 +43,15 @@ class MaintenanceManager(
         val stale = all.drop(keepCount)
         stale.forEach { it.delete() }
 
+        // Suspend Room query runs on Room's own executor, so blocking here is
+        // safe even when maintenance is invoked off a coroutine.
+        val overdueCount = runBlocking { db.loanDao().countOverdue(clock.instant().toEpochMilli()) }
+
         return MaintenanceResult(
             databaseHealthy = healthy,
             snapshot = snapshot,
             prunedCount = stale.size,
+            overdueCount = overdueCount,
         )
     }
 }

@@ -1,12 +1,16 @@
 package com.ethiopialibrary.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.screens.BookDetailScreen
 import com.ethiopialibrary.app.ui.screens.BooksScreen
 import com.ethiopialibrary.app.ui.screens.CheckoutScreen
@@ -22,8 +26,10 @@ fun LibraryNavHost(repo: LibraryRepository) {
     val nav = rememberNavController()
     val factory = remember(repo) { LibraryVmFactory(repo) }
     val back: () -> Unit = { nav.popBackStack() }
+    val calendarMode by repo.calendarModeFlow().collectAsStateWithLifecycle(CalendarMode.DUAL)
 
-    NavHost(navController = nav, startDestination = "dashboard") {
+    CompositionLocalProvider(LocalCalendarMode provides calendarMode) {
+        NavHost(navController = nav, startDestination = "dashboard") {
         composable("dashboard") {
             DashboardScreen(
                 vm = viewModel(factory = factory),
@@ -72,6 +78,7 @@ fun LibraryNavHost(repo: LibraryRepository) {
         }
         composable("statistics") {
             StatisticsScreen(vm = viewModel(factory = factory), onBack = back)
+        }
         }
     }
 }

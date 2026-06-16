@@ -109,6 +109,10 @@
 
     <!-- Settings -->
     <string name="settings_language">የመተግበሪያ ቋንቋ</string>
+    <string name="settings_calendar">የቀን አቆጣጠር</string>
+    <string name="calendar_dual">ሁለቱም</string>
+    <string name="calendar_ethiopian">ኢትዮጵያዊ</string>
+    <string name="calendar_gregorian">ግሪጎሪያን</string>
     <string name="settings_loan_period">የመዋስ ጊዜ (በቀናት)</string>
     <string name="save">አስቀምጥ</string>
     <string name="cancel">ሰርዝ</string>

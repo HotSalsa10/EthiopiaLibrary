@@ -98,6 +98,10 @@
     <string name="point_camera">Point the camera at the QR code</string>
 
     <string name="settings_language">App language</string>
+    <string name="settings_calendar">Date display</string>
+    <string name="calendar_dual">Both</string>
+    <string name="calendar_ethiopian">Ethiopian</string>
+    <string name="calendar_gregorian">Gregorian</string>
     <string name="settings_loan_period">Loan period (days)</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>

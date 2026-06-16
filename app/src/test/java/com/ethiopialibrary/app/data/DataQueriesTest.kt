@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -207,6 +208,13 @@ class DataQueriesTest {
         assertEquals(LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS, repo.loanPeriodDays())
         repo.setLoanPeriodDays(21)
         assertEquals(21, repo.loanPeriodDays())
+    }
+
+    @Test
+    fun `calendar mode round trips through settings and defaults to dual`() = runBlocking {
+        assertEquals(CalendarMode.DUAL, repo.calendarMode())
+        repo.setCalendarMode(CalendarMode.ETHIOPIAN)
+        assertEquals(CalendarMode.ETHIOPIAN, repo.calendarMode())
     }
 
     @Test

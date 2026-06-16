@@ -8,6 +8,7 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LibraryStatistics
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.MemberWithLoanCount
+import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -107,11 +108,15 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
     private val _dueSoonDays = MutableStateFlow<Int?>(null)
     val dueSoonDays: StateFlow<Int?> = _dueSoonDays.asStateFlow()
 
+    private val _calendarMode = MutableStateFlow<CalendarMode?>(null)
+    val calendarMode: StateFlow<CalendarMode?> = _calendarMode.asStateFlow()
+
     init {
         viewModelScope.launch {
             _loanPeriodDays.value = repo.loanPeriodDays()
             _maxBooks.value = repo.maxBooksPerMember()
             _dueSoonDays.value = repo.dueSoonDays()
+            _calendarMode.value = repo.calendarMode()
         }
     }
 
@@ -133,6 +138,13 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
         viewModelScope.launch {
             repo.setDueSoonDays(value)
             _dueSoonDays.value = value
+        }
+    }
+
+    fun setCalendarMode(mode: CalendarMode) {
+        viewModelScope.launch {
+            repo.setCalendarMode(mode)
+            _calendarMode.value = mode
         }
     }
 }
