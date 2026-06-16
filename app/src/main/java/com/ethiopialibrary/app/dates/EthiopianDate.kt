@@ -23,15 +23,23 @@ data class EthiopianDate(val year: Int, val month: Int, val day: Int) {
     }
 }
 
+/** Which calendar(s) a date is shown in; chosen by staff in Settings. */
+enum class CalendarMode { DUAL, ETHIOPIAN, GREGORIAN }
+
 /**
- * Ethiopia uses the Ethiopian calendar in daily life. Every date in the UI
- * shows both calendars: Ethiopian primary when the UI is Amharic, Gregorian
- * primary in English/Arabic. Digits are forced to Latin everywhere so dates
- * always match the printed B-/M- codes.
+ * Ethiopia uses the Ethiopian calendar in daily life. By default every date in
+ * the UI shows both calendars (Ethiopian primary when the UI is Amharic,
+ * Gregorian primary in English/Arabic), but staff can pick a single calendar in
+ * Settings. Digits are forced to Latin everywhere so dates always match the
+ * printed B-/M- codes.
  */
 object DualCalendarFormatter {
 
-    fun format(epochMillis: Long, locale: Locale): String {
+    fun format(
+        epochMillis: Long,
+        locale: Locale,
+        mode: CalendarMode = CalendarMode.DUAL,
+    ): String {
         val date = Date(epochMillis)
         val tag = locale.toLanguageTag()
         val ethiopic = DateFormat.getDateInstance(
@@ -42,10 +50,14 @@ object DualCalendarFormatter {
             DateFormat.MEDIUM,
             ULocale.forLanguageTag("$tag-u-nu-latn"),
         ).format(date)
-        return if (locale.language == "am") {
-            "$ethiopic ($gregorian)"
-        } else {
-            "$gregorian ($ethiopic)"
+        return when (mode) {
+            CalendarMode.ETHIOPIAN -> ethiopic
+            CalendarMode.GREGORIAN -> gregorian
+            CalendarMode.DUAL -> if (locale.language == "am") {
+                "$ethiopic ($gregorian)"
+            } else {
+                "$gregorian ($ethiopic)"
+            }
         }
     }
 }

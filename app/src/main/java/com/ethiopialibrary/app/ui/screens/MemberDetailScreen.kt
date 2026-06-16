@@ -48,6 +48,7 @@ import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
 import kotlinx.coroutines.launch
 
@@ -124,7 +125,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
                 val overdue = item.loan.dueAt < System.currentTimeMillis()
                 Text(
                     "${stringResource(R.string.due_date)}: " +
-                        DualCalendarFormatter.format(item.loan.dueAt, locale),
+                        DualCalendarFormatter.format(item.loan.dueAt, locale, LocalCalendarMode.current),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (overdue) {
                         MaterialTheme.colorScheme.error

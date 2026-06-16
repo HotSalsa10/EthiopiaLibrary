@@ -1,6 +1,7 @@
 package com.ethiopialibrary.app.data
 
 import androidx.room.withTransaction
+import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -298,6 +299,23 @@ class LibraryRepository(
             enqueueSync("setting", SettingKeys.DUE_SOON_DAYS)
         }
     }
+
+    // Display preference: which calendar(s) dates are shown in. Defaults to DUAL.
+    suspend fun calendarMode(): CalendarMode =
+        parseCalendarMode(db.settingsDao().get(SettingKeys.CALENDAR_MODE))
+
+    fun calendarModeFlow(): Flow<CalendarMode> =
+        db.settingsDao().watch(SettingKeys.CALENDAR_MODE).map(::parseCalendarMode)
+
+    suspend fun setCalendarMode(mode: CalendarMode) {
+        db.withTransaction {
+            db.settingsDao().put(SettingEntity(SettingKeys.CALENDAR_MODE, mode.name))
+            enqueueSync("setting", SettingKeys.CALENDAR_MODE)
+        }
+    }
+
+    private fun parseCalendarMode(value: String?): CalendarMode =
+        value?.let { runCatching { CalendarMode.valueOf(it) }.getOrNull() } ?: CalendarMode.DUAL
 
     /** Active loans falling due within the configured window (not yet overdue). */
     suspend fun dueSoonLoans(): Flow<List<LoanWithDetails>> {

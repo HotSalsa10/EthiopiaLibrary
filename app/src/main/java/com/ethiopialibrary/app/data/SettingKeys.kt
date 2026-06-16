@@ -8,4 +8,5 @@ object SettingKeys {
     const val STAFF_PIN_HASH = "staff_pin_hash"
     const val MAX_BOOKS_PER_MEMBER = "max_books_per_member"
     const val DUE_SOON_DAYS = "due_soon_days"
+    const val CALENDAR_MODE = "calendar_mode"
 }

@@ -14,6 +14,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
 import java.util.Locale
 
@@ -50,7 +51,7 @@ fun BorrowingHistorySection(
                     Text(
                         stringResource(
                             R.string.returned_on,
-                            DualCalendarFormatter.format(returnedAt, locale),
+                            DualCalendarFormatter.format(returnedAt, locale, LocalCalendarMode.current),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

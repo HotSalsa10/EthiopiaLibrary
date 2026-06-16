@@ -1,5 +1,8 @@
 package com.ethiopialibrary.app.maintenance
 
+import android.Manifest
+import android.app.Application
+import android.app.NotificationManager
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
@@ -17,6 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import java.io.File
 
 /** Daily local snapshots: last line of defense, independent of cloud sync. */
@@ -102,5 +106,58 @@ class MaintenanceTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val worker = TestListenableWorkerBuilder<MaintenanceWorker>(context).build()
         assertTrue(runBlocking { worker.doWork() } is ListenableWorker.Result.Success)
+    }
+
+    @Test
+    fun `daily maintenance reports the number of overdue loans`() {
+        runBlocking {
+            val repo = LibraryRepository(db, clock)
+            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            val member = repo.registerMember(fullName = "Abebe")
+            repo.checkout(copy.copyCode, member.memberCode)
+            clock.advanceDays(60) // push the due date well into the past
+        }
+
+        val result = manager().runDailyMaintenance()
+
+        assertEquals(1, result.overdueCount)
+    }
+
+    @Test
+    fun `returned loans are not counted as overdue`() {
+        runBlocking {
+            val repo = LibraryRepository(db, clock)
+            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            val member = repo.registerMember(fullName = "Abebe")
+            repo.checkout(copy.copyCode, member.memberCode)
+            repo.returnBook(copy.copyCode)
+            clock.advanceDays(60)
+        }
+
+        assertEquals(0, manager().runDailyMaintenance().overdueCount)
+    }
+
+    @Test
+    fun `worker posts an overdue notification when loans are overdue`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        shadowOf(context as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        runBlocking {
+            val repo = LibraryRepository(db, clock)
+            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            val member = repo.registerMember(fullName = "Abebe")
+            repo.checkout(copy.copyCode, member.memberCode)
+            clock.advanceDays(60)
+        }
+        MaintenanceLocator.managerFactory = { manager() }
+        val worker = TestListenableWorkerBuilder<MaintenanceWorker>(context).build()
+
+        val result = runBlocking { worker.doWork() }
+
+        assertTrue(result is ListenableWorker.Result.Success)
+        val nm = context.getSystemService(NotificationManager::class.java)
+        assertEquals(1, shadowOf(nm).size())
     }
 }

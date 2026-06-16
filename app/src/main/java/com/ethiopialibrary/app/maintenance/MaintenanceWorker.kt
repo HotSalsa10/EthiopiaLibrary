@@ -28,6 +28,9 @@ class MaintenanceWorker(context: Context, params: WorkerParameters) :
             if (!result.databaseHealthy) {
                 Log.e(TAG, "Database integrity check FAILED - snapshot taken at ${result.snapshot}")
             }
+            if (result.overdueCount > 0) {
+                OverdueNotifier.notifyOverdue(applicationContext, result.overdueCount)
+            }
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Daily maintenance failed", e)

@@ -63,6 +63,7 @@ import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.DashboardViewModel
+import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.pressScale
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
@@ -210,11 +211,12 @@ fun DashboardScreen(
 /** A small, subtle pill that surfaces backup state without competing for attention. */
 @Composable
 private fun BackupChip(lastBackupAt: Long?, pendingSync: Int, locale: Locale) {
+    val calendarMode = LocalCalendarMode.current
     val text = buildString {
         append(stringResource(R.string.last_backup))
         append(": ")
         append(
-            lastBackupAt?.let { DualCalendarFormatter.format(it, locale) }
+            lastBackupAt?.let { DualCalendarFormatter.format(it, locale, calendarMode) }
                 ?: stringResource(R.string.never_backed_up),
         )
         if (pendingSync > 0) {
@@ -381,7 +383,7 @@ private fun LoanAlertCard(
         )
         Text(
             "${stringResource(R.string.due_date)}: " +
-                DualCalendarFormatter.format(item.loan.dueAt, locale),
+                DualCalendarFormatter.format(item.loan.dueAt, locale, LocalCalendarMode.current),
             style = MaterialTheme.typography.bodyMedium,
             color = onContainer,
         )

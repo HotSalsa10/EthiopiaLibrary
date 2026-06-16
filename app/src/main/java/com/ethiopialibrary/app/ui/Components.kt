@@ -33,6 +33,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,8 +47,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
 import com.ethiopialibrary.app.ui.theme.LibraryBrushes
+
+/**
+ * The calendar(s) dates are shown in, provided once at the navigation root from
+ * the saved setting so every screen formats dates consistently. Changing the
+ * setting updates this and all visible dates recompose.
+ */
+val LocalCalendarMode = staticCompositionLocalOf { CalendarMode.DUAL }
 
 /**
  * Tactile press feedback for touch devices (no hover): the surface dips slightly

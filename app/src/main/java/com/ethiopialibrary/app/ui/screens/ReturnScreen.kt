@@ -23,6 +23,7 @@ import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.CodeEntry
 import com.ethiopialibrary.app.ui.ReturnViewModel
 
@@ -88,7 +89,7 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
                     )
                     Text(
                         "${stringResource(R.string.due_date)}: " +
-                            DualCalendarFormatter.format(loan.loan.dueAt, locale),
+                            DualCalendarFormatter.format(loan.loan.dueAt, locale, LocalCalendarMode.current),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

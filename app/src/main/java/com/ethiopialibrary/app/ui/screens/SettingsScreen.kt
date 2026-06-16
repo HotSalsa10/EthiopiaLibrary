@@ -17,6 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +41,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
@@ -137,6 +141,7 @@ private fun SettingsContent(
     var maxBooksText by remember(maxBooks) { mutableStateOf(maxBooks?.toString().orEmpty()) }
     val dueSoonDays by vm.dueSoonDays.collectAsStateWithLifecycle()
     var dueSoonText by remember(dueSoonDays) { mutableStateOf(dueSoonDays?.toString().orEmpty()) }
+    val calendarMode by vm.calendarMode.collectAsStateWithLifecycle()
     var showSetPin by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -160,6 +165,24 @@ private fun SettingsContent(
             }
             BigOutlinedButton(stringResource(R.string.lang_english), Modifier.weight(1f)) {
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+
+        SectionHeader(stringResource(R.string.settings_calendar))
+        Spacer(Modifier.height(12.dp))
+        val calendarOptions = listOf(
+            CalendarMode.DUAL to R.string.calendar_dual,
+            CalendarMode.ETHIOPIAN to R.string.calendar_ethiopian,
+            CalendarMode.GREGORIAN to R.string.calendar_gregorian,
+        )
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            calendarOptions.forEachIndexed { index, (mode, labelRes) ->
+                SegmentedButton(
+                    selected = calendarMode == mode,
+                    onClick = { vm.setCalendarMode(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, calendarOptions.size),
+                ) { Text(stringResource(labelRes)) }
             }
         }
         Spacer(Modifier.height(24.dp))
