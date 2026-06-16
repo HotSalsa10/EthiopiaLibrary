@@ -59,6 +59,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
         value = repo.memberById(memberId)
     }
     val loans by repo.activeLoansForMember(memberId).collectAsStateWithLifecycle(emptyList())
+    val history by repo.memberHistory(memberId).collectAsStateWithLifecycle(emptyList())
     val locale = LocalConfiguration.current.locales[0]
 
     var showEdit by remember { mutableStateOf(false) }
@@ -140,6 +141,9 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
             }
             Spacer(Modifier.height(8.dp))
         }
+
+        Spacer(Modifier.height(16.dp))
+        BorrowingHistorySection(history, locale) { "${it.bookTitle} — ${it.copyCode}" }
     }
 
     val current = member
