@@ -1,7 +1,9 @@
 package com.ethiopialibrary.app.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.labels.exportAndShareLabels
 import com.ethiopialibrary.app.ui.AppCard
@@ -50,6 +56,8 @@ fun BooksScreen(
 ) {
     val books by vm.books.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
+    val categories by vm.categories.collectAsStateWithLifecycle()
+    val categoryFilter by vm.categoryFilter.collectAsStateWithLifecycle()
     var showAdd by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -67,6 +75,25 @@ fun BooksScreen(
             label = { Text(stringResource(R.string.search_hint)) },
             singleLine = true,
         )
+        Spacer(Modifier.height(12.dp))
+        // Category filter: "All" + a chip per category.
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = categoryFilter.isEmpty(),
+                onClick = { vm.setCategoryFilter("") },
+                label = { Text(stringResource(R.string.filter_all)) },
+            )
+            categories.forEach { c ->
+                FilterChip(
+                    selected = categoryFilter == c.code,
+                    onClick = { vm.setCategoryFilter(c.code) },
+                    label = { Text(c.code) },
+                )
+            }
+        }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigButton(stringResource(R.string.add_book), Modifier.weight(1f)) { showAdd = true }
@@ -106,23 +133,98 @@ fun BooksScreen(
 
     if (showAdd) {
         AddBookDialog(
+            categories = categories,
+            onAddCategory = vm::addCategory,
             onDismiss = { showAdd = false },
-            onSave = { title, author, category, language, isbn, copies ->
-                vm.addBook(title, author, category, language, isbn, copies)
+            onSave = { title, author, categoryCode, language, isbn, copies ->
+                vm.addBook(title, author, categoryCode, language, isbn, copies)
                 showAdd = false
             },
         )
     }
 }
 
+/** Pick a category from the list, or add a new one inline. */
+@Composable
+private fun CategoryPicker(
+    categories: List<CategoryEntity>,
+    selectedCode: String,
+    onSelect: (String) -> Unit,
+    onAddCategory: (String, String) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var showAddCategory by remember { mutableStateOf(false) }
+    val selected = categories.firstOrNull { it.code == selectedCode }
+    Box {
+        OutlinedButton(onClick = { menuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                selected?.let { "${it.name} (${it.code})" }
+                    ?: stringResource(R.string.field_category),
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            categories.forEach { c ->
+                DropdownMenuItem(
+                    text = { Text("${c.name} (${c.code})") },
+                    onClick = { onSelect(c.code); menuOpen = false },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("➕ ${stringResource(R.string.add_category)}") },
+                onClick = { menuOpen = false; showAddCategory = true },
+            )
+        }
+    }
+    if (showAddCategory) {
+        AddCategoryDialog(
+            onDismiss = { showAddCategory = false },
+            onSave = { name, code ->
+                onAddCategory(name, code)
+                onSelect(code.trim().uppercase())
+                showAddCategory = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_category)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_category)) }, singleLine = true)
+                OutlinedTextField(
+                    code,
+                    { code = it.filter(Char::isLetter).take(2).uppercase() },
+                    label = { Text(stringResource(R.string.category_code)) },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && code.length == 2,
+                onClick = { onSave(name.trim(), code) },
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
 @Composable
 private fun AddBookDialog(
+    categories: List<CategoryEntity>,
+    onAddCategory: (String, String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, String?, Int) -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
+    var categoryCode by remember { mutableStateOf("") }
     var isbn by remember { mutableStateOf("") }
     var copies by remember { mutableStateOf("1") }
     var language by remember { mutableStateOf("am") }
@@ -137,7 +239,8 @@ private fun AddBookDialog(
             ) {
                 OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
                 OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.field_author)) }, singleLine = true)
-                OutlinedTextField(category, { category = it }, label = { Text(stringResource(R.string.field_category)) }, singleLine = true)
+                Text(stringResource(R.string.field_category), style = MaterialTheme.typography.labelLarge)
+                CategoryPicker(categories, categoryCode, { categoryCode = it }, onAddCategory)
                 Text(stringResource(R.string.field_language), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(language == "am", { language = "am" }, label = { Text(stringResource(R.string.lang_amharic)) })
@@ -155,12 +258,12 @@ private fun AddBookDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = title.isNotBlank() && author.isNotBlank(),
+                enabled = title.isNotBlank() && author.isNotBlank() && categoryCode.isNotBlank(),
                 onClick = {
                     onSave(
                         title.trim(),
                         author.trim(),
-                        category.trim(),
+                        categoryCode,
                         language,
                         isbn.trim().ifBlank { null },
                         copies.toIntOrNull() ?: 1,

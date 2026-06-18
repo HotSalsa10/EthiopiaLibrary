@@ -53,8 +53,8 @@ class ListViewModelsTest {
     @Test
     fun `books list filters by search query`() {
         runBlocking {
-            repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
-            repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", category = "Fiction", language = "am")
+            repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
+            repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", categoryCode = "Fiction", language = "am")
         }
         val vm = BooksViewModel(repo)
 
@@ -69,7 +69,7 @@ class ListViewModelsTest {
     fun `addBook creates book with requested number of copies`() {
         val vm = BooksViewModel(repo)
 
-        vm.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am", isbn = null, copies = 3)
+        vm.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am", isbn = null, copies = 3)
 
         val row = awaitValue(vm.books) { it.size == 1 }.single()
         assertEquals(3, row.totalCopies)
@@ -90,7 +90,7 @@ class ListViewModelsTest {
     @Test
     fun `dashboard exposes stats and overdue list`() {
         runBlocking {
-            val book = repo.addBook(title = "Oromay", author = "A", category = "C", language = "am")
+            val book = repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
             val copy = repo.addCopy(book.id)
             val member = repo.registerMember(fullName = "Abebe")
             repo.checkout(copy.copyCode, member.memberCode)
@@ -109,7 +109,7 @@ class ListViewModelsTest {
     @Test
     fun `dashboard exposes backup status`() {
         runBlocking {
-            repo.addBook(title = "Oromay", author = "A", category = "C", language = "am")
+            repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
         }
         val vm = DashboardViewModel(repo)
 

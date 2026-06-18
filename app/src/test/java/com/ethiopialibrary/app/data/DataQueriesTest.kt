@@ -41,8 +41,8 @@ class DataQueriesTest {
 
     @Test
     fun `book search matches title or author`() = runBlocking {
-        repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", category = "Fiction", language = "am")
-        repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
+        repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", categoryCode = "Fiction", language = "am")
+        repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
 
         assertEquals(2, repo.booksWithCounts("").first().size)
         assertEquals("Oromay", repo.booksWithCounts("oromay").first().single().book.title)
@@ -51,7 +51,7 @@ class DataQueriesTest {
 
     @Test
     fun `book counts exclude lost copies and copies on loan`() = runBlocking {
-        val book = repo.addBook(title = "T", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         repo.addCopy(book.id)
         val lost = repo.addCopy(book.id)
         val loaned = repo.addCopy(book.id)
@@ -67,7 +67,7 @@ class DataQueriesTest {
 
     @Test
     fun `copy rows expose loan state`() = runBlocking {
-        val book = repo.addBook(title = "T", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(book.id)
         val c2 = repo.addCopy(book.id)
         val member = repo.registerMember(fullName = "Abebe")
@@ -81,7 +81,7 @@ class DataQueriesTest {
 
     @Test
     fun `member search includes active loan count`() = runBlocking {
-        val book = repo.addBook(title = "T", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(book.id)
         val c2 = repo.addCopy(book.id)
         val c3 = repo.addCopy(book.id)
@@ -102,7 +102,7 @@ class DataQueriesTest {
 
     @Test
     fun `overdue details include book title and member name`() = runBlocking {
-        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
         val copy = repo.addCopy(book.id)
         val member = repo.registerMember(fullName = "Abebe Kebede")
         repo.checkout(copy.copyCode, member.memberCode)
@@ -118,7 +118,7 @@ class DataQueriesTest {
 
     @Test
     fun `active loans for member are detailed`() = runBlocking {
-        val book = repo.addBook(title = "T", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(book.id)
         val c2 = repo.addCopy(book.id)
         val member = repo.registerMember(fullName = "Abebe")
@@ -134,7 +134,7 @@ class DataQueriesTest {
 
     @Test
     fun `copy lookup for checkout preview returns book info and loan state`() = runBlocking {
-        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
         val copy = repo.addCopy(book.id)
         val member = repo.registerMember(fullName = "Abebe")
 
@@ -151,8 +151,8 @@ class DataQueriesTest {
 
     @Test
     fun `dashboard stats count books members loans and overdue`() = runBlocking {
-        val b1 = repo.addBook(title = "T1", author = "A", category = "C", language = "am")
-        val b2 = repo.addBook(title = "T2", author = "A", category = "C", language = "am")
+        val b1 = repo.addBook(title = "T1", author = "A", categoryCode = "C", language = "am")
+        val b2 = repo.addBook(title = "T2", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(b1.id)
         val c2 = repo.addCopy(b2.id)
         repo.addCopy(b2.id)
@@ -172,7 +172,7 @@ class DataQueriesTest {
 
     @Test
     fun `updateBook persists changes and writes outbox`() = runBlocking {
-        val book = repo.addBook(title = "Old Title", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "Old Title", author = "A", categoryCode = "C", language = "am")
         val entriesBefore = repo.pendingSyncEntries().count { it.entityType == "book" }
 
         repo.updateBook(book.copy(title = "New Title"))
@@ -191,7 +191,7 @@ class DataQueriesTest {
 
     @Test
     fun `active loan detail lookup by copy code`() = runBlocking {
-        val book = repo.addBook(title = "Oromay", author = "A", category = "C", language = "am")
+        val book = repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
         val copy = repo.addCopy(book.id)
         val member = repo.registerMember(fullName = "Abebe")
 
@@ -219,7 +219,7 @@ class DataQueriesTest {
 
     @Test
     fun `label rows list in-service copies and all members`() = runBlocking {
-        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
         val inService = repo.addCopy(book.id)
         val lost = repo.addCopy(book.id)
         repo.setCopyStatus(lost.id, CopyStatus.LOST)
@@ -236,7 +236,7 @@ class DataQueriesTest {
 
     @Test
     fun `entity lookups by id`() = runBlocking {
-        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am")
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
         val member = repo.registerMember(fullName = "Abebe Kebede")
 
         assertEquals("Oromay", repo.bookById(book.id)?.title)

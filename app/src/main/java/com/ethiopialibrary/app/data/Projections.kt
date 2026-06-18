@@ -5,6 +5,7 @@ import androidx.room.Embedded
 /** Book row for lists: counts are derived, never stored, so they can't drift. */
 data class BookWithCounts(
     @Embedded val book: BookEntity,
+    val categoryName: String?,
     val totalCopies: Int,
     val availableCopies: Int,
 )

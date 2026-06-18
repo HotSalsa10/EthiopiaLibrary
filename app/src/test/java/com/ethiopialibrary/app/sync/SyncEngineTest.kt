@@ -49,7 +49,7 @@ class SyncEngineTest {
         val book = repo.addBookWithCopies(
             title = "Oromay",
             author = "Bealu Girma",
-            category = "Fiction",
+            categoryCode = "Fiction",
             language = "am",
             copies = 1,
         )
@@ -127,8 +127,8 @@ class SyncEngineTest {
     fun `restore rebuilds a fresh database from the cloud`() = runBlocking {
         // Source tablet: catalog, members, one active loan, custom loan period.
         repo.setLoanPeriodDays(21)
-        repo.addBookWithCopies(title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am", copies = 2)
-        repo.addBookWithCopies(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", category = "Fiction", language = "am", copies = 1)
+        repo.addBookWithCopies(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am", copies = 2)
+        repo.addBookWithCopies(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", categoryCode = "Fiction", language = "am", copies = 1)
         val member = repo.registerMember(fullName = "Abebe Kebede")
         repo.registerMember(fullName = "Sara Tesfaye")
         val copyCode = repo.copyLabelRows().first().code
@@ -157,7 +157,7 @@ class SyncEngineTest {
 
     @Test
     fun `restore recomputes code sequences so new codes never collide`() = runBlocking {
-        repo.addBookWithCopies(title = "Oromay", author = "A", category = "C", language = "am", copies = 3)
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 3)
         repo.registerMember(fullName = "Abebe")
         repo.registerMember(fullName = "Sara")
         engine.drainOutbox()
@@ -171,7 +171,9 @@ class SyncEngineTest {
             SyncEngine(db2, cloud, clock).restore()
 
             val book = repo2.booksWithCounts("").first().single().book
-            assertEquals("B-0004", repo2.addCopy(book.id).copyCode)
+            // Copy number derives from restored data (3 copies -> next is 4),
+            // so codes never collide even without a copy counter.
+            assertEquals("C-001-4-00", repo2.addCopy(book.id).copyCode)
             assertEquals("M-0003", repo2.registerMember(fullName = "Third").memberCode)
         } finally {
             db2.close()

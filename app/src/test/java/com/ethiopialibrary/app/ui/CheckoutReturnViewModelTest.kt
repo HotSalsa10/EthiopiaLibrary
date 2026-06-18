@@ -56,7 +56,7 @@ class CheckoutReturnViewModelTest {
         runBlocking { withTimeout(5_000) { flow.first { predicate(it) } } }
 
     private fun seedCopy(title: String = "Oromay"): BookCopyEntity = runBlocking {
-        val book = repo.addBook(title = title, author = "Bealu Girma", category = "Fiction", language = "am")
+        val book = repo.addBook(title = title, author = "Bealu Girma", categoryCode = "Fiction", language = "am")
         repo.addCopy(book.id)
     }
 
@@ -149,7 +149,7 @@ class CheckoutReturnViewModelTest {
     @Test
     fun `same member can borrow several books in sequence`() {
         val book = runBlocking {
-            repo.addBookWithCopies(title = "Oromay", author = "A", category = "C", language = "am", copies = 2)
+            repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 2)
         }
         val codes = runBlocking { repo.copyLabelRows().map { it.code } }
         val member = seedMember()

@@ -44,7 +44,7 @@ class LibraryRepositoryTest {
         val book = repo.addBook(
             title = "ፍቅር እስከ መቃብር",
             author = "ሀዲስ ዓለማየሁ",
-            category = "Fiction",
+            categoryCode = "Fiction",
             language = "am",
         )
         book to (1..copies).map { repo.addCopy(book.id) }
@@ -56,18 +56,22 @@ class LibraryRepositoryTest {
     // ---------- accession / member codes ----------
 
     @Test
-    fun `copies receive sequential copy codes`() {
+    fun `copies of a book get incrementing copy numbers in the code`() {
         val (_, copies) = addBookWithCopies(2)
-        assertEquals("B-0001", copies[0].copyCode)
-        assertEquals("B-0002", copies[1].copyCode)
+        assertEquals("Fiction-001-1-00", copies[0].copyCode)
+        assertEquals("Fiction-001-2-00", copies[1].copyCode)
     }
 
     @Test
-    fun `copy code sequence continues across books`() = runBlocking {
-        addBookWithCopies(2)
-        val book2 = repo.addBook(title = "Second Book", author = "Author", category = "History", language = "en")
-        val copy3 = repo.addCopy(book2.id)
-        assertEquals("B-0003", copy3.copyCode)
+    fun `book numbers increment within a category, independently per category`() = runBlocking {
+        val first = repo.addBook(title = "A", author = "x", categoryCode = "TF", language = "am")
+        val second = repo.addBook(title = "B", author = "y", categoryCode = "TF", language = "am")
+        val other = repo.addBook(title = "C", author = "z", categoryCode = "AQ", language = "am")
+
+        assertEquals(1, first.bookNumber)
+        assertEquals(2, second.bookNumber)
+        assertEquals(1, other.bookNumber)
+        assertEquals("TF-002-1-00", repo.addCopy(second.id).copyCode)
     }
 
     @Test

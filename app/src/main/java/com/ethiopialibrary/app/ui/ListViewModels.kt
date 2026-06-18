@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiopialibrary.app.data.BookWithCounts
+import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.DashboardStats
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LibraryStatistics
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -26,18 +28,30 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
-    val books: StateFlow<List<BookWithCounts>> = _query
-        .flatMapLatest { repo.booksWithCounts(it) }
+    /** Category code to filter by; "" means show all categories. */
+    private val _categoryFilter = MutableStateFlow("")
+    val categoryFilter: StateFlow<String> = _categoryFilter.asStateFlow()
+
+    val categories: StateFlow<List<CategoryEntity>> = repo.categories()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val books: StateFlow<List<BookWithCounts>> =
+        combine(_query, _categoryFilter) { q, c -> q to c }
+            .flatMapLatest { (q, c) -> repo.booksWithCounts(q, c) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun setQuery(value: String) {
         _query.value = value
     }
 
+    fun setCategoryFilter(code: String) {
+        _categoryFilter.value = code
+    }
+
     fun addBook(
         title: String,
         author: String,
-        category: String,
+        categoryCode: String,
         language: String,
         isbn: String?,
         copies: Int,
@@ -46,12 +60,16 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
             repo.addBookWithCopies(
                 title = title,
                 author = author,
-                category = category,
+                categoryCode = categoryCode,
                 language = language,
                 isbn = isbn?.takeIf { it.isNotBlank() },
                 copies = copies,
             )
         }
+    }
+
+    fun addCategory(name: String, code: String) {
+        viewModelScope.launch { repo.addCategory(name, code) }
     }
 }
 

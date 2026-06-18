@@ -44,6 +44,7 @@ class SyncEngine(
     /** Current entity state at upload time: replaying old outbox rows is harmless. */
     private suspend fun buildPayload(entry: SyncQueueEntity): Pair<String, Map<String, Any?>>? =
         when (entry.entityType) {
+            "category" -> db.categoryDao().byId(entry.entityId)?.let { "categories" to it.toMap() }
             "book" -> db.bookDao().byId(entry.entityId)?.let { "books" to it.toMap() }
             "book_copy" -> db.bookCopyDao().byId(entry.entityId)?.let { "book_copies" to it.toMap() }
             "member" -> db.memberDao().byId(entry.entityId)?.let { "members" to it.toMap() }
@@ -58,6 +59,7 @@ class SyncEngine(
      * sequences from the restored data so new codes can never collide.
      */
     suspend fun restore(): Int {
+        val categories = cloud.fetchAll("categories").map { (id, m) -> categoryFrom(id, m) }
         val books = cloud.fetchAll("books").map { (id, m) -> bookFrom(id, m) }
         val copies = cloud.fetchAll("book_copies").map { (id, m) -> copyFrom(id, m) }
         val members = cloud.fetchAll("members").map { (id, m) -> memberFrom(id, m) }
@@ -65,6 +67,7 @@ class SyncEngine(
         val config = cloud.fetchAll("config")
 
         db.withTransaction {
+            db.categoryDao().upsertAll(categories)
             db.bookDao().upsertAll(books)
             db.bookCopyDao().upsertAll(copies)
             db.memberDao().upsertAll(members)
@@ -74,13 +77,13 @@ class SyncEngine(
             }
             recomputeSequences()
         }
-        return books.size + copies.size + members.size + loans.size
+        return categories.size + books.size + copies.size + members.size + loans.size
     }
 
+    // Book and copy numbers derive from the data itself (max + 1), so only the
+    // member code counter needs rebuilding after a restore.
     private suspend fun recomputeSequences() {
-        val nextCopy = (db.bookCopyDao().allCopyCodes().mapNotNull(::codeNumber).maxOrNull() ?: 0) + 1
         val nextMember = (db.memberDao().allMemberCodes().mapNotNull(::codeNumber).maxOrNull() ?: 0) + 1
-        db.settingsDao().put(SettingEntity(SettingKeys.NEXT_COPY_SEQ, nextCopy.toString()))
         db.settingsDao().put(SettingEntity(SettingKeys.NEXT_MEMBER_SEQ, nextMember.toString()))
     }
 

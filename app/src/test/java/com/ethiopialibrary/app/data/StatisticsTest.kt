@@ -33,8 +33,8 @@ class StatisticsTest {
 
     @Test
     fun `totals are counted`() = runBlocking {
-        repo.addBookWithCopies(title = "A", author = "x", category = "Fiction", language = "am", copies = 2)
-        repo.addBookWithCopies(title = "B", author = "y", category = "History", language = "en", copies = 1)
+        repo.addBookWithCopies(title = "A", author = "x", categoryCode = "Fiction", language = "am", copies = 2)
+        repo.addBookWithCopies(title = "B", author = "y", categoryCode = "History", language = "en", copies = 1)
         val m1 = repo.registerMember(fullName = "M1")
         repo.registerMember(fullName = "M2")
         val codes = repo.copyLabelRows().map { it.code }
@@ -52,8 +52,8 @@ class StatisticsTest {
 
     @Test
     fun `top books and members ranked by loan count`() = runBlocking {
-        repo.addBookWithCopies(title = "Popular", author = "x", category = "C", language = "am", copies = 3)
-        repo.addBookWithCopies(title = "Rare", author = "y", category = "C", language = "am", copies = 1)
+        repo.addBookWithCopies(title = "Popular", author = "x", categoryCode = "C", language = "am", copies = 3)
+        repo.addBookWithCopies(title = "Rare", author = "y", categoryCode = "C", language = "am", copies = 1)
         val heavy = repo.registerMember(fullName = "Heavy")
         val light = repo.registerMember(fullName = "Light")
         val codes = repo.copyLabelRows().map { it.code } // B-0001..3 = Popular, B-0004 = Rare
@@ -72,9 +72,9 @@ class StatisticsTest {
 
     @Test
     fun `category and language breakdowns`() = runBlocking {
-        repo.addBookWithCopies(title = "A", author = "x", category = "Fiction", language = "am", copies = 1)
-        repo.addBookWithCopies(title = "B", author = "y", category = "Fiction", language = "en", copies = 1)
-        repo.addBookWithCopies(title = "C", author = "z", category = "History", language = "am", copies = 1)
+        repo.addBookWithCopies(title = "A", author = "x", categoryCode = "Fiction", language = "am", copies = 1)
+        repo.addBookWithCopies(title = "B", author = "y", categoryCode = "Fiction", language = "en", copies = 1)
+        repo.addBookWithCopies(title = "C", author = "z", categoryCode = "History", language = "am", copies = 1)
 
         val s = repo.computeStatistics()
 
@@ -85,7 +85,7 @@ class StatisticsTest {
 
     @Test
     fun `recent activity windows split last and previous 30 days`() = runBlocking {
-        repo.addBookWithCopies(title = "A", author = "x", category = "C", language = "am", copies = 2)
+        repo.addBookWithCopies(title = "A", author = "x", categoryCode = "C", language = "am", copies = 2)
         val codes = repo.copyLabelRows().map { it.code }
         val m = repo.registerMember(fullName = "M")
         repo.checkout(codes[0], m.memberCode) // day 0
@@ -102,7 +102,7 @@ class StatisticsTest {
 
     @Test
     fun `csv contains key figures`() = runBlocking {
-        repo.addBookWithCopies(title = "A", author = "x", category = "C", language = "am", copies = 2)
+        repo.addBookWithCopies(title = "A", author = "x", categoryCode = "C", language = "am", copies = 2)
         val csv = buildStatisticsCsv(repo.computeStatistics())
         assertTrue(csv.contains("Total titles,1"))
         assertTrue(csv.contains("Total copies,2"))
