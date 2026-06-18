@@ -16,6 +16,7 @@ import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
+import com.ethiopialibrary.app.ui.StarRatingDisplay
 import java.util.Locale
 
 /**
@@ -56,6 +57,10 @@ fun BorrowingHistorySection(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                item.loan.rating?.let { rating ->
+                    Spacer(Modifier.height(4.dp))
+                    StarRatingDisplay(rating.toDouble())
                 }
             }
             Spacer(Modifier.height(8.dp))

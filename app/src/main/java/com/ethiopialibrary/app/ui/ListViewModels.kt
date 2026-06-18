@@ -87,9 +87,14 @@ class MembersViewModel(private val repo: LibraryRepository) : ViewModel() {
         _query.value = value
     }
 
-    fun addMember(fullName: String, phone: String?) {
+    fun addMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
         viewModelScope.launch {
-            repo.registerMember(fullName = fullName, phone = phone?.takeIf { it.isNotBlank() })
+            repo.registerMember(
+                fullName = fullName,
+                phone = phone?.takeIf { it.isNotBlank() },
+                nationalId = nationalId?.takeIf { it.isNotBlank() },
+                address = address?.takeIf { it.isNotBlank() },
+            )
         }
     }
 }

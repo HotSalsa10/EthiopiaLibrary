@@ -23,9 +23,11 @@ import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.CodeEntry
 import com.ethiopialibrary.app.ui.ReturnViewModel
+import com.ethiopialibrary.app.ui.StarRatingInput
 
 @Composable
 fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
@@ -46,27 +48,22 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
         }
 
         when {
+            state.returned != null && state.awaitingRating -> {
+                ReturnSuccessCard(wasOverdue = state.wasOverdue == true)
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    stringResource(R.string.rate_member_prompt),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(12.dp))
+                StarRatingInput(onRate = { vm.rateMember(it) })
+                Spacer(Modifier.height(16.dp))
+                BigOutlinedButton(stringResource(R.string.skip)) { vm.skipRating() }
+            }
+
             state.returned != null -> {
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentPadding = 20.dp,
-                ) {
-                    Text(
-                        stringResource(R.string.return_success),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    if (state.wasOverdue == true) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.return_was_overdue),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
+                ReturnSuccessCard(wasOverdue = state.wasOverdue == true)
                 Spacer(Modifier.height(16.dp))
                 BigButton(stringResource(R.string.new_return)) { vm.reset() }
             }
@@ -97,6 +94,30 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
                 BigButton(stringResource(R.string.confirm_return)) { vm.confirmReturn() }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReturnSuccessCard(wasOverdue: Boolean) {
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentPadding = 20.dp,
+    ) {
+        Text(
+            stringResource(R.string.return_success),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        if (wasOverdue) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.return_was_overdue),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

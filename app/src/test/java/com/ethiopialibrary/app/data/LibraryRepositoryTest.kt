@@ -9,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -286,6 +287,117 @@ class LibraryRepositoryTest {
         repo.renewLoan(loan.id)
 
         assertEquals(loanEntriesBefore + 1, repo.pendingSyncEntries().count { it.entityType == "loan" })
+    }
+
+    // ---------- member id + address (feature 3) ----------
+
+    @Test
+    fun `registerMember stores national id and address`() = runBlocking {
+        val member = repo.registerMember(
+            fullName = "Abebe Kebede",
+            phone = "0911121314",
+            nationalId = "ID-12345",
+            address = "Bole, Addis Ababa",
+        )
+
+        val stored = repo.memberById(member.id)!!
+        assertEquals("ID-12345", stored.nationalId)
+        assertEquals("Bole, Addis Ababa", stored.address)
+    }
+
+    @Test
+    fun `national id and address are optional`() = runBlocking {
+        val member = repo.registerMember(fullName = "No Details")
+
+        val stored = repo.memberById(member.id)!!
+        assertNull(stored.nationalId)
+        assertNull(stored.address)
+    }
+
+    // ---------- per-checkout loan period (feature 5) ----------
+
+    @Test
+    fun `checkout with explicit period overrides the default and the setting`() = runBlocking {
+        repo.setLoanPeriodDays(7)
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 30) as CheckoutResult.Success).loan
+
+        assertEquals(clock.instant().plus(30, ChronoUnit.DAYS).toEpochMilli(), loan.dueAt)
+    }
+
+    @Test
+    fun `checkout without an explicit period falls back to the setting`() = runBlocking {
+        repo.setLoanPeriodDays(10)
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        assertEquals(clock.instant().plus(10, ChronoUnit.DAYS).toEpochMilli(), loan.dueAt)
+    }
+
+    // ---------- member rating (feature 4) ----------
+
+    @Test
+    fun `rateLoan stores the rating on the loan`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val returned = (repo.returnBook(copies[0].copyCode) as ReturnResult.Success).loan
+
+        repo.rateLoan(returned.id, 4)
+
+        assertEquals(4, db.loanDao().byId(returned.id)!!.rating)
+    }
+
+    @Test
+    fun `member average rating averages every rated loan`() = runBlocking {
+        val (_, copies) = addBookWithCopies(2)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val l1 = (repo.returnBook(copies[0].copyCode) as ReturnResult.Success).loan
+        repo.checkout(copies[1].copyCode, member.memberCode)
+        val l2 = (repo.returnBook(copies[1].copyCode) as ReturnResult.Success).loan
+        repo.rateLoan(l1.id, 5)
+        repo.rateLoan(l2.id, 3)
+
+        assertEquals(4.0, repo.memberAverageRating(member.id)!!, 0.001)
+    }
+
+    @Test
+    fun `member average rating is null when no loans are rated`() = runBlocking {
+        val member = addMember()
+        assertNull(repo.memberAverageRating(member.id))
+    }
+
+    @Test
+    fun `rateLoan rejects ratings outside 1 to 5`(): Unit = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val returned = (repo.returnBook(copies[0].copyCode) as ReturnResult.Success).loan
+
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.rateLoan(returned.id, 0) }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.rateLoan(returned.id, 6) }
+        }
+    }
+
+    @Test
+    fun `rateLoan writes the loan to the sync outbox`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val returned = (repo.returnBook(copies[0].copyCode) as ReturnResult.Success).loan
+        val before = repo.pendingSyncEntries().count { it.entityType == "loan" }
+
+        repo.rateLoan(returned.id, 5)
+
+        assertEquals(before + 1, repo.pendingSyncEntries().count { it.entityType == "loan" })
     }
 
     // ---------- staff PIN ----------

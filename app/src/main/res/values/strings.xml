@@ -47,7 +47,10 @@
     <string name="add_member">አባል ጨምር</string>
     <string name="field_full_name">ሙሉ ስም</string>
     <string name="field_phone">ስልክ (አማራጭ)</string>
+    <string name="field_national_id">መታወቂያ ቁጥር (አማራጭ)</string>
+    <string name="field_address">አድራሻ (አማራጭ)</string>
     <string name="member_active_loans">የተዋሱ መጻሕፍት፦ %1$d</string>
+    <string name="member_rating">ደረጃ</string>
     <string name="suspend_member">አባል አግድ</string>
     <string name="activate_member">አባል አንቃ</string>
     <string name="member_card">የአባልነት ካርድ</string>
@@ -74,6 +77,8 @@
     <string name="return_was_overdue">ማስታወሻ፦ መጽሐፉ ዘግይቶ ተመልሷል</string>
     <string name="new_return">አዲስ መመለስ</string>
     <string name="borrowed_by">የተዋሰው፦ %1$s (%2$s)</string>
+    <string name="rate_member_prompt">አባሉን ይገምግሙ</string>
+    <string name="skip">ዝለል</string>
 
     <!-- Errors -->
     <string name="error_copy_not_found">ቅጂው አልተገኘም</string>

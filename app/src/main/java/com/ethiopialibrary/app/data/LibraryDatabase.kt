@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SyncQueueEntity::class,
         SettingEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class LibraryDatabase : RoomDatabase() {

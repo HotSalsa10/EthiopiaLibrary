@@ -80,7 +80,7 @@ class ListViewModelsTest {
     fun `members list shows loan counts and new members`() {
         val vm = MembersViewModel(repo)
 
-        vm.addMember(fullName = "Abebe Kebede", phone = "0911000000")
+        vm.addMember(fullName = "Abebe Kebede", phone = "0911000000", nationalId = null, address = null)
 
         val members = awaitValue(vm.members) { it.size == 1 }
         assertEquals("Abebe Kebede", members.single().member.fullName)

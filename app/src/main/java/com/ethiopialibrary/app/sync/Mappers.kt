@@ -89,6 +89,8 @@ internal fun MemberEntity.toMap(): Map<String, Any?> = mapOf(
     "memberCode" to memberCode,
     "fullName" to fullName,
     "phone" to phone,
+    "nationalId" to nationalId,
+    "address" to address,
     "joinedAt" to joinedAt,
     "status" to status.name,
     "notes" to notes,
@@ -102,6 +104,8 @@ internal fun memberFrom(id: String, m: Map<String, Any?>) = MemberEntity(
     memberCode = m.str("memberCode"),
     fullName = m.str("fullName"),
     phone = m.optStr("phone"),
+    nationalId = m.optStr("nationalId"),
+    address = m.optStr("address"),
     joinedAt = m.long("joinedAt"),
     status = MemberStatus.valueOf(m.str("status")),
     notes = m.optStr("notes"),
@@ -116,6 +120,7 @@ internal fun LoanEntity.toMap(): Map<String, Any?> = mapOf(
     "borrowedAt" to borrowedAt,
     "dueAt" to dueAt,
     "returnedAt" to returnedAt,
+    "rating" to rating,
     "createdAt" to createdAt,
     "updatedAt" to updatedAt,
     "isDeleted" to isDeleted,
@@ -128,6 +133,7 @@ internal fun loanFrom(id: String, m: Map<String, Any?>) = LoanEntity(
     borrowedAt = m.long("borrowedAt"),
     dueAt = m.long("dueAt"),
     returnedAt = m.optLong("returnedAt"),
+    rating = m.optInt("rating"),
     createdAt = m.long("createdAt"),
     updatedAt = m.long("updatedAt"),
     isDeleted = m.bool("isDeleted"),
@@ -136,6 +142,7 @@ internal fun loanFrom(id: String, m: Map<String, Any?>) = LoanEntity(
 private fun Map<String, Any?>.str(key: String): String = this[key] as String
 private fun Map<String, Any?>.optStr(key: String): String? = this[key] as String?
 private fun Map<String, Any?>.int(key: String): Int = (this[key] as Number).toInt()
+private fun Map<String, Any?>.optInt(key: String): Int? = (this[key] as Number?)?.toInt()
 private fun Map<String, Any?>.long(key: String): Long = (this[key] as Number).toLong()
 private fun Map<String, Any?>.optLong(key: String): Long? = (this[key] as Number?)?.toLong()
 private fun Map<String, Any?>.bool(key: String): Boolean = this[key] as? Boolean ?: false

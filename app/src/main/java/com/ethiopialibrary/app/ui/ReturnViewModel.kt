@@ -21,6 +21,9 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
         val loan: LoanWithDetails? = null,
         val returned: LoanEntity? = null,
         val wasOverdue: Boolean? = null,
+        // True after a return while staff are being prompted to rate the member.
+        // The step is skippable, so this can clear without a rating being stored.
+        val awaitingRating: Boolean = false,
         val error: ReturnUiError? = null,
     )
 
@@ -45,11 +48,31 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
         viewModelScope.launch {
             when (val result = repo.returnBook(loan.copyCode)) {
                 is ReturnResult.Success ->
-                    _state.update { it.copy(returned = result.loan, wasOverdue = result.wasOverdue) }
+                    _state.update {
+                        it.copy(
+                            returned = result.loan,
+                            wasOverdue = result.wasOverdue,
+                            awaitingRating = true,
+                        )
+                    }
                 else ->
                     _state.update { it.copy(error = ReturnUiError.NO_ACTIVE_LOAN) }
             }
         }
+    }
+
+    /** Records a 1–5 rating for the just-returned loan, then dismisses the prompt. */
+    fun rateMember(stars: Int) {
+        val loan = _state.value.returned ?: return
+        viewModelScope.launch {
+            repo.rateLoan(loan.id, stars)
+            _state.update { it.copy(awaitingRating = false) }
+        }
+    }
+
+    /** Dismisses the rating prompt without storing a rating. */
+    fun skipRating() {
+        _state.update { it.copy(awaitingRating = false) }
     }
 
     fun reset() {

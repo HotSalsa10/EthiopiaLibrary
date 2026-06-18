@@ -21,11 +21,13 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -180,6 +182,37 @@ class CheckoutReturnViewModelTest {
         assertEquals("Oromay", book.title)
     }
 
+    // ---------- per-checkout loan period (feature 5) ----------
+
+    @Test
+    fun `loan period defaults to the configured period`() {
+        runBlocking { repo.setLoanPeriodDays(21) }
+        val vm = CheckoutViewModel(repo)
+
+        val state = awaitValue(vm.state) { it.loanPeriodDays == 21 }
+        assertEquals(21, state.loanPeriodDays)
+    }
+
+    @Test
+    fun `checkout uses the chosen loan period`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.setLoanPeriod(30)
+        vm.confirm()
+
+        val state = awaitValue(vm.state) { it.completedLoan != null }
+        assertEquals(
+            clock.instant().plus(30, ChronoUnit.DAYS).toEpochMilli(),
+            state.completedLoan?.dueAt,
+        )
+    }
+
     // ---------- return ----------
 
     @Test
@@ -221,6 +254,47 @@ class CheckoutReturnViewModelTest {
         assertEquals(true, state.wasOverdue)
         runBlocking {
             assertEquals(null, repo.activeLoanDetailedForCopy(copy.copyCode))
+        }
+    }
+
+    @Test
+    fun `return prompts for a rating then records the chosen stars`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        runBlocking { repo.checkout(copy.copyCode, member.memberCode) }
+        val vm = ReturnViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.loan != null }
+        vm.confirmReturn()
+        val prompting = awaitValue(vm.state) { it.awaitingRating }
+        assertNotNull(prompting.returned)
+
+        vm.rateMember(4)
+
+        val done = awaitValue(vm.state) { !it.awaitingRating && it.returned != null }
+        runBlocking {
+            assertEquals(4, db.loanDao().byId(done.returned!!.id)?.rating)
+        }
+    }
+
+    @Test
+    fun `rating step can be skipped`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        runBlocking { repo.checkout(copy.copyCode, member.memberCode) }
+        val vm = ReturnViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.loan != null }
+        vm.confirmReturn()
+        awaitValue(vm.state) { it.awaitingRating }
+
+        vm.skipRating()
+
+        val done = awaitValue(vm.state) { !it.awaitingRating && it.returned != null }
+        runBlocking {
+            assertNull(db.loanDao().byId(done.returned!!.id)?.rating)
         }
     }
 

@@ -50,6 +50,7 @@ import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
+import com.ethiopialibrary.app.ui.StarRatingDisplay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,6 +62,10 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
     }
     val loans by repo.activeLoansForMember(memberId).collectAsStateWithLifecycle(emptyList())
     val history by repo.memberHistory(memberId).collectAsStateWithLifecycle(emptyList())
+    // Recomputes when history changes (a new return+rating re-emits the flow).
+    val avgRating by produceState<Double?>(null, memberId, history) {
+        value = repo.memberAverageRating(memberId)
+    }
     val locale = LocalConfiguration.current.locales[0]
 
     var showEdit by remember { mutableStateOf(false) }
@@ -79,7 +84,15 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
         }
         member?.let { m ->
             Text(m.memberCode, style = MaterialTheme.typography.titleLarge)
+            avgRating?.let {
+                Spacer(Modifier.height(4.dp))
+                StarRatingDisplay(it)
+            }
             m.phone?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            m.nationalId?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            m.address?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(12.dp))
 
             AppCard(modifier = Modifier.fillMaxWidth()) {
@@ -171,6 +184,8 @@ private fun EditMemberDialog(
 ) {
     var name by remember { mutableStateOf(member.fullName) }
     var phone by remember { mutableStateOf(member.phone.orEmpty()) }
+    var nationalId by remember { mutableStateOf(member.nationalId.orEmpty()) }
+    var address by remember { mutableStateOf(member.address.orEmpty()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -179,6 +194,8 @@ private fun EditMemberDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_full_name)) }, singleLine = true)
                 OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(R.string.field_phone)) }, singleLine = true)
+                OutlinedTextField(nationalId, { nationalId = it }, label = { Text(stringResource(R.string.field_national_id)) }, singleLine = true)
+                OutlinedTextField(address, { address = it }, label = { Text(stringResource(R.string.field_address)) }, singleLine = false, minLines = 2)
             }
         },
         confirmButton = {
@@ -189,6 +206,8 @@ private fun EditMemberDialog(
                         member.copy(
                             fullName = name.trim(),
                             phone = phone.trim().ifBlank { null },
+                            nationalId = nationalId.trim().ifBlank { null },
+                            address = address.trim().ifBlank { null },
                         ),
                     )
                 },
