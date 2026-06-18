@@ -25,7 +25,7 @@ class SnapshotTest {
         val db = LibraryDatabase.create(context(), "snapshot-src.db")
         val repo = LibraryRepository(db, TestClock())
         runBlocking {
-            val book = repo.addBook(title = "Title", author = "Author", category = "Fiction", language = "am")
+            val book = repo.addBook(title = "Title", author = "Author", categoryCode = "Fiction", language = "am")
             repo.addCopy(book.id)
         }
         val dest = File(context().cacheDir, "snapshot-copy.db")

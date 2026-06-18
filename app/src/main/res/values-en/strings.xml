@@ -19,6 +19,9 @@
 
     <string name="search_hint">Search…</string>
     <string name="add_book">Add book</string>
+    <string name="add_category">Add category</string>
+    <string name="category_code">Code (2 letters)</string>
+    <string name="filter_all">All</string>
     <string name="field_title">Title</string>
     <string name="field_author">Author</string>
     <string name="field_category">Category</string>
@@ -28,6 +31,7 @@
     <string name="available_of_total">%1$d of %2$d available</string>
     <string name="export_labels">Export QR labels (PDF)</string>
     <string name="add_copy">Add copy</string>
+    <string name="field_volume">Volume number (0 = single volume)</string>
     <string name="copy_status_in_service">In service</string>
     <string name="copy_status_lost">Lost</string>
     <string name="copy_status_damaged">Damaged</string>

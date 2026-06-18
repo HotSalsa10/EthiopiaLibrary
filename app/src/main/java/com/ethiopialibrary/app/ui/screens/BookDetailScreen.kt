@@ -58,6 +58,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     val history by repo.bookHistory(bookId).collectAsStateWithLifecycle(emptyList())
     val locale = LocalConfiguration.current.locales[0]
     var showEdit by remember { mutableStateOf(false) }
+    var showAddCopy by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -75,9 +76,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             b.isbn?.let { Text("ISBN: $it", style = MaterialTheme.typography.bodyMedium) }
         }
         Spacer(Modifier.height(12.dp))
-        BigButton(stringResource(R.string.add_copy)) {
-            scope.launch { repo.addCopy(bookId) }
-        }
+        BigButton(stringResource(R.string.add_copy)) { showAddCopy = true }
         Spacer(Modifier.height(16.dp))
         copies.forEach { row ->
             CopyCard(row) { status ->
@@ -104,6 +103,39 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             },
         )
     }
+
+    if (showAddCopy) {
+        AddCopyDialog(
+            onDismiss = { showAddCopy = false },
+            onSave = { volume ->
+                showAddCopy = false
+                scope.launch { repo.addCopy(bookId, volumeNumber = volume) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AddCopyDialog(onDismiss: () -> Unit, onSave: (Int) -> Unit) {
+    var volume by remember { mutableStateOf("0") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_copy)) },
+        text = {
+            OutlinedTextField(
+                value = volume,
+                onValueChange = { volume = it.filter(Char::isDigit).take(2) },
+                label = { Text(stringResource(R.string.field_volume)) },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(volume.toIntOrNull() ?: 0) }) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
@@ -114,7 +146,6 @@ private fun EditBookDialog(
 ) {
     var title by remember { mutableStateOf(book.title) }
     var author by remember { mutableStateOf(book.author) }
-    var category by remember { mutableStateOf(book.category) }
     var isbn by remember { mutableStateOf(book.isbn.orEmpty()) }
     var language by remember { mutableStateOf(book.language) }
 
@@ -128,7 +159,6 @@ private fun EditBookDialog(
             ) {
                 OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
                 OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.field_author)) }, singleLine = true)
-                OutlinedTextField(category, { category = it }, label = { Text(stringResource(R.string.field_category)) }, singleLine = true)
                 Text(stringResource(R.string.field_language), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(language == "am", { language = "am" }, label = { Text(stringResource(R.string.lang_amharic)) })
@@ -146,7 +176,6 @@ private fun EditBookDialog(
                         book.copy(
                             title = title.trim(),
                             author = author.trim(),
-                            category = category.trim(),
                             language = language,
                             isbn = isbn.trim().ifBlank { null },
                         ),

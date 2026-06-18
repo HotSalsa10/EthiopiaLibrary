@@ -8,6 +8,33 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+interface CategoryDao {
+    @Insert
+    suspend fun insert(category: CategoryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<CategoryEntity>)
+
+    @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY sortOrder, name")
+    fun all(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY sortOrder, name")
+    suspend fun allOnce(): List<CategoryEntity>
+
+    @Query("SELECT * FROM categories WHERE id = :id")
+    suspend fun byId(id: String): CategoryEntity?
+
+    @Query("SELECT * FROM categories WHERE code = :code AND isDeleted = 0")
+    suspend fun byCode(code: String): CategoryEntity?
+
+    @Query("SELECT COUNT(*) FROM categories")
+    suspend fun count(): Int
+
+    @Query("SELECT MAX(sortOrder) FROM categories")
+    suspend fun maxSortOrder(): Int?
+}
+
+@Dao
 interface BookDao {
     @Insert
     suspend fun insert(book: BookEntity)
@@ -21,9 +48,14 @@ interface BookDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<BookEntity>)
 
+    /** Highest book number used in a category, so the next is +1. Null when empty. */
+    @Query("SELECT MAX(bookNumber) FROM books WHERE categoryCode = :categoryCode AND isDeleted = 0")
+    suspend fun maxBookNumber(categoryCode: String): Int?
+
     @Query(
         """
         SELECT b.*,
+            (SELECT cat.name FROM categories cat WHERE cat.code = b.categoryCode) AS categoryName,
             (SELECT COUNT(*) FROM book_copies c
              WHERE c.bookId = b.id AND c.isDeleted = 0 AND c.status = 'IN_SERVICE') AS totalCopies,
             (SELECT COUNT(*) FROM book_copies c
@@ -34,11 +66,16 @@ interface BookDao {
                )) AS availableCopies
         FROM books b
         WHERE b.isDeleted = 0
-          AND (:query = '' OR b.title LIKE '%' || :query || '%' OR b.author LIKE '%' || :query || '%')
-        ORDER BY b.title
+          AND (:categoryCode = '' OR b.categoryCode = :categoryCode)
+          AND (:query = ''
+               OR b.title LIKE '%' || :query || '%'
+               OR b.author LIKE '%' || :query || '%'
+               OR EXISTS (SELECT 1 FROM book_copies c WHERE c.bookId = b.id
+                          AND c.isDeleted = 0 AND c.copyCode LIKE '%' || :query || '%'))
+        ORDER BY b.categoryCode, b.bookNumber
         """,
     )
-    fun withCounts(query: String): Flow<List<BookWithCounts>>
+    fun withCounts(query: String, categoryCode: String): Flow<List<BookWithCounts>>
 
     @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
     fun count(): Flow<Int>
@@ -46,7 +83,14 @@ interface BookDao {
     @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
     suspend fun titleCount(): Int
 
-    @Query("SELECT category AS label, COUNT(*) AS count FROM books WHERE isDeleted = 0 GROUP BY category ORDER BY count DESC, category")
+    @Query(
+        """
+        SELECT COALESCE((SELECT cat.name FROM categories cat WHERE cat.code = b.categoryCode), b.categoryCode) AS label,
+               COUNT(*) AS count
+        FROM books b WHERE b.isDeleted = 0
+        GROUP BY b.categoryCode ORDER BY count DESC, label
+        """,
+    )
     suspend fun categoryCounts(): List<LabelCount>
 
     @Query("SELECT language AS label, COUNT(*) AS count FROM books WHERE isDeleted = 0 GROUP BY language ORDER BY count DESC, language")
@@ -66,6 +110,10 @@ interface BookCopyDao {
 
     @Query("SELECT * FROM book_copies WHERE copyCode = :code AND isDeleted = 0")
     suspend fun byCode(code: String): BookCopyEntity?
+
+    /** Highest copy number for a book's volume, so the next copy is +1. Null when none. */
+    @Query("SELECT MAX(copyNumber) FROM book_copies WHERE bookId = :bookId AND volumeNumber = :volumeNumber AND isDeleted = 0")
+    suspend fun maxCopyNumber(bookId: String, volumeNumber: Int): Int?
 
     @Query(
         """

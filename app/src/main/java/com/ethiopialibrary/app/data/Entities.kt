@@ -13,13 +13,36 @@ enum class CopyStatus { IN_SERVICE, LOST, DAMAGED, RETIRED }
 
 enum class MemberStatus { ACTIVE, SUSPENDED }
 
-/** Bibliographic record: one row per title, regardless of physical copies. */
+/**
+ * A shelving category (e.g. التفسير / TF). The 2-letter [code] is the prefix of
+ * every book code in that category and must be unique; staff can add more.
+ */
+@Entity(
+    tableName = "categories",
+    indices = [Index(value = ["code"], unique = true)],
+)
+data class CategoryEntity(
+    @PrimaryKey val id: String,
+    val code: String,
+    val name: String,
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val isDeleted: Boolean = false,
+)
+
+/**
+ * Bibliographic record: one row per title. [categoryCode] is its category's
+ * 2-letter code and [bookNumber] is auto-assigned, unique within that category;
+ * together they form the first two parts of every copy code.
+ */
 @Entity(tableName = "books")
 data class BookEntity(
     @PrimaryKey val id: String,
     val title: String,
     val author: String,
-    val category: String,
+    val categoryCode: String,
+    val bookNumber: Int,
     val language: String,
     val isbn: String? = null,
     val notes: String? = null,
@@ -47,6 +70,8 @@ data class BookCopyEntity(
     @PrimaryKey val id: String,
     val bookId: String,
     val copyCode: String,
+    val copyNumber: Int,
+    val volumeNumber: Int,
     val shelfLocation: String? = null,
     val status: CopyStatus = CopyStatus.IN_SERVICE,
     val acquiredAt: Long,

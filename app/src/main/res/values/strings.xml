@@ -23,6 +23,9 @@
     <!-- Books -->
     <string name="search_hint">ፈልግ…</string>
     <string name="add_book">መጽሐፍ ጨምር</string>
+    <string name="add_category">ምድብ ጨምር</string>
+    <string name="category_code">ኮድ (2 ፊደላት)</string>
+    <string name="filter_all">ሁሉም</string>
     <string name="field_title">ርዕስ</string>
     <string name="field_author">ደራሲ</string>
     <string name="field_category">ምድብ</string>
@@ -32,6 +35,7 @@
     <string name="available_of_total">%1$d ከ %2$d ይገኛል</string>
     <string name="export_labels">የQR መለያዎችን አውጣ (PDF)</string>
     <string name="add_copy">ቅጂ ጨምር</string>
+    <string name="field_volume">ጥራዝ ቁጥር (0 = አንድ ጥራዝ)</string>
     <string name="copy_status_in_service">አገልግሎት ላይ</string>
     <string name="copy_status_lost">ጠፍቷል</string>
     <string name="copy_status_damaged">ተበላሽቷል</string>

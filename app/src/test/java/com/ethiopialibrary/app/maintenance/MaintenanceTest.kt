@@ -37,7 +37,7 @@ class MaintenanceTest {
         db = LibraryDatabase.create(context, "maintenance-test.db")
         runBlocking {
             LibraryRepository(db, clock).addBook(
-                title = "Oromay", author = "Bealu Girma", category = "Fiction", language = "am",
+                title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am",
             )
         }
         snapshotDir = File(context.cacheDir, "snapshots-test-${System.nanoTime()}")
@@ -112,7 +112,7 @@ class MaintenanceTest {
     fun `daily maintenance reports the number of overdue loans`() {
         runBlocking {
             val repo = LibraryRepository(db, clock)
-            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val book = repo.addBook(title = "Fiqh", author = "Author", categoryCode = "C", language = "am")
             val copy = repo.addCopy(book.id)
             val member = repo.registerMember(fullName = "Abebe")
             repo.checkout(copy.copyCode, member.memberCode)
@@ -128,7 +128,7 @@ class MaintenanceTest {
     fun `returned loans are not counted as overdue`() {
         runBlocking {
             val repo = LibraryRepository(db, clock)
-            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val book = repo.addBook(title = "Fiqh", author = "Author", categoryCode = "C", language = "am")
             val copy = repo.addCopy(book.id)
             val member = repo.registerMember(fullName = "Abebe")
             repo.checkout(copy.copyCode, member.memberCode)
@@ -145,7 +145,7 @@ class MaintenanceTest {
         shadowOf(context as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         runBlocking {
             val repo = LibraryRepository(db, clock)
-            val book = repo.addBook(title = "Fiqh", author = "Author", category = "C", language = "am")
+            val book = repo.addBook(title = "Fiqh", author = "Author", categoryCode = "C", language = "am")
             val copy = repo.addCopy(book.id)
             val member = repo.registerMember(fullName = "Abebe")
             repo.checkout(copy.copyCode, member.memberCode)

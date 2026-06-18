@@ -49,17 +49,20 @@ class LibraryRepository(
     suspend fun addBook(
         title: String,
         author: String,
-        category: String,
+        categoryCode: String,
         language: String,
         isbn: String? = null,
         notes: String? = null,
     ): BookEntity = db.withTransaction {
         val t = now()
+        // Book number is the next free one within this category.
+        val bookNumber = (db.bookDao().maxBookNumber(categoryCode) ?: 0) + 1
         val book = BookEntity(
             id = newId(),
             title = title,
             author = author,
-            category = category,
+            categoryCode = categoryCode,
+            bookNumber = bookNumber,
             language = language,
             isbn = isbn,
             notes = notes,
@@ -75,33 +78,66 @@ class LibraryRepository(
     suspend fun addBookWithCopies(
         title: String,
         author: String,
-        category: String,
+        categoryCode: String,
         language: String,
         isbn: String? = null,
         notes: String? = null,
         copies: Int,
     ): BookEntity = db.withTransaction {
-        val book = addBook(title, author, category, language, isbn, notes)
+        val book = addBook(title, author, categoryCode, language, isbn, notes)
         repeat(copies.coerceAtLeast(1)) { addCopy(book.id) }
         book
     }
 
-    suspend fun addCopy(bookId: String, shelfLocation: String? = null): BookCopyEntity =
-        db.withTransaction {
-            val t = now()
-            val copy = BookCopyEntity(
-                id = newId(),
-                bookId = bookId,
-                copyCode = "B-%04d".format(nextSequence(SettingKeys.NEXT_COPY_SEQ)),
-                shelfLocation = shelfLocation,
-                acquiredAt = t,
-                createdAt = t,
-                updatedAt = t,
-            )
-            db.bookCopyDao().insert(copy)
-            enqueueSync("book_copy", copy.id)
-            copy
-        }
+    /**
+     * Adds one physical copy. The copy number auto-increments per book+volume,
+     * so two copies never share a code; volume is 0 for a single-volume work.
+     */
+    suspend fun addCopy(
+        bookId: String,
+        volumeNumber: Int = 0,
+        shelfLocation: String? = null,
+    ): BookCopyEntity = db.withTransaction {
+        val t = now()
+        val book = db.bookDao().byId(bookId) ?: error("addCopy: book $bookId not found")
+        val copyNumber = (db.bookCopyDao().maxCopyNumber(bookId, volumeNumber) ?: 0) + 1
+        val copy = BookCopyEntity(
+            id = newId(),
+            bookId = bookId,
+            copyCode = BookCode.render(book.categoryCode, book.bookNumber, copyNumber, volumeNumber),
+            copyNumber = copyNumber,
+            volumeNumber = volumeNumber,
+            shelfLocation = shelfLocation,
+            acquiredAt = t,
+            createdAt = t,
+            updatedAt = t,
+        )
+        db.bookCopyDao().insert(copy)
+        enqueueSync("book_copy", copy.id)
+        copy
+    }
+
+    // ---------- categories ----------
+
+    fun categories(): Flow<List<CategoryEntity>> = db.categoryDao().all()
+
+    suspend fun categoryByCode(code: String): CategoryEntity? = db.categoryDao().byCode(code.trim())
+
+    /** Adds a category; [code] must be unique (its books are prefixed with it). */
+    suspend fun addCategory(name: String, code: String): CategoryEntity = db.withTransaction {
+        val t = now()
+        val category = CategoryEntity(
+            id = newId(),
+            code = code.trim().uppercase(),
+            name = name.trim(),
+            sortOrder = (db.categoryDao().maxSortOrder() ?: 0) + 1,
+            createdAt = t,
+            updatedAt = t,
+        )
+        db.categoryDao().insert(category)
+        enqueueSync("category", category.id)
+        category
+    }
 
     suspend fun registerMember(fullName: String, phone: String? = null): MemberEntity =
         db.withTransaction {
@@ -218,8 +254,8 @@ class LibraryRepository(
 
     // ---------- reactive queries for the UI ----------
 
-    fun booksWithCounts(query: String): Flow<List<BookWithCounts>> =
-        db.bookDao().withCounts(query.trim())
+    fun booksWithCounts(query: String, categoryCode: String = ""): Flow<List<BookWithCounts>> =
+        db.bookDao().withCounts(query.trim(), categoryCode)
 
     fun copiesForBook(bookId: String): Flow<List<CopyRow>> =
         db.bookCopyDao().copiesForBook(bookId)

@@ -33,7 +33,7 @@ class LimitsHistoryTest {
     fun tearDown() = db.close()
 
     private fun seedCopies(n: Int): List<String> = runBlocking {
-        repo.addBookWithCopies(title = "Oromay", author = "A", category = "Fiction", language = "am", copies = n)
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "Fiction", language = "am", copies = n)
         repo.copyLabelRows().map { it.code }
     }
 
@@ -119,7 +119,7 @@ class LimitsHistoryTest {
 
     @Test
     fun `book history shows returned loans across its copies`() = runBlocking {
-        val book = repo.addBookWithCopies(title = "Oromay", author = "A", category = "C", language = "am", copies = 2)
+        val book = repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 2)
         val codes = repo.copyLabelRows().map { it.code }
         val m = member()
         repo.checkout(codes[0], m.memberCode)

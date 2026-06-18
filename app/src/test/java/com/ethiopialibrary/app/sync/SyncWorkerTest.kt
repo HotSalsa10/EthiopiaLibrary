@@ -32,7 +32,7 @@ class SyncWorkerTest {
         val clock = TestClock()
         runBlocking {
             LibraryRepository(db, clock).addBook(
-                title = "T", author = "A", category = "C", language = "am",
+                title = "T", author = "A", categoryCode = "C", language = "am",
             )
         }
         SyncLocator.engineFactory = { SyncEngine(db, cloud, clock) }
