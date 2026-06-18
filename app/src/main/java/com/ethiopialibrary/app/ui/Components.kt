@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -248,6 +249,50 @@ fun BigOutlinedButton(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Medium,
             color = accent,
+        )
+    }
+}
+
+/** Warm amber used for rating stars, independent of the green brand palette. */
+private val StarGold = Color(0xFFF5A623)
+
+/**
+ * Tappable 1–5 star row. Each star is a generous touch target sized for a shared
+ * tablet; tapping star N reports N. Used at the return desk to rate a member.
+ */
+@Composable
+fun StarRatingInput(onRate: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        (1..5).forEach { star ->
+            val interaction = remember { MutableInteractionSource() }
+            Icon(
+                Icons.Filled.Star,
+                contentDescription = star.toString(),
+                tint = StarGold,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(50))
+                    .clickable(
+                        interactionSource = interaction,
+                        indication = ripple(color = StarGold),
+                        onClick = { onRate(star) },
+                    ),
+            )
+        }
+    }
+}
+
+/** Read-only rating: one gold star plus the value (e.g. "4.2"). */
+@Composable
+fun StarRatingDisplay(rating: Double, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Star, contentDescription = null, tint = StarGold, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            String.format(java.util.Locale.US, "%.1f", rating),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

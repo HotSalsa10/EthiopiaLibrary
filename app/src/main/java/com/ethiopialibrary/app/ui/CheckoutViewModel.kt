@@ -26,11 +26,25 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val copy: CopyWithBook? = null,
         val member: MemberEntity? = null,
         val completedLoan: LoanEntity? = null,
+        // Loan length for this checkout; prefilled from the setting, editable per loan.
+        val loanPeriodDays: Int = LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS,
         val error: CheckoutUiError? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val configured = repo.loanPeriodDays()
+            _state.update { it.copy(loanPeriodDays = configured) }
+        }
+    }
+
+    /** Staff override of the loan length for the current checkout. */
+    fun setLoanPeriod(days: Int) {
+        _state.update { it.copy(loanPeriodDays = days.coerceAtLeast(1)) }
+    }
 
     fun submitCopyCode(code: String) {
         viewModelScope.launch {
@@ -69,7 +83,8 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val copy = snapshot.copy ?: return
         val member = snapshot.member ?: return
         viewModelScope.launch {
-            val error = when (val result = repo.checkout(copy.copy.copyCode, member.memberCode)) {
+            val period = snapshot.loanPeriodDays
+            val error = when (val result = repo.checkout(copy.copy.copyCode, member.memberCode, period)) {
                 is CheckoutResult.Success -> {
                     _state.update { it.copy(completedLoan = result.loan, error = null) }
                     return@launch
@@ -85,11 +100,12 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     fun reset() {
-        _state.value = UiState()
+        // Keep the loaded loan-period default so staff don't re-discover it.
+        _state.update { UiState(loanPeriodDays = it.loanPeriodDays) }
     }
 
     /** Desk speed: keep the member locked in and just scan the next book. */
     fun startAnotherForSameMember() {
-        _state.update { UiState(member = it.member) }
+        _state.update { UiState(member = it.member, loanPeriodDays = it.loanPeriodDays) }
     }
 }

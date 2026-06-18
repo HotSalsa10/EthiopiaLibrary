@@ -90,6 +90,9 @@ data class MemberEntity(
     val memberCode: String,
     val fullName: String,
     val phone: String? = null,
+    // National ID and address are optional free text captured at registration.
+    val nationalId: String? = null,
+    val address: String? = null,
     val joinedAt: Long,
     val status: MemberStatus = MemberStatus.ACTIVE,
     val notes: String? = null,
@@ -129,6 +132,9 @@ data class LoanEntity(
     val borrowedAt: Long,
     val dueAt: Long,
     val returnedAt: Long? = null,
+    // Staff's 1–5 rating of how the member handled this loan, set at return.
+    // Null means not rated (the rating step is skippable).
+    val rating: Int? = null,
     val createdAt: Long,
     val updatedAt: Long,
     val isDeleted: Boolean = false,

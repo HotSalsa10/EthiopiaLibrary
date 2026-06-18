@@ -156,6 +156,39 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `member id, address and loan rating survive backup and restore`() = runBlocking {
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "Fiction", language = "am", copies = 1)
+        val copyCode = repo.copyLabelRows().single().code
+        val member = repo.registerMember(
+            fullName = "Abebe Kebede",
+            phone = null,
+            nationalId = "ID-7",
+            address = "Bole, Addis Ababa",
+        )
+        repo.checkout(copyCode, member.memberCode)
+        val loanId = repo.activeLoanDetailedForCopy(copyCode)!!.loan.id
+        repo.returnBook(copyCode)
+        repo.rateLoan(loanId, 5)
+        engine.drainOutbox()
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db2 = Room.inMemoryDatabaseBuilder(context, LibraryDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val repo2 = LibraryRepository(db2, clock)
+        try {
+            SyncEngine(db2, cloud, clock).restore()
+
+            val restored = repo2.memberByCode(member.memberCode)!!
+            assertEquals("ID-7", restored.nationalId)
+            assertEquals("Bole, Addis Ababa", restored.address)
+            assertEquals(5.0, repo2.memberAverageRating(restored.id)!!, 0.001)
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
     fun `restore recomputes code sequences so new codes never collide`() = runBlocking {
         repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 3)
         repo.registerMember(fullName = "Abebe")

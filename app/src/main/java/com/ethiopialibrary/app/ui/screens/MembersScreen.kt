@@ -104,8 +104,8 @@ fun MembersScreen(
     if (showAdd) {
         AddMemberDialog(
             onDismiss = { showAdd = false },
-            onSave = { name, phone ->
-                vm.addMember(name, phone)
+            onSave = { name, phone, nationalId, address ->
+                vm.addMember(name, phone, nationalId, address)
                 showAdd = false
             },
         )
@@ -113,9 +113,14 @@ fun MembersScreen(
 }
 
 @Composable
-private fun AddMemberDialog(onDismiss: () -> Unit, onSave: (String, String?) -> Unit) {
+private fun AddMemberDialog(
+    onDismiss: () -> Unit,
+    onSave: (name: String, phone: String?, nationalId: String?, address: String?) -> Unit,
+) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var nationalId by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -124,12 +129,21 @@ private fun AddMemberDialog(onDismiss: () -> Unit, onSave: (String, String?) -> 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_full_name)) }, singleLine = true)
                 OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(R.string.field_phone)) }, singleLine = true)
+                OutlinedTextField(nationalId, { nationalId = it }, label = { Text(stringResource(R.string.field_national_id)) }, singleLine = true)
+                OutlinedTextField(address, { address = it }, label = { Text(stringResource(R.string.field_address)) }, singleLine = false, minLines = 2)
             }
         },
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
-                onClick = { onSave(name.trim(), phone.trim().ifBlank { null }) },
+                onClick = {
+                    onSave(
+                        name.trim(),
+                        phone.trim().ifBlank { null },
+                        nationalId.trim().ifBlank { null },
+                        address.trim().ifBlank { null },
+                    )
+                },
             ) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {

@@ -139,7 +139,12 @@ class LibraryRepository(
         category
     }
 
-    suspend fun registerMember(fullName: String, phone: String? = null): MemberEntity =
+    suspend fun registerMember(
+        fullName: String,
+        phone: String? = null,
+        nationalId: String? = null,
+        address: String? = null,
+    ): MemberEntity =
         db.withTransaction {
             val t = now()
             val member = MemberEntity(
@@ -147,6 +152,8 @@ class LibraryRepository(
                 memberCode = "M-%04d".format(nextSequence(SettingKeys.NEXT_MEMBER_SEQ)),
                 fullName = fullName,
                 phone = phone,
+                nationalId = nationalId,
+                address = address,
                 joinedAt = t,
                 createdAt = t,
                 updatedAt = t,
@@ -179,7 +186,15 @@ class LibraryRepository(
         }
     }
 
-    suspend fun checkout(copyCode: String, memberCode: String): CheckoutResult =
+    /**
+     * [periodDays] lets staff override the loan length for this one checkout;
+     * null (or non-positive) falls back to the configured setting / default.
+     */
+    suspend fun checkout(
+        copyCode: String,
+        memberCode: String,
+        periodDays: Int? = null,
+    ): CheckoutResult =
         db.withTransaction {
             val copy = db.bookCopyDao().byCode(copyCode)
                 ?: return@withTransaction CheckoutResult.CopyNotFound
@@ -199,14 +214,15 @@ class LibraryRepository(
                 return@withTransaction CheckoutResult.LimitReached
             }
             val t = now()
-            val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
+            val effectivePeriod = periodDays?.takeIf { it > 0 }
+                ?: db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
                 ?: DEFAULT_LOAN_PERIOD_DAYS
             val loan = LoanEntity(
                 id = newId(),
                 copyId = copy.id,
                 memberId = member.id,
                 borrowedAt = t,
-                dueAt = t + periodDays * MILLIS_PER_DAY,
+                dueAt = t + effectivePeriod * MILLIS_PER_DAY,
                 createdAt = t,
                 updatedAt = t,
             )
@@ -227,6 +243,22 @@ class LibraryRepository(
             enqueueSync("loan", returned.id)
             ReturnResult.Success(returned, wasOverdue = t > active.dueAt)
         }
+
+    /**
+     * Records the staff's 1–5 rating of how a member handled a loan (set at the
+     * return desk; the step is skippable, so this is only called when they pick).
+     */
+    suspend fun rateLoan(loanId: String, rating: Int) {
+        require(rating in 1..5) { "rating must be 1..5, was $rating" }
+        db.withTransaction {
+            val loan = db.loanDao().byId(loanId) ?: return@withTransaction
+            db.loanDao().update(loan.copy(rating = rating, updatedAt = now()))
+            enqueueSync("loan", loanId)
+        }
+    }
+
+    suspend fun memberAverageRating(memberId: String): Double? =
+        db.loanDao().averageRatingForMember(memberId)
 
     /** "Can I keep it another week?" - extends the due date from today. */
     suspend fun renewLoan(loanId: String): RenewResult =

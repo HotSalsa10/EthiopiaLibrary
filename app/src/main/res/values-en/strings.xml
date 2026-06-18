@@ -42,7 +42,10 @@
     <string name="add_member">Add member</string>
     <string name="field_full_name">Full name</string>
     <string name="field_phone">Phone (optional)</string>
+    <string name="field_national_id">ID number (optional)</string>
+    <string name="field_address">Address (optional)</string>
     <string name="member_active_loans">Books on loan: %1$d</string>
+    <string name="member_rating">Rating</string>
     <string name="suspend_member">Suspend member</string>
     <string name="activate_member">Activate member</string>
     <string name="member_card">Membership card</string>
@@ -67,6 +70,8 @@
     <string name="return_was_overdue">Note: this book was returned late</string>
     <string name="new_return">New return</string>
     <string name="borrowed_by">Borrowed by: %1$s (%2$s)</string>
+    <string name="rate_member_prompt">Rate the member</string>
+    <string name="skip">Skip</string>
 
     <string name="error_copy_not_found">Copy not found</string>
     <string name="error_copy_not_available">Copy is not available</string>
