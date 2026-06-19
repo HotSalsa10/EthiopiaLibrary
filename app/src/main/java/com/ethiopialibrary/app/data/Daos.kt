@@ -185,6 +185,27 @@ interface BookCopyDao {
     )
     fun search(query: String): Flow<List<CopyWithBook>>
 
+    /**
+     * Return search: only copies with an active loan (the ones that can be
+     * returned), matched on book title/author or copy code.
+     */
+    @Query(
+        """
+        SELECT c.*, b.title AS bookTitle, b.author AS bookAuthor, 1 AS onLoan
+        FROM book_copies c
+        JOIN books b ON b.id = c.bookId
+        WHERE c.isDeleted = 0 AND b.isDeleted = 0
+          AND EXISTS(SELECT 1 FROM loans l
+                     WHERE l.copyId = c.id AND l.returnedAt IS NULL AND l.isDeleted = 0)
+          AND (b.title LIKE '%' || :query || '%'
+               OR b.author LIKE '%' || :query || '%'
+               OR c.copyCode LIKE '%' || :query || '%')
+        ORDER BY b.title, c.copyCode
+        LIMIT 50
+        """,
+    )
+    fun searchOnLoan(query: String): Flow<List<CopyWithBook>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<BookCopyEntity>)
 

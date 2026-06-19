@@ -322,6 +322,10 @@ class LibraryRepository(
     fun searchCopies(query: String): Flow<List<CopyWithBook>> =
         db.bookCopyDao().search(query.trim())
 
+    /** Return search by book title/author/copy code; only copies currently on loan. */
+    fun searchOnLoanCopies(query: String): Flow<List<CopyWithBook>> =
+        db.bookCopyDao().searchOnLoan(query.trim())
+
     suspend fun memberByCode(code: String): MemberEntity? =
         db.memberDao().byCode(code.trim())
 
