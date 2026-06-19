@@ -164,6 +164,27 @@ interface BookCopyDao {
     )
     suspend fun labelRows(): List<LabelRow>
 
+    /**
+     * Checkout search: every matching copy with its book and live loan status, so
+     * staff can find a copy by book title/author when they don't have the code.
+     */
+    @Query(
+        """
+        SELECT c.*, b.title AS bookTitle, b.author AS bookAuthor,
+            EXISTS(SELECT 1 FROM loans l
+                   WHERE l.copyId = c.id AND l.returnedAt IS NULL AND l.isDeleted = 0) AS onLoan
+        FROM book_copies c
+        JOIN books b ON b.id = c.bookId
+        WHERE c.isDeleted = 0 AND b.isDeleted = 0
+          AND (b.title LIKE '%' || :query || '%'
+               OR b.author LIKE '%' || :query || '%'
+               OR c.copyCode LIKE '%' || :query || '%')
+        ORDER BY b.title, c.copyCode
+        LIMIT 50
+        """,
+    )
+    fun search(query: String): Flow<List<CopyWithBook>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<BookCopyEntity>)
 

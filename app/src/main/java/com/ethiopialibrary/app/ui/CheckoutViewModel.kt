@@ -9,13 +9,19 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanEntity
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.data.MemberStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Checkout desk flow: scan/type copy -> scan/type member -> confirm. */
+/** Checkout desk flow: search/scan copy -> scan/type member -> confirm. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     enum class CheckoutUiError {
@@ -34,11 +40,23 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
+    // Copy-finder search (first step): type a book name/author/code, pick a copy.
+    private val _copyQuery = MutableStateFlow("")
+    val copyQuery: StateFlow<String> = _copyQuery.asStateFlow()
+
+    val copyResults: StateFlow<List<CopyWithBook>> = _copyQuery
+        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else repo.searchCopies(q) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     init {
         viewModelScope.launch {
             val configured = repo.loanPeriodDays()
             _state.update { it.copy(loanPeriodDays = configured) }
         }
+    }
+
+    fun setCopyQuery(value: String) {
+        _copyQuery.value = value
     }
 
     /** Staff override of the loan length for the current checkout. */
@@ -102,10 +120,12 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     fun reset() {
         // Keep the loaded loan-period default so staff don't re-discover it.
         _state.update { UiState(loanPeriodDays = it.loanPeriodDays) }
+        _copyQuery.value = ""
     }
 
     /** Desk speed: keep the member locked in and just scan the next book. */
     fun startAnotherForSameMember() {
         _state.update { UiState(member = it.member, loanPeriodDays = it.loanPeriodDays) }
+        _copyQuery.value = ""
     }
 }

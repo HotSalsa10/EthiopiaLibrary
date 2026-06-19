@@ -318,6 +318,10 @@ class LibraryRepository(
     suspend fun copyWithBook(copyCode: String): CopyWithBook? =
         db.bookCopyDao().withBook(copyCode.trim())
 
+    /** Checkout search by book title/author/copy code; all matches with loan status. */
+    fun searchCopies(query: String): Flow<List<CopyWithBook>> =
+        db.bookCopyDao().search(query.trim())
+
     suspend fun memberByCode(code: String): MemberEntity? =
         db.memberDao().byCode(code.trim())
 
