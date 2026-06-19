@@ -295,8 +295,9 @@ class LibraryRepository(
     fun membersWithLoanCounts(query: String): Flow<List<MemberWithLoanCount>> =
         db.memberDao().withLoanCounts(query.trim())
 
-    fun overdueLoansDetailed(): Flow<List<LoanWithDetails>> =
-        db.loanDao().overdueDetailed(now())
+    /** Overdue loans for the dashboard; [query] filters by book/member/code (blank = all). */
+    fun overdueLoansDetailed(query: String = ""): Flow<List<LoanWithDetails>> =
+        db.loanDao().overdueDetailedFiltered(now(), query.trim())
 
     fun activeLoansForMember(memberId: String): Flow<List<LoanWithDetails>> =
         db.loanDao().activeForMemberDetailed(memberId)

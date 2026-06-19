@@ -276,6 +276,11 @@ interface LoanDao {
     @Query("SELECT * FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0 ORDER BY dueAt")
     suspend fun overdue(now: Long): List<LoanEntity>
 
+    /**
+     * Overdue loans for the dashboard. [query] blank returns all; otherwise filters
+     * by book title/author, copy code, or member name/code so staff can find an
+     * overdue item by the book or by who has it.
+     */
     @Query(
         """
         SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
@@ -285,10 +290,16 @@ interface LoanDao {
         JOIN books b ON b.id = c.bookId
         JOIN members m ON m.id = l.memberId
         WHERE l.returnedAt IS NULL AND l.dueAt < :now AND l.isDeleted = 0
+          AND (:query = ''
+               OR b.title LIKE '%' || :query || '%'
+               OR b.author LIKE '%' || :query || '%'
+               OR c.copyCode LIKE '%' || :query || '%'
+               OR m.fullName LIKE '%' || :query || '%'
+               OR m.memberCode LIKE '%' || :query || '%')
         ORDER BY l.dueAt
         """,
     )
-    fun overdueDetailed(now: Long): Flow<List<LoanWithDetails>>
+    fun overdueDetailedFiltered(now: Long, query: String): Flow<List<LoanWithDetails>>
 
     @Query(
         """
