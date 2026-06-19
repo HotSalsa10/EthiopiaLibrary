@@ -117,6 +117,26 @@ class DataQueriesTest {
     }
 
     @Test
+    fun `overdue details can be filtered by book, member, author, or code`() = runBlocking {
+        val oromay = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
+        val fiqir = repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", categoryCode = "Fiction", language = "am")
+        val c1 = repo.addCopy(oromay.id)
+        val c2 = repo.addCopy(fiqir.id)
+        val abebe = repo.registerMember(fullName = "Abebe Kebede")
+        val sara = repo.registerMember(fullName = "Sara Tesfaye")
+        repo.checkout(c1.copyCode, abebe.memberCode)
+        repo.checkout(c2.copyCode, sara.memberCode)
+        clock.advanceDays(20)
+
+        assertEquals(2, repo.overdueLoansDetailed().first().size)
+        assertEquals(c1.copyCode, repo.overdueLoansDetailed("Oromay").first().single().copyCode)
+        assertEquals(c2.copyCode, repo.overdueLoansDetailed("Sara").first().single().copyCode)
+        assertEquals(c1.copyCode, repo.overdueLoansDetailed("Bealu").first().single().copyCode)
+        assertEquals(c2.copyCode, repo.overdueLoansDetailed(c2.copyCode).first().single().copyCode)
+        assertTrue(repo.overdueLoansDetailed("zzzzz").first().isEmpty())
+    }
+
+    @Test
     fun `active loans for member are detailed`() = runBlocking {
         val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(book.id)

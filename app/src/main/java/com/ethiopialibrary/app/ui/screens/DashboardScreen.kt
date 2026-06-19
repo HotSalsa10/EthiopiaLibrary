@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
@@ -78,6 +79,7 @@ fun DashboardScreen(
 ) {
     val stats by vm.stats.collectAsStateWithLifecycle()
     val overdue by vm.overdue.collectAsStateWithLifecycle()
+    val overdueQuery by vm.overdueQuery.collectAsStateWithLifecycle()
     val dueSoon by vm.dueSoon.collectAsStateWithLifecycle()
     val pendingSync by vm.pendingSync.collectAsStateWithLifecycle()
     val lastBackupAt by vm.lastBackupAt.collectAsStateWithLifecycle()
@@ -185,12 +187,24 @@ fun DashboardScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-        // Overdue section
+        // Overdue section. The filter appears once there are overdue loans (or a
+        // query is active); an empty result then means "no match" rather than none.
         SectionHeader(stringResource(R.string.overdue_title))
         Spacer(Modifier.height(12.dp))
+        val showOverdueFilter = overdue.isNotEmpty() || overdueQuery.isNotBlank()
+        if (showOverdueFilter) {
+            OutlinedTextField(
+                value = overdueQuery,
+                onValueChange = vm::setOverdueQuery,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.search_hint)) },
+                singleLine = true,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         if (overdue.isEmpty()) {
             Text(
-                stringResource(R.string.no_overdue),
+                stringResource(if (showOverdueFilter) R.string.no_data else R.string.no_overdue),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

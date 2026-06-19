@@ -107,6 +107,28 @@ class ListViewModelsTest {
     }
 
     @Test
+    fun `dashboard overdue filter narrows the list by book or member`() {
+        runBlocking {
+            val oromay = repo.addBook(title = "Oromay", author = "Bealu", categoryCode = "C", language = "am")
+            val fiqir = repo.addBook(title = "Fiqir", author = "Haddis", categoryCode = "C", language = "am")
+            val c1 = repo.addCopy(oromay.id)
+            val c2 = repo.addCopy(fiqir.id)
+            val abebe = repo.registerMember(fullName = "Abebe")
+            val sara = repo.registerMember(fullName = "Sara")
+            repo.checkout(c1.copyCode, abebe.memberCode)
+            repo.checkout(c2.copyCode, sara.memberCode)
+            clock.advanceDays(20)
+        }
+        val vm = DashboardViewModel(repo)
+        awaitValue(vm.overdue) { it.size == 2 }
+
+        vm.setOverdueQuery("Sara")
+
+        val filtered = awaitValue(vm.overdue) { it.size == 1 }
+        assertEquals("Fiqir", filtered.single().bookTitle)
+    }
+
+    @Test
     fun `dashboard exposes backup status`() {
         runBlocking {
             repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")

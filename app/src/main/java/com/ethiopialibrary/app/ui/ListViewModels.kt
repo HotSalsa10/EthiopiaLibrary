@@ -99,13 +99,23 @@ class MembersViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 }
 
-class DashboardViewModel(repo: LibraryRepository) : ViewModel() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     val stats: StateFlow<DashboardStats?> = repo.dashboardStats()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val overdue: StateFlow<List<LoanWithDetails>> = repo.overdueLoansDetailed()
+    /** Free-text filter for the overdue list: book title/author, copy code, or member. */
+    private val _overdueQuery = MutableStateFlow("")
+    val overdueQuery: StateFlow<String> = _overdueQuery.asStateFlow()
+
+    val overdue: StateFlow<List<LoanWithDetails>> = _overdueQuery
+        .flatMapLatest { q -> repo.overdueLoansDetailed(q) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun setOverdueQuery(value: String) {
+        _overdueQuery.value = value
+    }
 
     /** Loans falling due within the configured window (not yet overdue). */
     val dueSoon: StateFlow<List<LoanWithDetails>> = flow { emitAll(repo.dueSoonLoans()) }
