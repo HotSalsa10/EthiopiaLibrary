@@ -53,6 +53,7 @@
 
     <string name="checkout_title">Check out a book</string>
     <string name="enter_copy_code">Enter copy code (e.g. B-0001)</string>
+    <string name="search_copy_hint">Search book name, author, or code</string>
     <string name="enter_member_code">Enter member code (e.g. M-0001)</string>
     <string name="find">Find</string>
     <string name="scan">Scan</string>

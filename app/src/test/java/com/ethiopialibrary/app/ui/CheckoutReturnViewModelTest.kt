@@ -182,6 +182,26 @@ class CheckoutReturnViewModelTest {
         assertEquals("Oromay", book.title)
     }
 
+    // ---------- copy search on checkout (name search) ----------
+
+    @Test
+    fun `copy search lists matching copies and selecting one advances to member step`() {
+        runBlocking {
+            repo.addBookWithCopies(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am", copies = 2)
+        }
+        val codes = runBlocking { repo.copyLabelRows().map { it.code } }
+        val vm = CheckoutViewModel(repo)
+
+        vm.setCopyQuery("Oromay")
+        val results = awaitValue(vm.copyResults) { it.size == 2 }
+        assertEquals(2, results.size)
+
+        vm.submitCopyCode(codes[0])
+
+        val state = awaitValue(vm.state) { it.copy != null }
+        assertEquals(codes[0], state.copy?.copy?.copyCode)
+    }
+
     // ---------- per-checkout loan period (feature 5) ----------
 
     @Test

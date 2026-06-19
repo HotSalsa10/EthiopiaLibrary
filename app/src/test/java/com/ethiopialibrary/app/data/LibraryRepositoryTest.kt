@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -398,6 +399,35 @@ class LibraryRepositoryTest {
         repo.rateLoan(returned.id, 5)
 
         assertEquals(before + 1, repo.pendingSyncEntries().count { it.entityType == "loan" })
+    }
+
+    // ---------- copy search for checkout (name search) ----------
+
+    @Test
+    fun `searchCopies matches by title, author, and code with loan status`() = runBlocking {
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
+        val c1 = repo.addCopy(book.id)
+        val c2 = repo.addCopy(book.id)
+        val member = addMember()
+        repo.checkout(c1.copyCode, member.memberCode)
+
+        val byTitle = repo.searchCopies("Oromay").first()
+        assertEquals(2, byTitle.size)
+        assertTrue(byTitle.first { it.copy.copyCode == c1.copyCode }.onLoan)
+        assertFalse(byTitle.first { it.copy.copyCode == c2.copyCode }.onLoan)
+
+        assertEquals(2, repo.searchCopies("Bealu").first().size)
+
+        val byCode = repo.searchCopies(c2.copyCode).first()
+        assertEquals(1, byCode.size)
+        assertEquals(c2.copyCode, byCode.single().copy.copyCode)
+    }
+
+    @Test
+    fun `searchCopies returns nothing when nothing matches`() = runBlocking {
+        val book = repo.addBook(title = "Oromay", author = "A", categoryCode = "Fiction", language = "am")
+        repo.addCopy(book.id)
+        assertTrue(repo.searchCopies("zzzzz").first().isEmpty())
     }
 
     // ---------- staff PIN ----------

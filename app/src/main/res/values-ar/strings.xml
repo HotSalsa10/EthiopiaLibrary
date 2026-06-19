@@ -53,6 +53,7 @@
 
     <string name="checkout_title">إعارة كتاب</string>
     <string name="enter_copy_code">أدخل رمز النسخة (مثال B-0001)</string>
+    <string name="search_copy_hint">ابحث بالاسم أو المؤلف أو الرمز</string>
     <string name="enter_member_code">أدخل رمز العضو (مثال M-0001)</string>
     <string name="find">بحث</string>
     <string name="scan">مسح</string>
