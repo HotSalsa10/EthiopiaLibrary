@@ -250,6 +250,23 @@ class CheckoutReturnViewModelTest {
     }
 
     @Test
+    fun `return search lists on-loan copies and selecting one shows the loan`() {
+        val copy = seedCopy(title = "Fiqir Eske Meqabir")
+        val member = seedMember()
+        runBlocking { repo.checkout(copy.copyCode, member.memberCode) }
+        val vm = ReturnViewModel(repo)
+
+        vm.setCopyQuery("Fiqir")
+        val results = awaitValue(vm.copyResults) { it.isNotEmpty() }
+        assertEquals(copy.copyCode, results.single().copy.copyCode)
+
+        vm.submitCopyCode(copy.copyCode)
+
+        val state = awaitValue(vm.state) { it.loan != null }
+        assertEquals("Fiqir Eske Meqabir", state.loan?.bookTitle)
+    }
+
+    @Test
     fun `copy without active loan sets error`() {
         val copy = seedCopy()
         val vm = ReturnViewModel(repo)

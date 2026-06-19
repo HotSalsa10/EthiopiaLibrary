@@ -2,17 +2,24 @@ package com.ethiopialibrary.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiopialibrary.app.data.CopyWithBook
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanEntity
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.ReturnResult
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Return desk flow: scan/type copy -> confirm return. */
+/** Return desk flow: search/scan copy -> confirm return -> rate member. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     enum class ReturnUiError { NO_ACTIVE_LOAN }
@@ -29,6 +36,19 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    // Copy-finder search (first step): type a book name/author/code, pick a copy
+    // that is currently on loan to return it.
+    private val _copyQuery = MutableStateFlow("")
+    val copyQuery: StateFlow<String> = _copyQuery.asStateFlow()
+
+    val copyResults: StateFlow<List<CopyWithBook>> = _copyQuery
+        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else repo.searchOnLoanCopies(q) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun setCopyQuery(value: String) {
+        _copyQuery.value = value
+    }
 
     fun submitCopyCode(code: String) {
         viewModelScope.launch {
@@ -77,5 +97,6 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     fun reset() {
         _state.value = UiState()
+        _copyQuery.value = ""
     }
 }

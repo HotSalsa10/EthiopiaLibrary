@@ -430,6 +430,25 @@ class LibraryRepositoryTest {
         assertTrue(repo.searchCopies("zzzzz").first().isEmpty())
     }
 
+    @Test
+    fun `searchOnLoanCopies returns only copies currently on loan, matched by name or code`() = runBlocking {
+        val book = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
+        val c1 = repo.addCopy(book.id)
+        val c2 = repo.addCopy(book.id)
+        val member = addMember()
+        repo.checkout(c1.copyCode, member.memberCode)
+
+        val byTitle = repo.searchOnLoanCopies("Oromay").first()
+        assertEquals(1, byTitle.size)
+        assertEquals(c1.copyCode, byTitle.single().copy.copyCode)
+        assertTrue(byTitle.single().onLoan)
+
+        assertEquals(1, repo.searchOnLoanCopies("Bealu").first().size)
+        assertEquals(1, repo.searchOnLoanCopies(c1.copyCode).first().size)
+        // c2 is not on loan, so searching its code returns nothing
+        assertTrue(repo.searchOnLoanCopies(c2.copyCode).first().isEmpty())
+    }
+
     // ---------- staff PIN ----------
 
     @Test

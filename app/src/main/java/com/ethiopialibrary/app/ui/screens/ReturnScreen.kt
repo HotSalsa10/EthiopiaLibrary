@@ -25,13 +25,14 @@ import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.LocalCalendarMode
-import com.ethiopialibrary.app.ui.CodeEntry
 import com.ethiopialibrary.app.ui.ReturnViewModel
 import com.ethiopialibrary.app.ui.StarRatingInput
 
 @Composable
 fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val copyQuery by vm.copyQuery.collectAsStateWithLifecycle()
+    val copyResults by vm.copyResults.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
 
     Column(
@@ -69,7 +70,14 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
             }
 
             state.loan == null -> {
-                CodeEntry(stringResource(R.string.enter_copy_code), vm::submitCopyCode)
+                CopyPickerStep(
+                    query = copyQuery,
+                    results = copyResults,
+                    onQueryChange = vm::setCopyQuery,
+                    onPick = vm::submitCopyCode,
+                    // Return: only copies currently on loan are shown and selectable.
+                    selectable = { it.onLoan },
+                )
             }
 
             else -> {
