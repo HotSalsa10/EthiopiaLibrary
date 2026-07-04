@@ -16,6 +16,10 @@ class SyncEngine(
     private val cloud: CloudStore,
     private val clock: Clock,
 ) {
+    companion object {
+        /** [SettingKeys.LAST_SYNC_RESULT] value after a successful backup or restore. */
+        const val RESULT_OK = "ok"
+    }
 
     /**
      * Uploads pending outbox entries in write order. Stops at the first
@@ -34,10 +38,12 @@ class SyncEngine(
                 uploaded++
             } catch (e: Exception) {
                 db.syncQueueDao().recordAttempt(entry.localId)
+                recordResult("error:${e.javaClass.simpleName}")
                 return SyncResult.Failure(uploaded, e.message)
             }
         }
         db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
+        recordResult(RESULT_OK)
         return SyncResult.Success(uploaded)
     }
 
@@ -76,8 +82,16 @@ class SyncEngine(
                 (data["value"] as? String)?.let { db.settingsDao().put(SettingEntity(key, it)) }
             }
             recomputeSequences()
+            // A freshly restored tablet IS in sync with the cloud - stamp the
+            // status so the dashboard doesn't claim "never backed up".
+            db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
+            recordResult(RESULT_OK)
         }
         return categories.size + books.size + copies.size + members.size + loans.size
+    }
+
+    private suspend fun recordResult(value: String) {
+        db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_RESULT, value))
     }
 
     // Book and copy numbers derive from the data itself (max + 1), so only the

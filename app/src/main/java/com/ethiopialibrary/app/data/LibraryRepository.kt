@@ -355,6 +355,14 @@ class LibraryRepository(
     fun lastSyncAt(): Flow<Long?> =
         db.settingsDao().watch(SettingKeys.LAST_SYNC_AT).map { it?.toLongOrNull() }
 
+    /** Outcome of the most recent backup or restore: "ok", "error:<type>", or null if never run. */
+    fun lastSyncResult(): Flow<String?> =
+        db.settingsDao().watch(SettingKeys.LAST_SYNC_RESULT)
+
+    /** When the oldest un-backed-up change was made; null when everything is synced. */
+    fun oldestPendingSince(): Flow<Long?> =
+        db.syncQueueDao().oldestPendingCreatedAt()
+
     // ---------- borrowing limit, due-soon, history, statistics ----------
 
     suspend fun maxBooksPerMember(): Int =

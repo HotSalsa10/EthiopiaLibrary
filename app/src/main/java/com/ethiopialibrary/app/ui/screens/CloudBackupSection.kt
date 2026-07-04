@@ -23,9 +23,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.sync.SyncEngine
 import com.ethiopialibrary.app.sync.SyncLocator
 import com.ethiopialibrary.app.sync.SyncWorker
+import com.ethiopialibrary.app.sync.restoreFailureMessageRes
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.SectionHeader
@@ -38,7 +42,7 @@ import kotlinx.coroutines.launch
  * Thin glue over FirebaseAuth/WorkManager; the engine itself is unit-tested.
  */
 @Composable
-fun CloudBackupSection() {
+fun CloudBackupSection(repo: LibraryRepository) {
     val context = LocalContext.current
 
     SectionHeader(stringResource(R.string.cloud_backup))
@@ -92,8 +96,12 @@ fun CloudBackupSection() {
     } else {
         val scope = rememberCoroutineScope()
         var showRestoreConfirm by remember { mutableStateOf(false) }
+        val lastResult by repo.lastSyncResult().collectAsStateWithLifecycle(null)
+        val backingUp by remember { SyncWorker.isBackupRunning(context) }
+            .collectAsStateWithLifecycle(false)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(user?.email.orEmpty(), style = MaterialTheme.typography.bodyLarge)
+            BackupStatusLine(lastResult, backingUp)
             BigButton(stringResource(R.string.backup_now)) {
                 SyncWorker.backupNow(context)
                 Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
@@ -101,6 +109,11 @@ fun CloudBackupSection() {
             BigOutlinedButton(stringResource(R.string.restore_from_cloud)) {
                 showRestoreConfirm = true
             }
+            Text(
+                stringResource(R.string.auto_backup_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             TextButton(onClick = { auth.signOut() }) {
                 Text(stringResource(R.string.sign_out))
             }
@@ -114,14 +127,18 @@ fun CloudBackupSection() {
                     TextButton(onClick = {
                         showRestoreConfirm = false
                         scope.launch {
-                            val restored = runCatching {
+                            val message = runCatching {
                                 SyncLocator.engine(context)?.restore()
-                            }.getOrNull()
-                            val message = if (restored != null) {
-                                context.getString(R.string.restore_done)
-                            } else {
-                                context.getString(R.string.sign_in_failed)
-                            }
+                            }.fold(
+                                onSuccess = { restored ->
+                                    when {
+                                        restored == null -> context.getString(R.string.restore_failed)
+                                        restored == 0 -> context.getString(R.string.restore_cloud_empty)
+                                        else -> context.getString(R.string.restore_done)
+                                    }
+                                },
+                                onFailure = { context.getString(restoreFailureMessageRes(it)) },
+                            )
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                         }
                     }) { Text(stringResource(R.string.restore_from_cloud)) }
@@ -134,4 +151,24 @@ fun CloudBackupSection() {
             )
         }
     }
+}
+
+/** Truthful outcome of the most recent backup, or a live "backing up" indicator. */
+@Composable
+private fun BackupStatusLine(lastResult: String?, backingUp: Boolean) {
+    val statusRes = when {
+        backingUp -> R.string.backup_in_progress
+        lastResult == SyncEngine.RESULT_OK -> R.string.backup_status_ok
+        lastResult != null -> R.string.backup_status_failed
+        else -> return
+    }
+    Text(
+        stringResource(statusRes),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (statusRes == R.string.backup_status_failed) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    )
 }

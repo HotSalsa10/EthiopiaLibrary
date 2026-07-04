@@ -83,6 +83,7 @@ fun DashboardScreen(
     val dueSoon by vm.dueSoon.collectAsStateWithLifecycle()
     val pendingSync by vm.pendingSync.collectAsStateWithLifecycle()
     val lastBackupAt by vm.lastBackupAt.collectAsStateWithLifecycle()
+    val backupStaleSince by vm.backupStaleSince.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -113,7 +114,7 @@ fun DashboardScreen(
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(12.dp))
-            BackupChip(lastBackupAt, pendingSync, locale)
+            BackupChip(lastBackupAt, pendingSync, backupStaleSince, locale)
         }
         Spacer(Modifier.height(28.dp))
 
@@ -224,41 +225,69 @@ fun DashboardScreen(
 
 /** A small, subtle pill that surfaces backup state without competing for attention. */
 @Composable
-private fun BackupChip(lastBackupAt: Long?, pendingSync: Int, locale: Locale) {
+private fun BackupChip(
+    lastBackupAt: Long?,
+    pendingSync: Int,
+    staleSince: Long?,
+    locale: Locale,
+) {
     val calendarMode = LocalCalendarMode.current
-    val text = buildString {
-        append(stringResource(R.string.last_backup))
-        append(": ")
-        append(
-            lastBackupAt?.let { DualCalendarFormatter.format(it, locale, calendarMode) }
-                ?: stringResource(R.string.never_backed_up),
-        )
-        if (pendingSync > 0) {
-            append(" • ")
-            append(stringResource(R.string.pending_changes, pendingSync))
+    // Changes sitting un-backed-up for days deserve a visible warning,
+    // not just a pending count the operator has learned to ignore.
+    val daysWaiting = staleSince
+        ?.let { ((System.currentTimeMillis() - it) / MILLIS_PER_DAY).toInt() }
+        ?: 0
+    val needsBackup = pendingSync > 0 && daysWaiting >= STALE_BACKUP_WARNING_DAYS
+    val text = if (needsBackup) {
+        stringResource(R.string.backup_needed_warning, daysWaiting)
+    } else {
+        buildString {
+            append(stringResource(R.string.last_backup))
+            append(": ")
+            append(
+                lastBackupAt?.let { DualCalendarFormatter.format(it, locale, calendarMode) }
+                    ?: stringResource(R.string.never_backed_up),
+            )
+            if (pendingSync > 0) {
+                append(" • ")
+                append(stringResource(R.string.pending_changes, pendingSync))
+            }
         }
+    }
+    val background = if (needsBackup) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    }
+    val contentColor = if (needsBackup) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
     }
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(percent = 50))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+            .background(background)
             .padding(horizontal = 14.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            if (lastBackupAt != null) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
+            if (lastBackupAt != null && !needsBackup) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = contentColor,
             modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.width(6.dp))
         Text(
             text,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = contentColor,
         )
     }
 }
+
+private const val STALE_BACKUP_WARNING_DAYS = 3
+private const val MILLIS_PER_DAY = 86_400_000L
 
 private data class NavSegment(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 

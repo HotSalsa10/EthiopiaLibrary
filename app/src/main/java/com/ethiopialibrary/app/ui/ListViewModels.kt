@@ -128,6 +128,10 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** Epoch millis of the last successful backup, null if never. */
     val lastBackupAt: StateFlow<Long?> = repo.lastSyncAt()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** When the oldest un-backed-up change was made; null when fully synced. */
+    val backupStaleSince: StateFlow<Long?> = repo.oldestPendingSince()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 }
 
 class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {

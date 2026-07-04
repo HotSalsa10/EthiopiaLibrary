@@ -239,7 +239,7 @@ private fun SettingsContent(
         ) { showSetPin = true }
         Spacer(Modifier.height(24.dp))
 
-        CloudBackupSection()
+        CloudBackupSection(repo)
     }
 
     if (showSetPin) {

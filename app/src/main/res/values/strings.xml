@@ -144,6 +144,15 @@
     <string name="pending_changes">%1$d ለውጦች በመጠባበቅ ላይ</string>
     <string name="backup_started">ምትኬ ተጀምሯል</string>
     <string name="sign_in_failed">መግባት አልተሳካም</string>
+    <string name="backup_in_progress">ምትኬ በመያዝ ላይ…</string>
+    <string name="backup_status_ok">የመጨረሻው ምትኬ ተሳክቷል</string>
+    <string name="backup_status_failed">የመጨረሻው ምትኬ አልተሳካም፤ በራስ-ሰር እንደገና ይሞከራል</string>
+    <string name="auto_backup_note">ራስ-ሰር ምትኬ በርቷል፦ በየቀኑ እና በይነመረብ ሲገኝ።</string>
+    <string name="backup_needed_warning">ምትኬ ያስፈልጋል — ለ%1$d ቀናት ያልተቀመጡ ለውጦች አሉ</string>
+    <string name="restore_failed">ወደነበረበት መመለስ አልተሳካም። እባክዎ እንደገና ይሞክሩ።</string>
+    <string name="restore_network_error">የበይነመረብ ግንኙነት የለም። ተገናኝተው እንደገና ይሞክሩ።</string>
+    <string name="restore_permission_denied">ይህ መለያ ወደ ምትኬው መድረስ አልተፈቀደለትም።</string>
+    <string name="restore_cloud_empty">በደመናው ውስጥ ምንም ምትኬ አልተገኘም።</string>
 
     <!-- Editing -->
     <string name="edit_book">መጽሐፍ አርትዕ</string>

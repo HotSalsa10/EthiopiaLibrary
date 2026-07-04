@@ -132,6 +132,15 @@
     <string name="pending_changes">%1$d تغييرات قيد الانتظار</string>
     <string name="backup_started">بدأ النسخ الاحتياطي</string>
     <string name="sign_in_failed">فشل تسجيل الدخول</string>
+    <string name="backup_in_progress">جارٍ النسخ الاحتياطي…</string>
+    <string name="backup_status_ok">نجح النسخ الاحتياطي الأخير</string>
+    <string name="backup_status_failed">فشل النسخ الاحتياطي الأخير؛ ستتم إعادة المحاولة تلقائيًا</string>
+    <string name="auto_backup_note">النسخ الاحتياطي التلقائي مفعّل: يوميًا وعند توفر الإنترنت.</string>
+    <string name="backup_needed_warning">يلزم نسخ احتياطي — توجد تغييرات بانتظار الحفظ منذ %1$d أيام</string>
+    <string name="restore_failed">فشلت الاستعادة. يرجى المحاولة مرة أخرى.</string>
+    <string name="restore_network_error">لا يوجد اتصال بالإنترنت. اتصل ثم حاول مرة أخرى.</string>
+    <string name="restore_permission_denied">هذا الحساب غير مسموح له بالوصول إلى النسخة الاحتياطية.</string>
+    <string name="restore_cloud_empty">لا توجد نسخة احتياطية في السحابة.</string>
 
     <string name="edit_book">تعديل الكتاب</string>
     <string name="edit_member">تعديل العضو</string>

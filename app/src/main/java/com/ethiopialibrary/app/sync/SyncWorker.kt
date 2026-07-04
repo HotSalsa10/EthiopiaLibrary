@@ -9,8 +9,11 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 
 /**
@@ -72,5 +75,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(connected).build(),
             )
         }
+
+        /** True while a "backup now" one-shot is actively uploading. */
+        fun isBackupRunning(context: Context): Flow<Boolean> =
+            WorkManager.getInstance(context)
+                .getWorkInfosForUniqueWorkFlow(UNIQUE_ONESHOT)
+                .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING } }
     }
 }

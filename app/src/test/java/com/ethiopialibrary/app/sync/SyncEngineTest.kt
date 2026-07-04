@@ -121,6 +121,67 @@ class SyncEngineTest {
         assertNotNull(loanDoc["dueAt"])
     }
 
+    // ---------- honest status reporting ----------
+
+    @Test
+    fun `drain success records an ok result`() = runBlocking {
+        seedLibrary()
+        assertNull(repo.lastSyncResult().first())
+
+        engine.drainOutbox()
+
+        assertEquals("ok", repo.lastSyncResult().first())
+    }
+
+    @Test
+    fun `drain failure records an error result without advancing the timestamp`() = runBlocking {
+        seedLibrary()
+        cloud.failOn = { collection, _ -> collection == "books" }
+
+        engine.drainOutbox()
+
+        val result = repo.lastSyncResult().first()
+        assertTrue("expected error result, was $result", result != null && result.startsWith("error"))
+        assertNull(repo.lastSyncAt().first())
+
+        cloud.failOn = null
+        engine.drainOutbox()
+        assertEquals("ok", repo.lastSyncResult().first())
+    }
+
+    @Test
+    fun `restore stamps the backup status so a fresh tablet shows backed up`() = runBlocking {
+        seedLibrary()
+        engine.drainOutbox()
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db2 = Room.inMemoryDatabaseBuilder(context, LibraryDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val repo2 = LibraryRepository(db2, clock)
+        try {
+            SyncEngine(db2, cloud, clock).restore()
+
+            assertEquals(clock.instant().toEpochMilli(), repo2.lastSyncAt().first())
+            assertEquals("ok", repo2.lastSyncResult().first())
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
+    fun `oldest pending change time is exposed for the backup warning`() = runBlocking {
+        assertNull(repo.oldestPendingSince().first())
+        val createdAt = clock.instant().toEpochMilli()
+        seedLibrary()
+        clock.advanceDays(5)
+
+        assertEquals(createdAt, repo.oldestPendingSince().first())
+
+        engine.drainOutbox()
+        assertNull(repo.oldestPendingSince().first())
+    }
+
     // ---------- restore ----------
 
     @Test

@@ -132,6 +132,15 @@
     <string name="pending_changes">%1$d changes waiting</string>
     <string name="backup_started">Backup started</string>
     <string name="sign_in_failed">Sign-in failed</string>
+    <string name="backup_in_progress">Backing up…</string>
+    <string name="backup_status_ok">Last backup succeeded</string>
+    <string name="backup_status_failed">Last backup failed — it will retry automatically</string>
+    <string name="auto_backup_note">Automatic backup is on: daily and whenever internet is available.</string>
+    <string name="backup_needed_warning">Backup needed — changes waiting for %1$d days</string>
+    <string name="restore_failed">Restore failed. Please try again.</string>
+    <string name="restore_network_error">No internet connection. Connect and try again.</string>
+    <string name="restore_permission_denied">This account is not allowed to access the backup.</string>
+    <string name="restore_cloud_empty">No backup found in the cloud.</string>
 
     <string name="edit_book">Edit book</string>
     <string name="edit_member">Edit member</string>

@@ -443,6 +443,10 @@ interface SyncQueueDao {
     @Query("SELECT COUNT(*) FROM sync_queue WHERE syncedAt IS NULL")
     fun pendingCount(): Flow<Int>
 
+    /** Creation time of the oldest un-synced change; null when everything is synced. */
+    @Query("SELECT MIN(createdAt) FROM sync_queue WHERE syncedAt IS NULL")
+    fun oldestPendingCreatedAt(): Flow<Long?>
+
     @Query("UPDATE sync_queue SET syncedAt = :at WHERE localId = :id")
     suspend fun markSynced(id: Long, at: Long)
 
