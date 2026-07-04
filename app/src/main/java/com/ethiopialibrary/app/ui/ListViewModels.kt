@@ -132,6 +132,14 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** When the oldest un-backed-up change was made; null when fully synced. */
     val backupStaleSince: StateFlow<Long?> = repo.oldestPendingSince()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Data-side backup suggestion; the screen adds the connectivity condition. */
+    val backupNudgeWanted: StateFlow<Boolean> = repo.backupNudgeWanted()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun dismissBackupNudge() {
+        viewModelScope.launch { repo.dismissBackupNudgeForToday() }
+    }
 }
 
 class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {

@@ -498,4 +498,20 @@ class LibraryRepositoryTest {
         assertTrue(result is CheckoutResult.CopyNotAvailable)
         assertEquals(entriesBefore, repo.pendingSyncEntries().size)
     }
+
+    // ---------- backup nudge ----------
+
+    @Test
+    fun `backup nudge appears for waiting changes and stays quiet for today once dismissed`() = runBlocking {
+        assertFalse(repo.backupNudgeWanted().first()) // empty library, nothing pending
+
+        addMember() // pending outbox entry, never backed up
+        assertTrue(repo.backupNudgeWanted().first())
+
+        repo.dismissBackupNudgeForToday()
+        assertFalse(repo.backupNudgeWanted().first())
+
+        clock.advanceDays(1) // a new day with changes still waiting
+        assertTrue(repo.backupNudgeWanted().first())
+    }
 }

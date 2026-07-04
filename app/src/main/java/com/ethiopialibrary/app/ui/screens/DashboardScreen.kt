@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
@@ -61,6 +62,8 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
+import com.ethiopialibrary.app.sync.SyncWorker
+import com.ethiopialibrary.app.sync.connectivityFlow
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.DashboardViewModel
@@ -115,6 +118,22 @@ fun DashboardScreen(
             )
             Spacer(Modifier.height(12.dp))
             BackupChip(lastBackupAt, pendingSync, backupStaleSince, locale)
+        }
+
+        // Gentle, dismissible once-per-day suggestion when internet is
+        // available and changes are waiting - never a blocking dialog.
+        val nudgeWanted by vm.backupNudgeWanted.collectAsStateWithLifecycle()
+        val online by remember { connectivityFlow(context) }.collectAsStateWithLifecycle(false)
+        if (nudgeWanted && online) {
+            Spacer(Modifier.height(20.dp))
+            BackupNudgeCard(
+                onBackupNow = {
+                    SyncWorker.backupNow(context)
+                    Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
+                    vm.dismissBackupNudge()
+                },
+                onLater = { vm.dismissBackupNudge() },
+            )
         }
         Spacer(Modifier.height(28.dp))
 
@@ -288,6 +307,35 @@ private fun BackupChip(
 
 private const val STALE_BACKUP_WARNING_DAYS = 3
 private const val MILLIS_PER_DAY = 86_400_000L
+
+/** Suggests a backup while internet is around; both actions quiet it for the day. */
+@Composable
+private fun BackupNudgeCard(onBackupNow: () -> Unit, onLater: () -> Unit) {
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.CloudUpload,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.backup_nudge_text),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onLater) { Text(stringResource(R.string.backup_nudge_later)) }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onBackupNow) { Text(stringResource(R.string.backup_now)) }
+        }
+    }
+}
 
 private data class NavSegment(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 

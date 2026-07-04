@@ -363,6 +363,22 @@ class LibraryRepository(
     fun oldestPendingSince(): Flow<Long?> =
         db.syncQueueDao().oldestPendingCreatedAt()
 
+    /** Gentle once-per-day backup suggestion; the UI adds the connectivity condition. */
+    fun backupNudgeWanted(): Flow<Boolean> = combine(
+        pendingSyncCount(),
+        lastSyncAt(),
+        db.settingsDao().watch(SettingKeys.BACKUP_NUDGE_DISMISSED_DAY),
+    ) { pending, last, dismissed ->
+        shouldNudgeBackup(pending, last, dismissed?.toLongOrNull(), now())
+    }
+
+    /** Local-only quiet switch; deliberately never synced to the cloud. */
+    suspend fun dismissBackupNudgeForToday() {
+        db.settingsDao().put(
+            SettingEntity(SettingKeys.BACKUP_NUDGE_DISMISSED_DAY, epochDay(now()).toString()),
+        )
+    }
+
     // ---------- borrowing limit, due-soon, history, statistics ----------
 
     suspend fun maxBooksPerMember(): Int =

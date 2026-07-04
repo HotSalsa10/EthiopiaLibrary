@@ -153,6 +153,8 @@
     <string name="restore_network_error">የበይነመረብ ግንኙነት የለም። ተገናኝተው እንደገና ይሞክሩ።</string>
     <string name="restore_permission_denied">ይህ መለያ ወደ ምትኬው መድረስ አልተፈቀደለትም።</string>
     <string name="restore_cloud_empty">በደመናው ውስጥ ምንም ምትኬ አልተገኘም።</string>
+    <string name="backup_nudge_text">በይነመረብ አለ — አሁን ምትኬ ይያዙ?</string>
+    <string name="backup_nudge_later">ቆይቶ</string>
 
     <!-- Editing -->
     <string name="edit_book">መጽሐፍ አርትዕ</string>
