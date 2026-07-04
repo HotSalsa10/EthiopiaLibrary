@@ -143,6 +143,7 @@
     <string name="restore_cloud_empty">لا توجد نسخة احتياطية في السحابة.</string>
     <string name="backup_nudge_text">الإنترنت متاح — هل تريد النسخ الاحتياطي الآن؟</string>
     <string name="backup_nudge_later">لاحقًا</string>
+    <string name="export_backup_file">تصدير ملف النسخة الاحتياطية</string>
 
     <string name="edit_book">تعديل الكتاب</string>
     <string name="edit_member">تعديل العضو</string>

@@ -41,6 +41,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.data.exportAndShareBackup
 import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
@@ -240,6 +241,13 @@ private fun SettingsContent(
         Spacer(Modifier.height(24.dp))
 
         CloudBackupSection(repo)
+
+        // Off-device insurance, independent of Firebase: a plain SQLite copy
+        // shared to Drive/WhatsApp/USB. Works fully offline.
+        Spacer(Modifier.height(12.dp))
+        BigOutlinedButton(stringResource(R.string.export_backup_file)) {
+            scope.launch { exportAndShareBackup(context, repo) }
+        }
     }
 
     if (showSetPin) {

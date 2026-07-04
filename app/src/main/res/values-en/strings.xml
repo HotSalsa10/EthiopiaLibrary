@@ -143,6 +143,7 @@
     <string name="restore_cloud_empty">No backup found in the cloud.</string>
     <string name="backup_nudge_text">Internet is available — back up now?</string>
     <string name="backup_nudge_later">Later</string>
+    <string name="export_backup_file">Export backup file</string>
 
     <string name="edit_book">Edit book</string>
     <string name="edit_member">Edit member</string>

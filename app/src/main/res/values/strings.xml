@@ -155,6 +155,7 @@
     <string name="restore_cloud_empty">በደመናው ውስጥ ምንም ምትኬ አልተገኘም።</string>
     <string name="backup_nudge_text">በይነመረብ አለ — አሁን ምትኬ ይያዙ?</string>
     <string name="backup_nudge_later">ቆይቶ</string>
+    <string name="export_backup_file">የምትኬ ፋይል አጋራ</string>
 
     <!-- Editing -->
     <string name="edit_book">መጽሐፍ አርትዕ</string>

@@ -2,10 +2,15 @@ package com.ethiopialibrary.app.data
 
 import androidx.room.withTransaction
 import com.ethiopialibrary.app.dates.CalendarMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.Clock
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 sealed interface CheckoutResult {
@@ -377,6 +382,19 @@ class LibraryRepository(
         db.settingsDao().put(
             SettingEntity(SettingKeys.BACKUP_NUDGE_DISMISSED_DAY, epochDay(now()).toString()),
         )
+    }
+
+    /**
+     * Off-device insurance: checkpoint-copies the live database into [dir]
+     * as a timestamped file the operator can share to Drive/WhatsApp/USB.
+     */
+    suspend fun createBackupFile(dir: File): File = withContext(Dispatchers.IO) {
+        val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+            .withZone(ZoneOffset.UTC)
+            .format(clock.instant())
+        val out = File(dir, "library-backup-$stamp.db")
+        SnapshotManager(db).createSnapshot(out)
+        out
     }
 
     // ---------- borrowing limit, due-soon, history, statistics ----------

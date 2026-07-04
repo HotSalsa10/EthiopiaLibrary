@@ -51,6 +51,35 @@ class SnapshotTest {
     }
 
     @Test
+    fun `export creates a timestamped backup file that opens as a database`() {
+        val db = LibraryDatabase.create(context(), "export-src.db")
+        val repo = LibraryRepository(db, TestClock())
+        val dir = File(context().cacheDir, "backup-export")
+        try {
+            runBlocking { repo.registerMember(fullName = "Abebe Kebede") }
+
+            val file = runBlocking { repo.createBackupFile(dir) }
+
+            assertEquals(dir, file.parentFile)
+            assertTrue(
+                "unexpected name: ${file.name}",
+                Regex("library-backup-\\d{8}-\\d{6}\\.db").matches(file.name),
+            )
+            assertTrue(file.exists() && file.length() > 0)
+            SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { raw ->
+                raw.rawQuery("SELECT COUNT(*) FROM members", null).use { c ->
+                    c.moveToFirst()
+                    assertEquals(1, c.getInt(0))
+                }
+            }
+        } finally {
+            db.close()
+            dir.deleteRecursively()
+            context().deleteDatabase("export-src.db")
+        }
+    }
+
+    @Test
     fun `quick check passes on a healthy database`() {
         val db = LibraryDatabase.create(context(), "integrity-test.db")
         try {
