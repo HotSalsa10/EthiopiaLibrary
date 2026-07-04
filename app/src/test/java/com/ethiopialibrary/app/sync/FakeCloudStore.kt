@@ -6,11 +6,19 @@ class FakeCloudStore : CloudStore {
     val collections = mutableMapOf<String, MutableMap<String, Map<String, Any?>>>()
     var failOn: ((collection: String, docId: String) -> Boolean)? = null
 
-    override suspend fun upsert(collection: String, docId: String, data: Map<String, Any?>) {
-        if (failOn?.invoke(collection, docId) == true) {
-            throw RuntimeException("simulated upload failure")
+    /** Size of every committed batch, in commit order. */
+    val batchSizes = mutableListOf<Int>()
+
+    override suspend fun upsertBatch(items: List<CloudUpsert>) {
+        // Validate first, apply second: a failing item aborts the whole batch,
+        // mirroring Firestore's all-or-nothing WriteBatch commit.
+        items.forEach { item ->
+            if (failOn?.invoke(item.collection, item.docId) == true) {
+                throw RuntimeException("simulated upload failure")
+            }
         }
-        collections.getOrPut(collection) { mutableMapOf() }[docId] = data
+        items.forEach { collections.getOrPut(it.collection) { mutableMapOf() }[it.docId] = it.data }
+        batchSizes += items.size
     }
 
     override suspend fun fetchAll(collection: String): List<Pair<String, Map<String, Any?>>> =

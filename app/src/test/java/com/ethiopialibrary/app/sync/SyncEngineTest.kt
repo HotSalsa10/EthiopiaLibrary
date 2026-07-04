@@ -121,6 +121,36 @@ class SyncEngineTest {
         assertNotNull(loanDoc["dueAt"])
     }
 
+    // ---------- batched uploads ----------
+
+    @Test
+    fun `changes upload as one atomic batch not per document`() = runBlocking {
+        seedLibrary() // book, copy, member, loan = 4 pending entries
+
+        engine.drainOutbox()
+
+        assertEquals(listOf(4), cloud.batchSizes)
+    }
+
+    @Test
+    fun `large drains are chunked and a failing chunk stays fully pending`() = runBlocking {
+        seedLibrary() // queue order: book, copy, member, loan
+        val chunkedEngine = SyncEngine(db, cloud, clock, batchSize = 2)
+        cloud.failOn = { collection, _ -> collection == "loans" } // second chunk
+
+        val result = chunkedEngine.drainOutbox()
+
+        // First chunk (book, copy) committed; second chunk (member, loan) aborted whole.
+        assertTrue(result is SyncResult.Failure)
+        assertEquals(2, (result as SyncResult.Failure).uploaded)
+        assertEquals(listOf(2), cloud.batchSizes)
+        assertEquals(2, repo.pendingSyncEntries().size)
+
+        cloud.failOn = null
+        assertEquals(2, (chunkedEngine.drainOutbox() as SyncResult.Success).uploaded)
+        assertEquals(listOf(2, 2), cloud.batchSizes)
+    }
+
     // ---------- honest status reporting ----------
 
     @Test

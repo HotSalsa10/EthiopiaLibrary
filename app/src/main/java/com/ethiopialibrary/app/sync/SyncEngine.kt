@@ -15,32 +15,41 @@ class SyncEngine(
     private val db: LibraryDatabase,
     private val cloud: CloudStore,
     private val clock: Clock,
+    private val batchSize: Int = FIRESTORE_BATCH_LIMIT,
 ) {
     companion object {
         /** [SettingKeys.LAST_SYNC_RESULT] value after a successful backup or restore. */
         const val RESULT_OK = "ok"
+
+        /** Firestore allows at most 500 writes per atomic batch commit. */
+        const val FIRESTORE_BATCH_LIMIT = 500
     }
 
     /**
-     * Uploads pending outbox entries in write order. Stops at the first
-     * failure (WorkManager retries later with backoff); already-uploaded
-     * entries stay marked and never re-upload.
+     * Uploads pending outbox entries in write order as atomic batches
+     * (fewer round-trips on flaky internet, all-or-nothing per chunk).
+     * Stops at the first failed chunk (WorkManager retries later with
+     * backoff); committed chunks stay marked and never re-upload.
      */
     suspend fun drainOutbox(): SyncResult {
         val pending = db.syncQueueDao().pending()
         var uploaded = 0
-        for (entry in pending) {
-            try {
+        for (chunk in pending.chunked(batchSize)) {
+            val items = chunk.mapNotNull { entry ->
                 buildPayload(entry)?.let { (collection, payload) ->
-                    cloud.upsert(collection, entry.entityId, payload)
+                    CloudUpsert(collection, entry.entityId, payload)
                 }
-                db.syncQueueDao().markSynced(entry.localId, now())
-                uploaded++
+            }
+            try {
+                if (items.isNotEmpty()) cloud.upsertBatch(items)
             } catch (e: Exception) {
-                db.syncQueueDao().recordAttempt(entry.localId)
+                chunk.forEach { db.syncQueueDao().recordAttempt(it.localId) }
                 recordResult("error:${e.javaClass.simpleName}")
                 return SyncResult.Failure(uploaded, e.message)
             }
+            val t = now()
+            chunk.forEach { db.syncQueueDao().markSynced(it.localId, t) }
+            uploaded += chunk.size
         }
         db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
         recordResult(RESULT_OK)

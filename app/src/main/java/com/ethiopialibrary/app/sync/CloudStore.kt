@@ -6,9 +6,18 @@ package com.ethiopialibrary.app.sync
  * to String, Long, Boolean and null - types Firestore round-trips losslessly.
  */
 interface CloudStore {
-    suspend fun upsert(collection: String, docId: String, data: Map<String, Any?>)
+    /** Writes every item or none: one atomic commit, one network round-trip. */
+    suspend fun upsertBatch(items: List<CloudUpsert>)
+
     suspend fun fetchAll(collection: String): List<Pair<String, Map<String, Any?>>>
 }
+
+/** One document write inside a batch. */
+data class CloudUpsert(
+    val collection: String,
+    val docId: String,
+    val data: Map<String, Any?>,
+)
 
 sealed interface SyncResult {
     data class Success(val uploaded: Int) : SyncResult

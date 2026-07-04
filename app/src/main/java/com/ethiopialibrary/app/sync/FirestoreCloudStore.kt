@@ -21,8 +21,12 @@ class FirestoreCloudStore : CloudStore {
         }
     }
 
-    override suspend fun upsert(collection: String, docId: String, data: Map<String, Any?>) {
-        firestore.collection(collection).document(docId).set(data).await()
+    override suspend fun upsertBatch(items: List<CloudUpsert>) {
+        val batch = firestore.batch()
+        items.forEach { item ->
+            batch.set(firestore.collection(item.collection).document(item.docId), item.data)
+        }
+        batch.commit().await()
     }
 
     override suspend fun fetchAll(collection: String): List<Pair<String, Map<String, Any?>>> =
