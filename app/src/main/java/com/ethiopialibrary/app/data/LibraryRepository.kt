@@ -45,6 +45,9 @@ class LibraryRepository(
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
         private const val MILLIS_PER_DAY = 86_400_000L
+
+        /** Exported share-sheet backups kept on device before rotation. */
+        private const val EXPORT_KEEP_COUNT = 3
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
@@ -387,6 +390,7 @@ class LibraryRepository(
     /**
      * Off-device insurance: checkpoint-copies the live database into [dir]
      * as a timestamped file the operator can share to Drive/WhatsApp/USB.
+     * Older exports rotate away so repeated use can't fill the tablet.
      */
     suspend fun createBackupFile(dir: File): File = withContext(Dispatchers.IO) {
         val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
@@ -394,6 +398,11 @@ class LibraryRepository(
             .format(clock.instant())
         val out = File(dir, "library-backup-$stamp.db")
         SnapshotManager(db).createSnapshot(out)
+        dir.listFiles { f -> f.name.startsWith("library-backup-") && f.name.endsWith(".db") }
+            .orEmpty()
+            .sortedByDescending { it.name }
+            .drop(EXPORT_KEEP_COUNT)
+            .forEach { it.delete() }
         out
     }
 

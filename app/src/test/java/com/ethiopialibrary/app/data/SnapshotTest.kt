@@ -80,6 +80,28 @@ class SnapshotTest {
     }
 
     @Test
+    fun `old exported backups rotate away keeping the newest three`() {
+        val db = LibraryDatabase.create(context(), "rotate-src.db")
+        val clock = TestClock()
+        val repo = LibraryRepository(db, clock)
+        val dir = File(context().cacheDir, "backup-rotate")
+        try {
+            val names = (1..4).map {
+                val file = runBlocking { repo.createBackupFile(dir) }
+                clock.advanceDays(1)
+                file.name
+            }
+
+            val kept = dir.listFiles().orEmpty().map { it.name }.sorted()
+            assertEquals(names.drop(1).sorted(), kept)
+        } finally {
+            db.close()
+            dir.deleteRecursively()
+            context().deleteDatabase("rotate-src.db")
+        }
+    }
+
+    @Test
     fun `quick check passes on a healthy database`() {
         val db = LibraryDatabase.create(context(), "integrity-test.db")
         try {
