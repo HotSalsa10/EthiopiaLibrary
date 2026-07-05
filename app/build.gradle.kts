@@ -27,8 +27,8 @@ android {
         applicationId = "com.ethiopialibrary.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.7.0"
+        versionCode = 12
+        versionName = "1.8.2"
     }
 
     signingConfigs {

@@ -303,4 +303,76 @@ class SyncEngineTest {
             db2.close()
         }
     }
+
+    // ---------- restore robustness (regressions found in the device drill) ----------
+
+    @Test
+    fun `restore onto a non-empty tablet does not violate foreign keys`() = runBlocking {
+        // Backup a book with a copy, then restore onto a tablet that already
+        // holds that same book+copy locally. A REPLACE-based upsert would
+        // delete the parent book (orphaning the existing copy) and fail the
+        // foreign key; @Upsert updates in place instead.
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        engine.drainOutbox()
+
+        val restored = engine.restore() // same db, already populated
+
+        assertTrue(restored > 0)
+        assertEquals(1, repo.booksWithCounts("").first().size)
+        assertEquals(1, repo.copyLabelRows().size)
+    }
+
+    @Test
+    fun `restore skips a malformed cloud document instead of aborting`() = runBlocking {
+        repo.addBookWithCopies(title = "Good Book", author = "A", categoryCode = "C", language = "am", copies = 1)
+        engine.drainOutbox()
+        // A partial write from an older broken backup: a book row missing its
+        // required title.
+        cloud.collections.getValue("books")["broken-id"] = mapOf(
+            "author" to "X", "categoryCode" to "C", "bookNumber" to 9L,
+            "language" to "am", "createdAt" to 1L, "updatedAt" to 1L, "isDeleted" to false,
+        )
+
+        val db2 = freshDb()
+        val repo2 = LibraryRepository(db2, clock)
+        try {
+            val restored = SyncEngine(db2, cloud, clock).restore()
+
+            assertTrue(restored > 0)
+            // Only the well-formed book made it in; the malformed one was skipped.
+            assertEquals(1, repo2.booksWithCounts("").first().size)
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
+    fun `restore drops a loan whose copy never made it to the cloud`() = runBlocking {
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val member = repo.registerMember(fullName = "Abebe")
+        val copyCode = repo.copyLabelRows().single().code
+        repo.checkout(copyCode, member.memberCode)
+        engine.drainOutbox()
+        // Simulate an inconsistent cloud: the copy the loan points at is gone.
+        cloud.collections.getValue("book_copies").clear()
+
+        val db2 = freshDb()
+        val repo2 = LibraryRepository(db2, clock)
+        try {
+            // Must not throw a foreign-key error; the orphaned loan is dropped.
+            SyncEngine(db2, cloud, clock).restore()
+
+            assertEquals(1, repo2.membersWithLoanCounts("").first().size)
+            assertNull(repo2.activeLoanDetailedForCopy(copyCode))
+        } finally {
+            db2.close()
+        }
+    }
+
+    private fun freshDb(): LibraryDatabase {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        return Room.inMemoryDatabaseBuilder(context, LibraryDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+    }
 }

@@ -74,19 +74,28 @@ class SyncEngine(
      * sequences from the restored data so new codes can never collide.
      */
     suspend fun restore(): Int {
-        val categories = cloud.fetchAll("categories").map { (id, m) -> categoryFrom(id, m) }
-        val books = cloud.fetchAll("books").map { (id, m) -> bookFrom(id, m) }
-        val copies = cloud.fetchAll("book_copies").map { (id, m) -> copyFrom(id, m) }
-        val members = cloud.fetchAll("members").map { (id, m) -> memberFrom(id, m) }
-        val loans = cloud.fetchAll("loans").map { (id, m) -> loanFrom(id, m) }
+        val categories = cloud.fetchAll("categories").mapDocs("categories", ::categoryFrom)
+        val books = cloud.fetchAll("books").mapDocs("books", ::bookFrom)
+        val copies = cloud.fetchAll("book_copies").mapDocs("book_copies", ::copyFrom)
+        val members = cloud.fetchAll("members").mapDocs("members", ::memberFrom)
+        val loans = cloud.fetchAll("loans").mapDocs("loans", ::loanFrom)
         val config = cloud.fetchAll("config")
+
+        // Drop referentially-orphaned children whose parent document was
+        // malformed-and-skipped (or never reached the cloud), so a foreign-key
+        // violation can never abort the whole restore.
+        val bookIds = books.mapTo(HashSet()) { it.id }
+        val validCopies = copies.filter { it.bookId in bookIds }
+        val copyIds = validCopies.mapTo(HashSet()) { it.id }
+        val memberIds = members.mapTo(HashSet()) { it.id }
+        val validLoans = loans.filter { it.copyId in copyIds && it.memberId in memberIds }
 
         db.withTransaction {
             db.categoryDao().upsertAll(categories)
             db.bookDao().upsertAll(books)
-            db.bookCopyDao().upsertAll(copies)
+            db.bookCopyDao().upsertAll(validCopies)
             db.memberDao().upsertAll(members)
-            db.loanDao().upsertAll(loans)
+            db.loanDao().upsertAll(validLoans)
             config.forEach { (key, data) ->
                 (data["value"] as? String)?.let { db.settingsDao().put(SettingEntity(key, it)) }
             }
@@ -96,7 +105,7 @@ class SyncEngine(
             db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
             recordResult(RESULT_OK)
         }
-        return categories.size + books.size + copies.size + members.size + loans.size
+        return categories.size + books.size + validCopies.size + members.size + validLoans.size
     }
 
     private suspend fun recordResult(value: String) {
@@ -111,6 +120,22 @@ class SyncEngine(
     }
 
     private fun codeNumber(code: String): Int? = code.substringAfter('-', "").toIntOrNull()
+
+    /**
+     * Maps cloud documents into entities, skipping any single document that
+     * can't be parsed (e.g. a partially-written record from an interrupted
+     * older backup) rather than aborting the whole restore. One damaged row
+     * must never block recovering everything else.
+     */
+    private fun <T> List<Pair<String, Map<String, Any?>>>.mapDocs(
+        collection: String,
+        transform: (String, Map<String, Any?>) -> T,
+    ): List<T> = mapNotNull { (id, m) ->
+        runCatching { transform(id, m) }.getOrElse { e ->
+            android.util.Log.w("LibrarySync", "skipping malformed $collection/$id: ${e.message}")
+            null
+        }
+    }
 
     private fun now(): Long = clock.instant().toEpochMilli()
 }

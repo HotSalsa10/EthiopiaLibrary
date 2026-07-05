@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -12,7 +13,10 @@ interface CategoryDao {
     @Insert
     suspend fun insert(category: CategoryEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Upsert (not REPLACE): updates existing rows in place instead of
+    // delete-then-insert, so a restore onto a non-empty tablet can't orphan
+    // FK children (e.g. copies of an existing book) mid-transaction.
+    @Upsert
     suspend fun upsertAll(items: List<CategoryEntity>)
 
     @Query("SELECT * FROM categories WHERE isDeleted = 0 ORDER BY sortOrder, name")
@@ -45,7 +49,7 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun byId(id: String): BookEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(items: List<BookEntity>)
 
     /** Highest book number used in a category, so the next is +1. Null when empty. */
@@ -206,7 +210,7 @@ interface BookCopyDao {
     )
     fun searchOnLoan(query: String): Flow<List<CopyWithBook>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(items: List<BookCopyEntity>)
 
     @Query("SELECT copyCode FROM book_copies")
@@ -249,7 +253,7 @@ interface MemberDao {
     @Query("SELECT memberCode AS code, fullName AS title FROM members WHERE isDeleted = 0 ORDER BY memberCode")
     suspend fun labelRows(): List<LabelRow>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(items: List<MemberEntity>)
 
     @Query("SELECT memberCode FROM members")
@@ -338,7 +342,7 @@ interface LoanDao {
     @Query("SELECT * FROM loans WHERE id = :id")
     suspend fun byId(id: String): LoanEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(items: List<LoanEntity>)
 
     @Query("SELECT COUNT(*) FROM loans WHERE returnedAt IS NULL AND isDeleted = 0")
