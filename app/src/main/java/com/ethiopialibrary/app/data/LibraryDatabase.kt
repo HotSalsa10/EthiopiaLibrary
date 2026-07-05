@@ -15,8 +15,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LoanEntity::class,
         SyncQueueEntity::class,
         SettingEntity::class,
+        ActivityLogEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class LibraryDatabase : RoomDatabase() {
@@ -28,6 +29,7 @@ abstract class LibraryDatabase : RoomDatabase() {
     abstract fun loanDao(): LoanDao
     abstract fun syncQueueDao(): SyncQueueDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun activityLogDao(): ActivityLogDao
 
     companion object {
         /**
@@ -38,9 +40,10 @@ abstract class LibraryDatabase : RoomDatabase() {
         fun create(context: Context, name: String = "library.db"): LibraryDatabase =
             Room.databaseBuilder(context, LibraryDatabase::class.java, name)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                // No real data exists yet anywhere, so an in-place schema bump can
-                // safely recreate rather than carry a migration.
-                .fallbackToDestructiveMigration()
+                // Real data lives on the production tablet: every schema bump
+                // must ship a tested migration (see Migrations.kt). There is
+                // deliberately NO destructive fallback.
+                .addMigrations(*Migrations.ALL)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         // Seed categories with deterministic ids (cat-<code>) so a

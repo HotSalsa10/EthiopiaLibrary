@@ -455,6 +455,16 @@ interface SyncQueueDao {
 }
 
 @Dao
+interface ActivityLogDao {
+    @Insert
+    suspend fun insert(entry: ActivityLogEntity)
+
+    /** Feed for the dashboard: entries since [since], newest first. */
+    @Query("SELECT * FROM activity_log WHERE at >= :since ORDER BY at DESC LIMIT :limit")
+    fun recent(since: Long, limit: Int): Flow<List<ActivityLogEntity>>
+}
+
+@Dao
 interface SettingsDao {
     @Query("SELECT `value` FROM settings WHERE `key` = :key")
     suspend fun get(key: String): String?

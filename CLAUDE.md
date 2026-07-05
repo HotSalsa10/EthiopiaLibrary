@@ -18,3 +18,9 @@
 *   **EPIC Sequence:** Always follow the Explore, Plan, Implement, and Commit sequence. Do not jump straight into massive code generation.
 *   **Pacing:** Implement one architectural layer at a time (e.g., build and verify the local database completely before touching the UI). Wait for my confirmation between steps.
 *   **Address Root Causes:** If I paste a compilation error, do not just suppress it. Explain the root mechanical cause of the error first, then provide the fix.
+
+## Database Migration Policy (since v1.8.0, 2026-07)
+Real data lives on the production tablet and `fallbackToDestructiveMigration` has been removed. Any bump of `LibraryDatabase.version` MUST ship:
+1. a `Migration` in `app/src/main/java/com/ethiopialibrary/app/data/Migrations.kt` whose SQL mirrors the newly exported `app/schemas/<n>.json`, and
+2. a `MigrationTest` case proving old-version data survives (`helper.createDatabase(old)` → insert rows → `runMigrationsAndValidate(new)`).
+Never re-add a destructive fallback. Exported schemas are committed; the schemas dir doubles as debug assets so Robolectric's MigrationTestHelper can read them.

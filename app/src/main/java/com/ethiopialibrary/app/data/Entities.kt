@@ -36,7 +36,12 @@ data class CategoryEntity(
  * 2-letter code and [bookNumber] is auto-assigned, unique within that category;
  * together they form the first two parts of every copy code.
  */
-@Entity(tableName = "books")
+@Entity(
+    tableName = "books",
+    // The book list, search, and category statistics all filter or sort by
+    // categoryCode; without this index they scan the whole table.
+    indices = [Index("categoryCode")],
+)
 data class BookEntity(
     @PrimaryKey val id: String,
     val title: String,
@@ -159,4 +164,18 @@ data class SyncQueueEntity(
 data class SettingEntity(
     @PrimaryKey val key: String,
     val value: String,
+)
+
+/**
+ * Desk activity journal: one row per loan action, newest surfacing on the
+ * dashboard feed. [prevDueAt] preserves the pre-renewal due date so a renew
+ * can be undone; local-only (never synced - the loans themselves sync).
+ */
+@Entity(tableName = "activity_log", indices = [Index("at")])
+data class ActivityLogEntity(
+    @PrimaryKey val id: String,
+    val type: String, // CHECKOUT | RETURN | RENEW
+    val loanId: String,
+    val at: Long,
+    val prevDueAt: Long? = null,
 )

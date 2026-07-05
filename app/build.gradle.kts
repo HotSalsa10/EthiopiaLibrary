@@ -68,6 +68,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+    sourceSets {
+        // Exported Room schemas as DEBUG assets: AGP does not merge unit-test
+        // assets, and Robolectric's MigrationTestHelper reads the app variant's
+        // merged assets. A few KB of JSON in debug builds only; release clean.
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -111,4 +117,5 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.work.testing)
+    testImplementation(libs.room.testing)
 }
