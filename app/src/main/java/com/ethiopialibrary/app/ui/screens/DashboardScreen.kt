@@ -180,6 +180,7 @@ fun DashboardScreen(
                     Modifier.weight(1f), Icons.Filled.LocalLibrary,
                     LibraryAccents.loans, LibraryAccents.loansBg,
                     s.activeLoans, stringResource(R.string.stat_active_loans),
+                    onClick = { onNavigate("loans") },
                 )
                 StatTile(
                     Modifier.weight(1f), Icons.Filled.Schedule,
@@ -399,6 +400,7 @@ private fun StatTile(
     value: Int,
     label: String,
     valueColor: Color? = null,
+    onClick: () -> Unit = {},
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = RoundedCornerShape(20.dp)
@@ -409,7 +411,7 @@ private fun StatTile(
             .shadow(3.dp, shape, spotColor = LibraryAccents.shadowCard, ambientColor = LibraryAccents.shadowCard)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .clickable(interactionSource = interaction, indication = ripple()) {},
+            .clickable(interactionSource = interaction, indication = ripple()) { onClick() },
     ) {
         // Faint metric watermark, bleeding off the bottom-end corner for depth.
         Icon(

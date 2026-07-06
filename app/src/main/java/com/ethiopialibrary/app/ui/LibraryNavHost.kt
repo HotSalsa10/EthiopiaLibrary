@@ -14,6 +14,7 @@ import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.screens.BookDetailScreen
 import com.ethiopialibrary.app.ui.screens.BooksScreen
 import com.ethiopialibrary.app.ui.screens.CheckoutScreen
+import com.ethiopialibrary.app.ui.screens.CurrentlyOutScreen
 import com.ethiopialibrary.app.ui.screens.DashboardScreen
 import com.ethiopialibrary.app.ui.screens.MemberDetailScreen
 import com.ethiopialibrary.app.ui.screens.MembersScreen
@@ -72,6 +73,9 @@ fun LibraryNavHost(repo: LibraryRepository) {
         }
         composable("return") {
             ReturnScreen(vm = viewModel(factory = factory), onBack = back)
+        }
+        composable("loans") {
+            CurrentlyOutScreen(vm = viewModel(factory = factory), onBack = back)
         }
         composable("settings") {
             SettingsScreen(vm = viewModel(factory = factory), repo = repo, onBack = back)

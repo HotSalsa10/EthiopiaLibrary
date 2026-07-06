@@ -319,6 +319,30 @@ interface LoanDao {
     )
     fun activeForMemberDetailed(memberId: String): Flow<List<LoanWithDetails>>
 
+    /**
+     * Every book currently on loan, soonest-due first. [query] blank returns all;
+     * otherwise filters by book title/author, copy code, or member name/code.
+     */
+    @Query(
+        """
+        SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM loans l
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE l.returnedAt IS NULL AND l.isDeleted = 0
+          AND (:query = ''
+               OR b.title LIKE '%' || :query || '%'
+               OR b.author LIKE '%' || :query || '%'
+               OR c.copyCode LIKE '%' || :query || '%'
+               OR m.fullName LIKE '%' || :query || '%'
+               OR m.memberCode LIKE '%' || :query || '%')
+        ORDER BY l.dueAt
+        """,
+    )
+    fun allActiveDetailed(query: String): Flow<List<LoanWithDetails>>
+
     @Query(
         """
         SELECT l.*, b.title AS bookTitle, c.copyCode AS copyCode,

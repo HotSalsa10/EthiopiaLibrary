@@ -137,6 +137,29 @@ class DataQueriesTest {
     }
 
     @Test
+    fun `currently-out lists every active loan, soonest due first, and filters`() = runBlocking {
+        val oromay = repo.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am")
+        val fiqir = repo.addBook(title = "Fiqir Eske Meqabir", author = "Haddis Alemayehu", categoryCode = "Fiction", language = "am")
+        val c1 = repo.addCopy(oromay.id)
+        val c2 = repo.addCopy(fiqir.id)
+        val c3 = repo.addCopy(oromay.id)
+        val abebe = repo.registerMember(fullName = "Abebe Kebede")
+        val sara = repo.registerMember(fullName = "Sara Tesfaye")
+        repo.checkout(c1.copyCode, abebe.memberCode, periodDays = 30)
+        repo.checkout(c2.copyCode, sara.memberCode, periodDays = 7) // due soonest
+        repo.checkout(c3.copyCode, abebe.memberCode, periodDays = 14)
+        repo.returnBook(c3.copyCode) // returned -> not "out"
+
+        val out = repo.currentlyOutLoans().first()
+        assertEquals(2, out.size)
+        assertEquals(c2.copyCode, out.first().copyCode) // soonest due leads
+        // Filter by member, book, or code like the overdue list.
+        assertEquals(c1.copyCode, repo.currentlyOutLoans("Abebe").first().single().copyCode)
+        assertEquals(c2.copyCode, repo.currentlyOutLoans("Fiqir").first().single().copyCode)
+        assertTrue(repo.currentlyOutLoans("zzzz").first().isEmpty())
+    }
+
+    @Test
     fun `active loans for member are detailed`() = runBlocking {
         val book = repo.addBook(title = "T", author = "A", categoryCode = "C", language = "am")
         val c1 = repo.addCopy(book.id)

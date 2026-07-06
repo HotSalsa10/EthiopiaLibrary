@@ -156,6 +156,9 @@
     <string name="backup_nudge_text">በይነመረብ አለ — አሁን ምትኬ ይያዙ?</string>
     <string name="backup_nudge_later">ቆይቶ</string>
     <string name="export_backup_file">የምትኬ ፋይል አጋራ</string>
+    <string name="currently_out">አሁን የተወሰዱ</string>
+    <string name="no_books_out">አሁን የተወሰደ መጽሐፍ የለም</string>
+    <string name="no_matches">ተመሳሳይ አልተገኘም</string>
 
     <!-- Editing -->
     <string name="edit_book">መጽሐፍ አርትዕ</string>

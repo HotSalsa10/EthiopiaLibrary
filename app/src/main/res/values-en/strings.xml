@@ -144,6 +144,9 @@
     <string name="backup_nudge_text">Internet is available — back up now?</string>
     <string name="backup_nudge_later">Later</string>
     <string name="export_backup_file">Export backup file</string>
+    <string name="currently_out">Currently out</string>
+    <string name="no_books_out">No books are out right now</string>
+    <string name="no_matches">No matches</string>
 
     <string name="edit_book">Edit book</string>
     <string name="edit_member">Edit member</string>

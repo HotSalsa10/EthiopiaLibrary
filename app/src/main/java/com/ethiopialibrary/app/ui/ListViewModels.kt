@@ -194,6 +194,36 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
+class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
+
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    /** Every book on loan right now, soonest-due first, filtered by [query]. */
+    val loans: StateFlow<List<LoanWithDetails>> = _query
+        .flatMapLatest { repo.currentlyOutLoans(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun setQuery(value: String) {
+        _query.value = value
+    }
+
+    fun renew(loanId: String, onDone: () -> Unit) {
+        viewModelScope.launch {
+            repo.renewLoan(loanId)
+            onDone()
+        }
+    }
+
+    fun returnBook(copyCode: String, onDone: () -> Unit) {
+        viewModelScope.launch {
+            repo.returnBook(copyCode)
+            onDone()
+        }
+    }
+}
+
 class StatisticsViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     private val _stats = MutableStateFlow<LibraryStatistics?>(null)

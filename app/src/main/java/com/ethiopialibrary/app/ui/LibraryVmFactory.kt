@@ -16,6 +16,7 @@ class LibraryVmFactory(private val repo: LibraryRepository) : ViewModelProvider.
         modelClass.isAssignableFrom(ReturnViewModel::class.java) -> ReturnViewModel(repo)
         modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(repo)
         modelClass.isAssignableFrom(StatisticsViewModel::class.java) -> StatisticsViewModel(repo)
+        modelClass.isAssignableFrom(CurrentlyOutViewModel::class.java) -> CurrentlyOutViewModel(repo)
         else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
     } as T
 }

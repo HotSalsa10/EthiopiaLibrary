@@ -310,6 +310,10 @@ class LibraryRepository(
     fun activeLoansForMember(memberId: String): Flow<List<LoanWithDetails>> =
         db.loanDao().activeForMemberDetailed(memberId)
 
+    /** Everything currently on loan; [query] filters by book/member/code (blank = all). */
+    fun currentlyOutLoans(query: String = ""): Flow<List<LoanWithDetails>> =
+        db.loanDao().allActiveDetailed(query.trim())
+
     fun dashboardStats(): Flow<DashboardStats> = combine(
         db.bookDao().count(),
         db.memberDao().count(),
