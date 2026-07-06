@@ -17,6 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +35,7 @@ import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.CurrentlyOutViewModel
 import com.ethiopialibrary.app.ui.LocalCalendarMode
+import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import java.util.Locale
 
 /** Every book on loan right now, soonest-due first, with per-row renew and return. */
@@ -40,6 +45,24 @@ fun CurrentlyOutScreen(vm: CurrentlyOutViewModel, onBack: () -> Unit) {
     val query by vm.query.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
+    var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
+
+    renewTarget?.let { target ->
+        val preview by produceState<Long?>(null, target) { value = vm.renewPreviewDueAt() }
+        RenewConfirmDialog(
+            bookTitle = target.bookTitle,
+            memberName = target.memberName,
+            newDueAt = preview,
+            locale = locale,
+            onConfirm = {
+                vm.renew(target.loan.id) {
+                    Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                }
+                renewTarget = null
+            },
+            onDismiss = { renewTarget = null },
+        )
+    }
 
     Column(
         Modifier
@@ -71,11 +94,7 @@ fun CurrentlyOutScreen(vm: CurrentlyOutViewModel, onBack: () -> Unit) {
                     OutLoanCard(
                         item = loan,
                         locale = locale,
-                        onRenew = {
-                            vm.renew(loan.loan.id) {
-                                Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onRenew = { renewTarget = loan },
                         onReturn = {
                             vm.returnBook(loan.copyCode) {
                                 Toast.makeText(context, R.string.return_success, Toast.LENGTH_SHORT).show()

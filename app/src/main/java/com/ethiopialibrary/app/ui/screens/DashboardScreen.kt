@@ -41,8 +41,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +71,7 @@ import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.DashboardViewModel
 import com.ethiopialibrary.app.ui.LocalCalendarMode
+import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.pressScale
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
@@ -90,6 +94,25 @@ fun DashboardScreen(
     val locale = LocalConfiguration.current.locales[0]
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
+
+    renewTarget?.let { target ->
+        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt() }
+        RenewConfirmDialog(
+            bookTitle = target.bookTitle,
+            memberName = target.memberName,
+            newDueAt = preview,
+            locale = locale,
+            onConfirm = {
+                scope.launch {
+                    repo.renewLoan(target.loan.id)
+                    Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                }
+                renewTarget = null
+            },
+            onDismiss = { renewTarget = null },
+        )
+    }
 
     Column(
         Modifier
@@ -197,12 +220,7 @@ fun DashboardScreen(
             SectionHeader(stringResource(R.string.due_soon_title))
             Spacer(Modifier.height(12.dp))
             dueSoon.forEach { loan ->
-                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) {
-                    scope.launch {
-                        repo.renewLoan(loan.loan.id)
-                        Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
-                    }
-                }
+                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) { renewTarget = loan }
                 Spacer(Modifier.height(10.dp))
             }
             Spacer(Modifier.height(16.dp))
@@ -231,12 +249,7 @@ fun DashboardScreen(
             )
         } else {
             overdue.forEach { loan ->
-                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer) {
-                    scope.launch {
-                        repo.renewLoan(loan.loan.id)
-                        Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
-                    }
-                }
+                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer) { renewTarget = loan }
                 Spacer(Modifier.height(10.dp))
             }
         }

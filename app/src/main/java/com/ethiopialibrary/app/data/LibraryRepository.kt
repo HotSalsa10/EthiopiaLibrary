@@ -362,6 +362,9 @@ class LibraryRepository(
     suspend fun loanPeriodDays(): Int =
         db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull() ?: DEFAULT_LOAN_PERIOD_DAYS
 
+    /** The due date a renew would set (today + the configured loan period), for a confirm preview. */
+    suspend fun renewalPreviewDueAt(): Long = now() + loanPeriodDays() * MILLIS_PER_DAY
+
     fun pendingSyncCount(): Flow<Int> = db.syncQueueDao().pendingCount()
 
     fun lastSyncAt(): Flow<Long?> =

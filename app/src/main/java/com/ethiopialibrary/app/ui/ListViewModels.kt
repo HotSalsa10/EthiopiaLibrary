@@ -209,6 +209,9 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
         _query.value = value
     }
 
+    /** Due date a renewal would set, for the confirm dialog's preview. */
+    suspend fun renewPreviewDueAt(): Long = repo.renewalPreviewDueAt()
+
     fun renew(loanId: String, onDone: () -> Unit) {
         viewModelScope.launch {
             repo.renewLoan(loanId)

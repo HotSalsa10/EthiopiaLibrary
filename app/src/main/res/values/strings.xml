@@ -159,6 +159,7 @@
     <string name="currently_out">አሁን የተወሰዱ</string>
     <string name="no_books_out">አሁን የተወሰደ መጽሐፍ የለም</string>
     <string name="no_matches">ተመሳሳይ አልተገኘም</string>
+    <string name="renew_new_due">አዲስ የመመለሻ ቀን፦ %1$s</string>
 
     <!-- Editing -->
     <string name="edit_book">መጽሐፍ አርትዕ</string>

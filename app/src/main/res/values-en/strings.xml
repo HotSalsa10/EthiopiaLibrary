@@ -147,6 +147,7 @@
     <string name="currently_out">Currently out</string>
     <string name="no_books_out">No books are out right now</string>
     <string name="no_matches">No matches</string>
+    <string name="renew_new_due">New due date: %1$s</string>
 
     <string name="edit_book">Edit book</string>
     <string name="edit_member">Edit member</string>

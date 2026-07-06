@@ -147,6 +147,7 @@
     <string name="currently_out">المعارة حاليًا</string>
     <string name="no_books_out">لا توجد كتب معارة حاليًا</string>
     <string name="no_matches">لا توجد نتائج</string>
+    <string name="renew_new_due">تاريخ الاستحقاق الجديد: %1$s</string>
 
     <string name="edit_book">تعديل الكتاب</string>
     <string name="edit_member">تعديل العضو</string>
