@@ -40,8 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.data.MemberStatus
+import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.labels.LabelGenerator
 import com.ethiopialibrary.app.ui.AppCard
@@ -56,6 +58,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     val member by produceState<MemberEntity?>(null, memberId, refresh) {
         value = repo.memberById(memberId)
@@ -66,10 +69,28 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
     val avgRating by produceState<Double?>(null, memberId, history) {
         value = repo.memberAverageRating(memberId)
     }
+    var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
+
+    renewTarget?.let { target ->
+        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt() }
+        RenewConfirmDialog(
+            bookTitle = target.bookTitle,
+            memberName = target.memberName,
+            newDueAt = preview,
+            locale = LocalConfiguration.current.locales[0],
+            onConfirm = {
+                scope.launch {
+                    repo.renewLoan(target.loan.id)
+                    Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                }
+                renewTarget = null
+            },
+            onDismiss = { renewTarget = null },
+        )
+    }
     val locale = LocalConfiguration.current.locales[0]
 
     var showEdit by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     Column(
         Modifier
@@ -146,12 +167,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
-                TextButton(onClick = {
-                    scope.launch {
-                        repo.renewLoan(item.loan.id)
-                        Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
-                    }
-                }) { Text(stringResource(R.string.renew)) }
+                TextButton(onClick = { renewTarget = item }) { Text(stringResource(R.string.renew)) }
             }
             Spacer(Modifier.height(8.dp))
         }
