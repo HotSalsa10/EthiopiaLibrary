@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +30,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.MemberStatus
 import com.ethiopialibrary.app.labels.exportAndShareLabels
+import com.ethiopialibrary.app.ui.AddMemberDialog
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
@@ -110,44 +109,4 @@ fun MembersScreen(
             },
         )
     }
-}
-
-@Composable
-private fun AddMemberDialog(
-    onDismiss: () -> Unit,
-    onSave: (name: String, phone: String?, nationalId: String?, address: String?) -> Unit,
-) {
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var nationalId by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_member)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_full_name)) }, singleLine = true)
-                OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(R.string.field_phone)) }, singleLine = true)
-                OutlinedTextField(nationalId, { nationalId = it }, label = { Text(stringResource(R.string.field_national_id)) }, singleLine = true)
-                OutlinedTextField(address, { address = it }, label = { Text(stringResource(R.string.field_address)) }, singleLine = false, minLines = 2)
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = name.isNotBlank(),
-                onClick = {
-                    onSave(
-                        name.trim(),
-                        phone.trim().ifBlank { null },
-                        nationalId.trim().ifBlank { null },
-                        address.trim().ifBlank { null },
-                    )
-                },
-            ) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
 }
