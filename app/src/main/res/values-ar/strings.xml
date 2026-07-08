@@ -157,6 +157,15 @@
     <string name="renew_done">تم التجديد — تم تحديد تاريخ إرجاع جديد</string>
 
     <string name="borrow_another">إعارة كتاب آخر لنفس العضو</string>
+    <string name="batch_checkout_start">إعارة عدة كتب لعضو واحد</string>
+    <string name="batch_checkout_title">إعارة جماعية</string>
+    <string name="batch_items_heading">الكتب في هذه المجموعة:</string>
+    <string name="batch_confirm_all">تأكيد الكل</string>
+    <string name="batch_new">مجموعة جديدة</string>
+    <string name="batch_done">تم</string>
+    <string name="batch_line_success">نجحت</string>
+    <string name="batch_line_failed">فشلت</string>
+    <string name="batch_results_heading">النتائج:</string>
 
     <string name="staff_pin">رمز PIN للموظفين</string>
     <string name="set_pin">تعيين رمز PIN</string>

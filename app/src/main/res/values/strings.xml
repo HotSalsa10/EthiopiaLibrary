@@ -172,6 +172,15 @@
 
     <!-- Multi-book checkout -->
     <string name="borrow_another">ለዚሁ አባል ሌላ መጽሐፍ አውስ</string>
+    <string name="batch_checkout_start">ለአንድ አባል ብዙ መጽሐፍት አዋስ</string>
+    <string name="batch_checkout_title">ብዙ መጽሐፍት ማዋስ</string>
+    <string name="batch_items_heading">በዚህ ስብስብ ውስጥ ያሉ መጽሐፍት፦</string>
+    <string name="batch_confirm_all">ሁሉንም አረጋግጥ</string>
+    <string name="batch_new">አዲስ ስብስብ</string>
+    <string name="batch_done">ተጠናቋል</string>
+    <string name="batch_line_success">ተሳክቷል</string>
+    <string name="batch_line_failed">አልተሳካም</string>
+    <string name="batch_results_heading">ውጤቶች፦</string>
 
     <!-- Staff PIN -->
     <string name="staff_pin">የሰራተኛ ፒን</string>

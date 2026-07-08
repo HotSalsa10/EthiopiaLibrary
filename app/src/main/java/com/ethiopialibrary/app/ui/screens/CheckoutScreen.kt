@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,6 +46,7 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
     val copyQuery by vm.copyQuery.collectAsStateWithLifecycle()
     val copyResults by vm.copyResults.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
+    var showBatch by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -52,7 +54,19 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
-        AppTopBar(stringResource(R.string.checkout_title), onBack)
+        AppTopBar(
+            stringResource(if (showBatch) R.string.batch_checkout_title else R.string.checkout_title),
+            onBack = if (showBatch) {
+                { vm.resetBatch(); showBatch = false }
+            } else {
+                onBack
+            },
+        )
+
+        if (showBatch) {
+            BatchCheckoutSection(vm, onExit = { showBatch = false })
+            return@Column
+        }
 
         state.error?.let { error ->
             ErrorCard(checkoutErrorText(error))
@@ -106,6 +120,8 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                     // Checkout: only copies available to loan are selectable.
                     selectable = { it.copy.status == CopyStatus.IN_SERVICE && !it.onLoan },
                 )
+                Spacer(Modifier.height(16.dp))
+                BigOutlinedButton(stringResource(R.string.batch_checkout_start)) { showBatch = true }
             }
 
             state.member == null -> {
@@ -141,6 +157,81 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
             onPinChanged = vm::clearPinOverrideError,
             onDismiss = vm::dismissPinOverride,
         )
+    }
+}
+
+/** Member-first basket: scan the member once, then scan books repeatedly, then Confirm All. */
+@Composable
+private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
+    val state by vm.batchState.collectAsStateWithLifecycle()
+    val results = state.results
+    // CodeEntry doesn't clear its own text after submit (fine for the one-shot steps
+    // elsewhere, which unmount on success) - here it's reused for every scan, so force a
+    // fresh instance after each attempt by keying on an attempt counter.
+    var attempt by remember { mutableStateOf(0) }
+
+    when {
+        results != null -> {
+            Text(stringResource(R.string.batch_results_heading), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            results.forEach { line ->
+                val success = line.outcome == CheckoutViewModel.BatchLineOutcome.SUCCESS
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = if (success) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    },
+                ) {
+                    Text("${line.bookTitle} — " + stringResource(if (success) R.string.batch_line_success else R.string.batch_line_failed))
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            BigButton(stringResource(R.string.batch_new)) { vm.resetBatch() }
+            Spacer(Modifier.height(8.dp))
+            BigOutlinedButton(stringResource(R.string.batch_done)) { vm.resetBatch(); onExit() }
+        }
+
+        state.member == null -> {
+            state.memberError?.let {
+                ErrorCard(checkoutErrorText(it))
+                Spacer(Modifier.height(12.dp))
+            }
+            CodeEntry(stringResource(R.string.enter_member_code), vm::submitBatchMemberCode)
+        }
+
+        else -> {
+            FoundMemberCard(state.member!!)
+            Spacer(Modifier.height(16.dp))
+
+            if (state.items.isNotEmpty()) {
+                Text(stringResource(R.string.batch_items_heading), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                state.items.forEach { line ->
+                    FoundCopyCard(line.copy)
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            state.copyError?.let {
+                ErrorCard(checkoutErrorText(it))
+                Spacer(Modifier.height(12.dp))
+            }
+
+            key(attempt) {
+                CodeEntry(stringResource(R.string.enter_copy_code)) { code ->
+                    vm.addBatchCopyCode(code)
+                    attempt++
+                }
+            }
+
+            if (state.items.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                BigButton(stringResource(R.string.batch_confirm_all)) { vm.confirmBatch() }
+            }
+        }
     }
 }
 

@@ -157,6 +157,15 @@
     <string name="renew_done">Renewed — new due date set</string>
 
     <string name="borrow_another">Borrow another book for this member</string>
+    <string name="batch_checkout_start">Check out several books to one member</string>
+    <string name="batch_checkout_title">Batch checkout</string>
+    <string name="batch_items_heading">Books in this batch:</string>
+    <string name="batch_confirm_all">Confirm all</string>
+    <string name="batch_new">New batch</string>
+    <string name="batch_done">Done</string>
+    <string name="batch_line_success">Succeeded</string>
+    <string name="batch_line_failed">Failed</string>
+    <string name="batch_results_heading">Results:</string>
 
     <string name="staff_pin">Staff PIN</string>
     <string name="set_pin">Set PIN</string>
