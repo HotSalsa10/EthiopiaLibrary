@@ -493,9 +493,29 @@ interface ActivityLogDao {
     @Insert
     suspend fun insert(entry: ActivityLogEntity)
 
+    @Query("SELECT * FROM activity_log WHERE id = :id")
+    suspend fun byId(id: String): ActivityLogEntity?
+
     /** Feed for the dashboard: entries since [since], newest first. */
     @Query("SELECT * FROM activity_log WHERE at >= :since ORDER BY at DESC LIMIT :limit")
     fun recent(since: Long, limit: Int): Flow<List<ActivityLogEntity>>
+
+    /** Same feed, joined with book/member details for display. */
+    @Query(
+        """
+        SELECT a.*, b.title AS bookTitle, c.copyCode AS copyCode,
+               m.fullName AS memberName, m.memberCode AS memberCode
+        FROM activity_log a
+        JOIN loans l ON l.id = a.loanId
+        JOIN book_copies c ON c.id = l.copyId
+        JOIN books b ON b.id = c.bookId
+        JOIN members m ON m.id = l.memberId
+        WHERE a.at >= :since
+        ORDER BY a.at DESC
+        LIMIT :limit
+        """,
+    )
+    fun recentDetailed(since: Long, limit: Int): Flow<List<ActivityWithDetails>>
 }
 
 @Dao

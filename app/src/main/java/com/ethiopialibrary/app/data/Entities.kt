@@ -166,6 +166,9 @@ data class SettingEntity(
     val value: String,
 )
 
+/** Stored as [ActivityLogEntity.type]'s raw string (`.name`), not a Room-native enum column. */
+enum class ActivityType { CHECKOUT, RETURN, RENEW, UNDO }
+
 /**
  * Desk activity journal: one row per loan action, newest surfacing on the
  * dashboard feed. [prevDueAt] preserves the pre-renewal due date so a renew
@@ -174,7 +177,7 @@ data class SettingEntity(
 @Entity(tableName = "activity_log", indices = [Index("at")])
 data class ActivityLogEntity(
     @PrimaryKey val id: String,
-    val type: String, // CHECKOUT | RETURN | RENEW
+    val type: String, // ActivityType.name
     val loanId: String,
     val at: Long,
     val prevDueAt: Long? = null,

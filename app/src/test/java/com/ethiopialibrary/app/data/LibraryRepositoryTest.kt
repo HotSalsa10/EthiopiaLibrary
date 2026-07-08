@@ -267,6 +267,134 @@ class LibraryRepositoryTest {
         assertEquals(0, repo.overdueLoans().size)
     }
 
+    // ---------- activity log + undo (Wave 5 item 6) ----------
+
+    @Test
+    fun `checkout logs a CHECKOUT activity entry`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        val entries = repo.recentActivity().first()
+        assertEquals(1, entries.size)
+        assertEquals(ActivityType.CHECKOUT.name, entries[0].entry.type)
+        assertEquals(loan.id, entries[0].entry.loanId)
+        assertEquals("Abebe Kebede", entries[0].memberName)
+    }
+
+    @Test
+    fun `return logs a RETURN activity entry`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+
+        repo.returnBook(copies[0].copyCode)
+
+        val entries = repo.recentActivity().first()
+        assertEquals(2, entries.size) // checkout + return
+        assertEquals(ActivityType.RETURN.name, entries[0].entry.type) // newest first
+    }
+
+    @Test
+    fun `renew logs a RENEW activity entry with the previous due date`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        val originalDueAt = loan.dueAt
+
+        repo.renewLoan(loan.id)
+
+        val entries = repo.recentActivity().first()
+        val renewEntry = entries.first { it.entry.type == ActivityType.RENEW.name }
+        assertEquals(originalDueAt, renewEntry.entry.prevDueAt)
+    }
+
+    @Test
+    fun `recent activity only includes today's entries`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+
+        clock.advanceDays(1)
+
+        assertTrue(repo.recentActivity().first().isEmpty())
+    }
+
+    @Test
+    fun `undoing a checkout soft-deletes the loan and frees the copy`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+
+        val undone = repo.undoActivity(checkoutEntry.entry.id)
+
+        assertTrue(undone)
+        assertNull(repo.activeLoanDetailedForCopy(copies[0].copyCode))
+        assertTrue(repo.checkout(copies[0].copyCode, member.memberCode) is CheckoutResult.Success)
+    }
+
+    @Test
+    fun `undoing a return clears returnedAt`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        repo.returnBook(copies[0].copyCode)
+        val returnEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.RETURN.name }
+
+        val undone = repo.undoActivity(returnEntry.entry.id)
+
+        assertTrue(undone)
+        assertNotNull(repo.activeLoanDetailedForCopy(copies[0].copyCode))
+    }
+
+    @Test
+    fun `undoing a renew restores the previous due date`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        val originalDueAt = loan.dueAt
+        repo.renewLoan(loan.id)
+        val renewEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.RENEW.name }
+
+        val undone = repo.undoActivity(renewEntry.entry.id)
+
+        assertTrue(undone)
+        assertEquals(originalDueAt, repo.activeLoanDetailedForCopy(copies[0].copyCode)?.loan?.dueAt)
+    }
+
+    @Test
+    fun `undo logs its own UNDO entry`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+
+        repo.undoActivity(checkoutEntry.entry.id)
+
+        val entries = repo.recentActivity().first()
+        assertEquals(2, entries.size) // original CHECKOUT + new UNDO
+        assertTrue(entries.any { it.entry.type == ActivityType.UNDO.name })
+    }
+
+    @Test
+    fun `an UNDO entry itself cannot be undone`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+        repo.undoActivity(checkoutEntry.entry.id)
+        val undoEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.UNDO.name }
+
+        assertFalse(repo.undoActivity(undoEntry.entry.id))
+    }
+
+    @Test
+    fun `undoing an unknown activity id returns false`() = runBlocking {
+        assertFalse(repo.undoActivity("does-not-exist"))
+    }
+
     @Test
     fun `renewing a returned loan reports NotActive`() = runBlocking {
         val (_, copies) = addBookWithCopies(1)

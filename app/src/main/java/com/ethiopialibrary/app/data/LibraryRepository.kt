@@ -45,12 +45,17 @@ class LibraryRepository(
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
         private const val MILLIS_PER_DAY = 86_400_000L
+        private const val RECENT_ACTIVITY_LIMIT = 10
 
         /** Exported share-sheet backups kept on device before rotation. */
         private const val EXPORT_KEEP_COUNT = 3
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
+
+    /** Midnight in the clock's own zone - the boundary for "today" in the activity feed. */
+    private fun startOfToday(): Long =
+        clock.instant().atZone(clock.zone).toLocalDate().atStartOfDay(clock.zone).toInstant().toEpochMilli()
 
     private fun newId(): String = UUID.randomUUID().toString()
 
@@ -238,6 +243,7 @@ class LibraryRepository(
             )
             db.loanDao().insert(loan)
             enqueueSync("loan", loan.id)
+            db.activityLogDao().insert(ActivityLogEntity(id = newId(), type = ActivityType.CHECKOUT.name, loanId = loan.id, at = t))
             CheckoutResult.Success(loan)
         }
 
@@ -251,6 +257,7 @@ class LibraryRepository(
             val returned = active.copy(returnedAt = t, updatedAt = t)
             db.loanDao().update(returned)
             enqueueSync("loan", returned.id)
+            db.activityLogDao().insert(ActivityLogEntity(id = newId(), type = ActivityType.RETURN.name, loanId = returned.id, at = t))
             ReturnResult.Success(returned, wasOverdue = t > active.dueAt)
         }
 
@@ -283,6 +290,9 @@ class LibraryRepository(
             val renewed = loan.copy(dueAt = t + periodDays * MILLIS_PER_DAY, updatedAt = t)
             db.loanDao().update(renewed)
             enqueueSync("loan", renewed.id)
+            db.activityLogDao().insert(
+                ActivityLogEntity(id = newId(), type = ActivityType.RENEW.name, loanId = renewed.id, at = t, prevDueAt = loan.dueAt),
+            )
             RenewResult.Success(renewed)
         }
 
@@ -464,6 +474,32 @@ class LibraryRepository(
         val until = start + dueSoonDays() * MILLIS_PER_DAY
         return db.loanDao().dueSoonDetailed(start, until)
     }
+
+    /** Dashboard feed: today's desk activity, newest first, capped to the last few. */
+    suspend fun recentActivity(): Flow<List<ActivityWithDetails>> =
+        db.activityLogDao().recentDetailed(startOfToday(), RECENT_ACTIVITY_LIMIT)
+
+    /**
+     * Reverts a CHECKOUT/RETURN/RENEW entry (checkout -> soft-delete the loan; return ->
+     * un-return it; renew -> restore the pre-renewal due date), re-syncs the loan, and logs
+     * the undo as its own entry. Returns false if the entry/loan is gone or isn't undoable
+     * (e.g. it's already an UNDO entry - undoing an undo isn't supported).
+     */
+    suspend fun undoActivity(activityId: String): Boolean =
+        db.withTransaction {
+            val entry = db.activityLogDao().byId(activityId) ?: return@withTransaction false
+            val loan = db.loanDao().byId(entry.loanId) ?: return@withTransaction false
+            val t = now()
+            when (entry.type) {
+                ActivityType.CHECKOUT.name -> db.loanDao().update(loan.copy(isDeleted = true, updatedAt = t))
+                ActivityType.RETURN.name -> db.loanDao().update(loan.copy(returnedAt = null, updatedAt = t))
+                ActivityType.RENEW.name -> db.loanDao().update(loan.copy(dueAt = entry.prevDueAt ?: loan.dueAt, updatedAt = t))
+                else -> return@withTransaction false
+            }
+            enqueueSync("loan", loan.id)
+            db.activityLogDao().insert(ActivityLogEntity(id = newId(), type = ActivityType.UNDO.name, loanId = loan.id, at = t))
+            true
+        }
 
     fun memberHistory(memberId: String): Flow<List<LoanWithDetails>> =
         db.loanDao().memberHistoryDetailed(memberId)

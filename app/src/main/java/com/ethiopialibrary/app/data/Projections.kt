@@ -37,6 +37,15 @@ data class CopyWithBook(
     val onLoan: Boolean,
 )
 
+/** One activity_log row joined with what staff need to read it aloud, for the dashboard feed. */
+data class ActivityWithDetails(
+    @Embedded val entry: ActivityLogEntity,
+    val bookTitle: String,
+    val copyCode: String,
+    val memberName: String,
+    val memberCode: String,
+)
+
 data class DashboardStats(
     val totalBooks: Int,
     val totalMembers: Int,
