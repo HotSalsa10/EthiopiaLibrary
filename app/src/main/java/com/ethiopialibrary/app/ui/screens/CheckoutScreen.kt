@@ -31,6 +31,7 @@ import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.CopyWithBook
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
+import com.ethiopialibrary.app.ui.AddMemberDialog
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
@@ -47,6 +48,7 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
     val copyResults by vm.copyResults.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     var showBatch by remember { mutableStateOf(false) }
+    var showAddMember by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -128,6 +130,10 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                 FoundCopyCard(state.copy!!)
                 Spacer(Modifier.height(16.dp))
                 CodeEntry(stringResource(R.string.enter_member_code), vm::submitMemberCode)
+                if (state.error == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
+                    Spacer(Modifier.height(8.dp))
+                    BigOutlinedButton(stringResource(R.string.add_member)) { showAddMember = true }
+                }
             }
 
             state.memberOverdueCount > 0 && !state.overdueWarningAcknowledged -> {
@@ -158,6 +164,16 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
             onDismiss = vm::dismissPinOverride,
         )
     }
+
+    if (showAddMember) {
+        AddMemberDialog(
+            onDismiss = { showAddMember = false },
+            onSave = { name, phone, nationalId, address ->
+                vm.quickAddMember(name, phone, nationalId, address)
+                showAddMember = false
+            },
+        )
+    }
 }
 
 /** Member-first basket: scan the member once, then scan books repeatedly, then Confirm All. */
@@ -169,6 +185,7 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
     // elsewhere, which unmount on success) - here it's reused for every scan, so force a
     // fresh instance after each attempt by keying on an attempt counter.
     var attempt by remember { mutableStateOf(0) }
+    var showAddMember by remember { mutableStateOf(false) }
 
     when {
         results != null -> {
@@ -200,6 +217,10 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
             }
             CodeEntry(stringResource(R.string.enter_member_code), vm::submitBatchMemberCode)
+            if (state.memberError == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
+                Spacer(Modifier.height(8.dp))
+                BigOutlinedButton(stringResource(R.string.add_member)) { showAddMember = true }
+            }
         }
 
         else -> {
@@ -232,6 +253,16 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                 BigButton(stringResource(R.string.batch_confirm_all)) { vm.confirmBatch() }
             }
         }
+    }
+
+    if (showAddMember) {
+        AddMemberDialog(
+            onDismiss = { showAddMember = false },
+            onSave = { name, phone, nationalId, address ->
+                vm.quickAddBatchMember(name, phone, nationalId, address)
+                showAddMember = false
+            },
+        )
     }
 }
 
