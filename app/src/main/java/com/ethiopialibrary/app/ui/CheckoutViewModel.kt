@@ -35,6 +35,13 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         // Loan length for this checkout; prefilled from the setting, editable per loan.
         val loanPeriodDays: Int = LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS,
         val error: CheckoutUiError? = null,
+        // Overdue books this member already has; set when they're found, reset per member.
+        // Staff acknowledge the warning to proceed - it never blocks by itself.
+        val memberOverdueCount: Int = 0,
+        val overdueWarningAcknowledged: Boolean = false,
+        // True after confirm() hits LimitReached, prompting a staff-PIN override dialog.
+        val awaitingPinOverride: Boolean = false,
+        val pinOverrideError: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -83,6 +90,11 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     fun submitMemberCode(code: String) {
         viewModelScope.launch {
             val found = repo.memberByCode(code)
+            val overdueCount = if (found != null && found.status == MemberStatus.ACTIVE) {
+                repo.overdueCountForMember(found.id)
+            } else {
+                0
+            }
             _state.update { current ->
                 when {
                     found == null ->
@@ -90,10 +102,20 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                     found.status != MemberStatus.ACTIVE ->
                         current.copy(error = CheckoutUiError.MEMBER_NOT_ACTIVE)
                     else ->
-                        current.copy(member = found, error = null)
+                        current.copy(
+                            member = found,
+                            error = null,
+                            memberOverdueCount = overdueCount,
+                            overdueWarningAcknowledged = false,
+                        )
                 }
             }
         }
+    }
+
+    /** Staff clicked through the "member has overdue books" warning. */
+    fun acknowledgeOverdueWarning() {
+        _state.update { it.copy(overdueWarningAcknowledged = true) }
     }
 
     fun confirm() {
@@ -111,9 +133,61 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
                 CheckoutResult.MemberNotFound -> CheckoutUiError.MEMBER_NOT_FOUND
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
-                CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
+                CheckoutResult.LimitReached -> {
+                    // Hard block becomes a staff-PIN-gated override instead of a dead end.
+                    _state.update { it.copy(error = null, awaitingPinOverride = true, pinOverrideError = false) }
+                    return@launch
+                }
             }
             _state.update { it.copy(error = error) }
+        }
+    }
+
+    /** Staff entered a PIN to check out this member over the borrowing limit. */
+    fun confirmWithPinOverride(pin: String) {
+        val snapshot = _state.value
+        val copy = snapshot.copy ?: return
+        val member = snapshot.member ?: return
+        viewModelScope.launch {
+            if (!repo.verifyStaffPin(pin)) {
+                _state.update { it.copy(pinOverrideError = true) }
+                return@launch
+            }
+            val period = snapshot.loanPeriodDays
+            val result = repo.checkout(copy.copy.copyCode, member.memberCode, period, allowOverLimit = true)
+            if (result is CheckoutResult.Success) {
+                _state.update {
+                    it.copy(
+                        completedLoan = result.loan,
+                        error = null,
+                        awaitingPinOverride = false,
+                        pinOverrideError = false,
+                    )
+                }
+                return@launch
+            }
+            val error = when (result) {
+                CheckoutResult.CopyNotFound -> CheckoutUiError.COPY_NOT_FOUND
+                CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
+                CheckoutResult.MemberNotFound -> CheckoutUiError.MEMBER_NOT_FOUND
+                CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
+                // Unreachable: allowOverLimit=true bypasses this in repo.checkout().
+                CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
+                is CheckoutResult.Success -> return@launch
+            }
+            _state.update { it.copy(awaitingPinOverride = false, error = error) }
+        }
+    }
+
+    /** Clears the stale wrong-PIN message as soon as staff starts a new attempt. */
+    fun clearPinOverrideError() {
+        _state.update { it.copy(pinOverrideError = false) }
+    }
+
+    /** Staff backed out of the PIN prompt; the original block still applies. */
+    fun dismissPinOverride() {
+        _state.update {
+            it.copy(awaitingPinOverride = false, pinOverrideError = false, error = CheckoutUiError.LIMIT_REACHED)
         }
     }
 
@@ -123,9 +197,20 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         _copyQuery.value = ""
     }
 
-    /** Desk speed: keep the member locked in and just scan the next book. */
+    /**
+     * Desk speed: keep the member locked in and just scan the next book. This flow never
+     * calls submitMemberCode() again, so the overdue-warning state has to be carried over
+     * explicitly or it would silently look like the member has no overdue books.
+     */
     fun startAnotherForSameMember() {
-        _state.update { UiState(member = it.member, loanPeriodDays = it.loanPeriodDays) }
+        _state.update {
+            UiState(
+                member = it.member,
+                loanPeriodDays = it.loanPeriodDays,
+                memberOverdueCount = it.memberOverdueCount,
+                overdueWarningAcknowledged = it.overdueWarningAcknowledged,
+            )
+        }
         _copyQuery.value = ""
     }
 }

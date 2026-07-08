@@ -183,6 +183,12 @@
     <string name="pin_saved">ፒን ተቀምጧል</string>
     <string name="ok">እሺ</string>
 
+    <!-- Warn-and-override checkout -->
+    <string name="overdue_warning">ይህ አባል %1$d ያልተመለሱ መጽሐፍት አሉት።</string>
+    <string name="overdue_warning_continue">ቢሆንም ይቀጥሉ</string>
+    <string name="override_limit_prompt">ከጣሪያ በላይ ለማዋስ የሰራተኛ ፒን ያስገቡ።</string>
+    <string name="override_limit_confirm">ቢሆንም አዋስ</string>
+
     <!-- Language names stay in their own script everywhere -->
     <string name="lang_amharic" translatable="false">አማርኛ</string>
     <string name="lang_arabic" translatable="false">العربية</string>

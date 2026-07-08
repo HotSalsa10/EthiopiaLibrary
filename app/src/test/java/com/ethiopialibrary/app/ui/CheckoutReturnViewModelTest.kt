@@ -182,6 +182,205 @@ class CheckoutReturnViewModelTest {
         assertEquals("Oromay", book.title)
     }
 
+    // ---------- warn-and-override checkout (Wave 5 item 3) ----------
+
+    private fun seedOverdueLoanFor(member: MemberEntity) {
+        val overdueCopy = runBlocking {
+            val book = repo.addBook(title = "Overdue Book", author = "A", categoryCode = "Fiction", language = "am")
+            repo.addCopy(book.id)
+        }
+        runBlocking { repo.checkout(overdueCopy.copyCode, member.memberCode) }
+        clock.advanceDays(20) // past the 14-day default due date
+    }
+
+    @Test
+    fun `member with no overdue loans shows no warning`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+
+        val state = awaitValue(vm.state) { it.member != null }
+        assertEquals(0, state.memberOverdueCount)
+    }
+
+    @Test
+    fun `member with overdue loans surfaces the count unacknowledged`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        seedOverdueLoanFor(member)
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+
+        val state = awaitValue(vm.state) { it.member != null }
+        assertEquals(1, state.memberOverdueCount)
+        assertEquals(false, state.overdueWarningAcknowledged)
+    }
+
+    @Test
+    fun `acknowledging the overdue warning clears it`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        seedOverdueLoanFor(member)
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.memberOverdueCount == 1 }
+
+        vm.acknowledgeOverdueWarning()
+
+        val state = awaitValue(vm.state) { it.overdueWarningAcknowledged }
+        assertEquals(true, state.overdueWarningAcknowledged)
+    }
+
+    @Test
+    fun `starting another checkout for the same member keeps the overdue warning state`() {
+        val copy = seedCopy()
+        val member = seedMember()
+        seedOverdueLoanFor(member)
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.memberOverdueCount == 1 }
+        vm.acknowledgeOverdueWarning()
+        awaitValue(vm.state) { it.overdueWarningAcknowledged }
+        vm.confirm()
+        awaitValue(vm.state) { it.completedLoan != null }
+
+        vm.startAnotherForSameMember()
+
+        val state = awaitValue(vm.state) { it.member != null }
+        assertEquals(1, state.memberOverdueCount)
+        assertEquals(true, state.overdueWarningAcknowledged)
+    }
+
+    @Test
+    fun `confirm at the limit prompts for PIN override instead of blocking`() {
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val firstCopy = seedCopy()
+        runBlocking { repo.checkout(firstCopy.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(secondCopy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+
+        val state = awaitValue(vm.state) { it.awaitingPinOverride }
+        assertEquals(null, state.error)
+        assertEquals(null, state.completedLoan)
+    }
+
+    @Test
+    fun `wrong PIN on override is rejected and does not check out`() {
+        runBlocking { repo.setStaffPin("1234") }
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val firstCopy = seedCopy()
+        runBlocking { repo.checkout(firstCopy.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(secondCopy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.awaitingPinOverride }
+
+        vm.confirmWithPinOverride("0000")
+
+        val state = awaitValue(vm.state) { it.pinOverrideError }
+        assertEquals(true, state.awaitingPinOverride)
+        assertEquals(null, state.completedLoan)
+    }
+
+    @Test
+    fun `correct PIN on override checks out beyond the limit`() {
+        runBlocking { repo.setStaffPin("1234") }
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val firstCopy = seedCopy()
+        runBlocking { repo.checkout(firstCopy.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(secondCopy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.awaitingPinOverride }
+
+        vm.confirmWithPinOverride("1234")
+
+        val state = awaitValue(vm.state) { it.completedLoan != null }
+        assertEquals(false, state.awaitingPinOverride)
+        runBlocking {
+            assertEquals(2, repo.activeLoansForMember(member.id).first().size)
+        }
+    }
+
+    @Test
+    fun `entering a new PIN clears the wrong-PIN flag`() {
+        runBlocking { repo.setStaffPin("1234") }
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val firstCopy = seedCopy()
+        runBlocking { repo.checkout(firstCopy.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(secondCopy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.awaitingPinOverride }
+        vm.confirmWithPinOverride("0000")
+        awaitValue(vm.state) { it.pinOverrideError }
+
+        vm.clearPinOverrideError()
+
+        val state = awaitValue(vm.state) { !it.pinOverrideError }
+        assertEquals(false, state.pinOverrideError)
+    }
+
+    @Test
+    fun `dismissing PIN override restores the limit-reached error`() {
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val firstCopy = seedCopy()
+        runBlocking { repo.checkout(firstCopy.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitCopyCode(secondCopy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(member.memberCode)
+        awaitValue(vm.state) { it.member != null }
+        vm.confirm()
+        awaitValue(vm.state) { it.awaitingPinOverride }
+
+        vm.dismissPinOverride()
+
+        val state = awaitValue(vm.state) { it.error == CheckoutViewModel.CheckoutUiError.LIMIT_REACHED }
+        assertEquals(false, state.awaitingPinOverride)
+    }
+
     // ---------- copy search on checkout (name search) ----------
 
     @Test

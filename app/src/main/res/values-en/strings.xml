@@ -166,4 +166,9 @@
     <string name="wrong_pin">Wrong PIN</string>
     <string name="pin_saved">PIN saved</string>
     <string name="ok">OK</string>
+
+    <string name="overdue_warning">This member has %1$d overdue book(s).</string>
+    <string name="overdue_warning_continue">Continue anyway</string>
+    <string name="override_limit_prompt">Enter the staff PIN to check out over the limit.</string>
+    <string name="override_limit_confirm">Check out anyway</string>
 </resources>

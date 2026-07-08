@@ -166,4 +166,9 @@
     <string name="wrong_pin">رمز PIN غير صحيح</string>
     <string name="pin_saved">تم حفظ رمز PIN</string>
     <string name="ok">موافق</string>
+
+    <string name="overdue_warning">لدى هذا العضو %1$d كتب متأخرة الإرجاع.</string>
+    <string name="overdue_warning_continue">المتابعة على أي حال</string>
+    <string name="override_limit_prompt">أدخل رمز PIN الخاص بالموظف للإعارة رغم تجاوز الحد.</string>
+    <string name="override_limit_confirm">إعارة على أي حال</string>
 </resources>
