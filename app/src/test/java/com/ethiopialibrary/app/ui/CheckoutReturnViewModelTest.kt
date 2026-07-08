@@ -381,6 +381,158 @@ class CheckoutReturnViewModelTest {
         assertEquals(false, state.awaitingPinOverride)
     }
 
+    // ---------- batch checkout (Wave 5 item 4) ----------
+
+    @Test
+    fun `batch member lookup populates member`() {
+        val member = seedMember()
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitBatchMemberCode(member.memberCode)
+
+        val state = awaitValue(vm.batchState) { it.member != null }
+        assertEquals(member.id, state.member?.id)
+    }
+
+    @Test
+    fun `batch member lookup with unknown code sets member error`() {
+        val vm = CheckoutViewModel(repo)
+
+        vm.submitBatchMemberCode("M-9999")
+
+        val state = awaitValue(vm.batchState) { it.memberError != null }
+        assertEquals(CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND, state.memberError)
+    }
+
+    @Test
+    fun `adding a copy to the batch lists it`() {
+        val member = seedMember()
+        val copy = seedCopy()
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+
+        vm.addBatchCopyCode(copy.copyCode)
+
+        val state = awaitValue(vm.batchState) { it.items.isNotEmpty() }
+        assertEquals(1, state.items.size)
+        assertEquals(copy.copyCode, state.items[0].copy.copy.copyCode)
+    }
+
+    @Test
+    fun `adding the same copy twice is rejected`() {
+        val member = seedMember()
+        val copy = seedCopy()
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+        vm.addBatchCopyCode(copy.copyCode)
+        awaitValue(vm.batchState) { it.items.isNotEmpty() }
+
+        vm.addBatchCopyCode(copy.copyCode)
+
+        val state = awaitValue(vm.batchState) { it.copyError != null }
+        assertEquals(1, state.items.size)
+        assertEquals(CheckoutViewModel.CheckoutUiError.COPY_NOT_AVAILABLE, state.copyError)
+    }
+
+    @Test
+    fun `adding an unavailable copy is rejected`() {
+        val member = seedMember()
+        val onLoanCopy = seedCopy()
+        val otherMember = seedMember("Someone Else")
+        runBlocking { repo.checkout(onLoanCopy.copyCode, otherMember.memberCode) }
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+
+        vm.addBatchCopyCode(onLoanCopy.copyCode)
+
+        val state = awaitValue(vm.batchState) { it.copyError != null }
+        assertEquals(0, state.items.size)
+        assertEquals(CheckoutViewModel.CheckoutUiError.COPY_NOT_AVAILABLE, state.copyError)
+    }
+
+    @Test
+    fun `adding a copy beyond the limit is rejected`() {
+        runBlocking { repo.setMaxBooksPerMember(1) }
+        val member = seedMember()
+        val alreadyBorrowed = seedCopy()
+        runBlocking { repo.checkout(alreadyBorrowed.copyCode, member.memberCode) }
+        val secondCopy = seedCopy(title = "Second Book")
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+
+        vm.addBatchCopyCode(secondCopy.copyCode)
+
+        val state = awaitValue(vm.batchState) { it.copyError != null }
+        assertEquals(0, state.items.size)
+        assertEquals(CheckoutViewModel.CheckoutUiError.LIMIT_REACHED, state.copyError)
+    }
+
+    @Test
+    fun `limit counts items already added to the basket`() {
+        runBlocking { repo.setMaxBooksPerMember(2) }
+        val member = seedMember()
+        val first = seedCopy(title = "First")
+        val second = seedCopy(title = "Second")
+        val third = seedCopy(title = "Third")
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+        vm.addBatchCopyCode(first.copyCode)
+        awaitValue(vm.batchState) { it.items.size == 1 }
+        vm.addBatchCopyCode(second.copyCode)
+        awaitValue(vm.batchState) { it.items.size == 2 }
+
+        vm.addBatchCopyCode(third.copyCode)
+
+        val state = awaitValue(vm.batchState) { it.copyError != null }
+        assertEquals(2, state.items.size)
+        assertEquals(CheckoutViewModel.CheckoutUiError.LIMIT_REACHED, state.copyError)
+    }
+
+    @Test
+    fun `confirming the batch checks out every item and reports success`() {
+        val member = seedMember()
+        val first = seedCopy(title = "First")
+        val second = seedCopy(title = "Second")
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+        vm.addBatchCopyCode(first.copyCode)
+        awaitValue(vm.batchState) { it.items.size == 1 }
+        vm.addBatchCopyCode(second.copyCode)
+        awaitValue(vm.batchState) { it.items.size == 2 }
+
+        vm.confirmBatch()
+
+        val state = awaitValue(vm.batchState) { it.results != null }
+        assertEquals(2, state.results?.size)
+        assertTrue(state.results!!.all { it.outcome == CheckoutViewModel.BatchLineOutcome.SUCCESS })
+        runBlocking {
+            assertEquals(2, repo.activeLoansForMember(member.id).first().size)
+        }
+    }
+
+    @Test
+    fun `resetting the batch clears all state`() {
+        val member = seedMember()
+        val copy = seedCopy()
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(member.memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+        vm.addBatchCopyCode(copy.copyCode)
+        awaitValue(vm.batchState) { it.items.isNotEmpty() }
+
+        vm.resetBatch()
+
+        val state = awaitValue(vm.batchState) { it.member == null }
+        assertTrue(state.items.isEmpty())
+        assertEquals(null, state.results)
+    }
+
     // ---------- copy search on checkout (name search) ----------
 
     @Test

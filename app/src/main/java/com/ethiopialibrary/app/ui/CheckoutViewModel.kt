@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -27,6 +28,22 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     enum class CheckoutUiError {
         COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED,
     }
+
+    enum class BatchLineOutcome { SUCCESS, FAILED }
+
+    data class BatchLine(val copy: CopyWithBook)
+
+    data class BatchResultLine(val bookTitle: String, val copyCode: String, val outcome: BatchLineOutcome)
+
+    /** Member-first basket mode: one member, several books, one Confirm All. */
+    data class BatchUiState(
+        val member: MemberEntity? = null,
+        val memberError: CheckoutUiError? = null,
+        val items: List<BatchLine> = emptyList(),
+        val copyError: CheckoutUiError? = null,
+        // Null while still building the basket; set once Confirm All has run.
+        val results: List<BatchResultLine>? = null,
+    )
 
     data class UiState(
         val copy: CopyWithBook? = null,
@@ -212,5 +229,74 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
             )
         }
         _copyQuery.value = ""
+    }
+
+    // ---------- batch checkout: member-first basket (Wave 5 item 4) ----------
+    // Entirely separate state from the copy-first flow above, which stays untouched.
+
+    private val _batchState = MutableStateFlow(BatchUiState())
+    val batchState: StateFlow<BatchUiState> = _batchState.asStateFlow()
+
+    fun submitBatchMemberCode(code: String) {
+        viewModelScope.launch {
+            val found = repo.memberByCode(code)
+            _batchState.update { current ->
+                when {
+                    found == null -> current.copy(memberError = CheckoutUiError.MEMBER_NOT_FOUND)
+                    found.status != MemberStatus.ACTIVE -> current.copy(memberError = CheckoutUiError.MEMBER_NOT_ACTIVE)
+                    else -> current.copy(member = found, memberError = null)
+                }
+            }
+        }
+    }
+
+    /** Validates and lists one book; the limit is checked against DB loans plus this basket so far. */
+    fun addBatchCopyCode(code: String) {
+        val member = _batchState.value.member ?: return
+        viewModelScope.launch {
+            val found = repo.copyWithBook(code)
+            if (found == null) {
+                _batchState.update { it.copy(copyError = CheckoutUiError.COPY_NOT_FOUND) }
+                return@launch
+            }
+            if (found.onLoan || found.copy.status != CopyStatus.IN_SERVICE) {
+                _batchState.update { it.copy(copyError = CheckoutUiError.COPY_NOT_AVAILABLE) }
+                return@launch
+            }
+            val basketSoFar = _batchState.value.items
+            if (basketSoFar.any { it.copy.copy.copyCode == found.copy.copyCode }) {
+                _batchState.update { it.copy(copyError = CheckoutUiError.COPY_NOT_AVAILABLE) }
+                return@launch
+            }
+            val limit = repo.maxBooksPerMember()
+            val activeCount = repo.activeLoansForMember(member.id).first().size
+            if (limit > 0 && activeCount + basketSoFar.size >= limit) {
+                _batchState.update { it.copy(copyError = CheckoutUiError.LIMIT_REACHED) }
+                return@launch
+            }
+            _batchState.update { it.copy(items = it.items + BatchLine(found), copyError = null) }
+        }
+    }
+
+    /** Checks every basket line out in order, collecting a per-line result instead of stopping at the first failure. */
+    fun confirmBatch() {
+        val snapshot = _batchState.value
+        val member = snapshot.member ?: return
+        if (snapshot.items.isEmpty()) return
+        viewModelScope.launch {
+            val results = snapshot.items.map { line ->
+                val result = repo.checkout(line.copy.copy.copyCode, member.memberCode)
+                BatchResultLine(
+                    bookTitle = line.copy.bookTitle,
+                    copyCode = line.copy.copy.copyCode,
+                    outcome = if (result is CheckoutResult.Success) BatchLineOutcome.SUCCESS else BatchLineOutcome.FAILED,
+                )
+            }
+            _batchState.update { it.copy(results = results) }
+        }
+    }
+
+    fun resetBatch() {
+        _batchState.value = BatchUiState()
     }
 }
