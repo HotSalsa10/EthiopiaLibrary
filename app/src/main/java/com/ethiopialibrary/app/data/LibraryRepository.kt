@@ -197,11 +197,13 @@ class LibraryRepository(
     /**
      * [periodDays] lets staff override the loan length for this one checkout;
      * null (or non-positive) falls back to the configured setting / default.
+     * [allowOverLimit] bypasses the borrowing-limit check (staff-PIN-gated in the UI).
      */
     suspend fun checkout(
         copyCode: String,
         memberCode: String,
         periodDays: Int? = null,
+        allowOverLimit: Boolean = false,
     ): CheckoutResult =
         db.withTransaction {
             val copy = db.bookCopyDao().byCode(copyCode)
@@ -218,7 +220,7 @@ class LibraryRepository(
                 return@withTransaction CheckoutResult.CopyNotAvailable
             }
             val limit = db.settingsDao().get(SettingKeys.MAX_BOOKS_PER_MEMBER)?.toIntOrNull() ?: 3
-            if (limit > 0 && db.loanDao().countActiveForMember(member.id) >= limit) {
+            if (limit > 0 && !allowOverLimit && db.loanDao().countActiveForMember(member.id) >= limit) {
                 return@withTransaction CheckoutResult.LimitReached
             }
             val t = now()
@@ -285,6 +287,10 @@ class LibraryRepository(
         }
 
     suspend fun overdueLoans(): List<LoanEntity> = db.loanDao().overdue(now())
+
+    /** Preflight check for the checkout member step: how many books this member already has overdue. */
+    suspend fun overdueCountForMember(memberId: String): Int =
+        db.loanDao().countOverdueForMember(memberId, now())
 
     suspend fun availableCopyCount(bookId: String): Int =
         db.bookCopyDao().availableCount(bookId)

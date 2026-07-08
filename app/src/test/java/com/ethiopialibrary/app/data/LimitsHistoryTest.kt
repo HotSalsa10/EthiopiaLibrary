@@ -72,6 +72,40 @@ class LimitsHistoryTest {
         codes.forEach { assertTrue(repo.checkout(it, m.memberCode) is CheckoutResult.Success) }
     }
 
+    @Test
+    fun `limit can be overridden with allowOverLimit`() = runBlocking {
+        repo.setMaxBooksPerMember(2)
+        val codes = seedCopies(3)
+        val m = member()
+        repo.checkout(codes[0], m.memberCode)
+        repo.checkout(codes[1], m.memberCode)
+        assertTrue(repo.checkout(codes[2], m.memberCode, allowOverLimit = true) is CheckoutResult.Success)
+    }
+
+    // ---------- overdue preflight (warn-and-override) ----------
+
+    @Test
+    fun `overdue count for member is zero with no overdue loans`() = runBlocking {
+        val codes = seedCopies(1)
+        val m = member()
+        repo.checkout(codes[0], m.memberCode)
+        assertEquals(0, repo.overdueCountForMember(m.id))
+    }
+
+    @Test
+    fun `overdue count for member reflects only that member's overdue loans`() = runBlocking {
+        val codes = seedCopies(2)
+        val m1 = member("Abebe")
+        val m2 = member("Chaltu")
+        repo.checkout(codes[0], m1.memberCode) // due day 14
+        repo.checkout(codes[1], m2.memberCode) // due day 14
+        clock.advanceDays(20) // both now overdue
+        repo.returnBook(codes[1]) // m2's loan is returned -> no longer overdue
+
+        assertEquals(1, repo.overdueCountForMember(m1.id))
+        assertEquals(0, repo.overdueCountForMember(m2.id))
+    }
+
     // ---------- due-soon ----------
 
     @Test

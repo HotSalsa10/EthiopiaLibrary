@@ -378,6 +378,12 @@ interface LoanDao {
     @Query("SELECT COUNT(*) FROM loans WHERE memberId = :memberId AND returnedAt IS NULL AND isDeleted = 0")
     suspend fun countActiveForMember(memberId: String): Int
 
+    @Query(
+        "SELECT COUNT(*) FROM loans WHERE memberId = :memberId AND returnedAt IS NULL " +
+            "AND dueAt < :now AND isDeleted = 0",
+    )
+    suspend fun countOverdueForMember(memberId: String, now: Long): Int
+
     /** Member's average rating across all rated loans; null when none are rated. */
     @Query("SELECT AVG(rating) FROM loans WHERE memberId = :memberId AND rating IS NOT NULL AND isDeleted = 0")
     suspend fun averageRatingForMember(memberId: String): Double?
