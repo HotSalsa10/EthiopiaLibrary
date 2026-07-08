@@ -533,6 +533,38 @@ class CheckoutReturnViewModelTest {
         assertEquals(null, state.results)
     }
 
+    // ---------- quick-add member mid-checkout (Wave 5 item 5) ----------
+
+    @Test
+    fun `quick-adding a member during checkout populates member and clears the error`() {
+        val copy = seedCopy()
+        val vm = CheckoutViewModel(repo)
+        vm.submitCopyCode(copy.copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode("M-9999")
+        awaitValue(vm.state) { it.error != null }
+
+        vm.quickAddMember("Kebede Alemu", null, null, null)
+
+        val state = awaitValue(vm.state) { it.member != null }
+        assertEquals("Kebede Alemu", state.member?.fullName)
+        assertEquals(null, state.error)
+        assertEquals(0, state.memberOverdueCount)
+    }
+
+    @Test
+    fun `quick-adding a member during batch checkout populates the batch member`() {
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode("M-9999")
+        awaitValue(vm.batchState) { it.memberError != null }
+
+        vm.quickAddBatchMember("Kebede Alemu", null, null, null)
+
+        val state = awaitValue(vm.batchState) { it.member != null }
+        assertEquals("Kebede Alemu", state.member?.fullName)
+        assertEquals(null, state.memberError)
+    }
+
     // ---------- copy search on checkout (name search) ----------
 
     @Test

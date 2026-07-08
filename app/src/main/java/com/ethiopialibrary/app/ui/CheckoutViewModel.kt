@@ -130,6 +130,25 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         }
     }
 
+    /**
+     * Registers a brand-new member on the spot (MEMBER_NOT_FOUND during checkout) and
+     * adopts them as the current member, same as a successful submitMemberCode(). A
+     * freshly created member can't have overdue loans, so there's nothing to look up.
+     */
+    fun quickAddMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
+        viewModelScope.launch {
+            val created = repo.registerMember(fullName, phone, nationalId, address)
+            _state.update {
+                it.copy(
+                    member = created,
+                    error = null,
+                    memberOverdueCount = 0,
+                    overdueWarningAcknowledged = false,
+                )
+            }
+        }
+    }
+
     /** Staff clicked through the "member has overdue books" warning. */
     fun acknowledgeOverdueWarning() {
         _state.update { it.copy(overdueWarningAcknowledged = true) }
@@ -247,6 +266,14 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                     else -> current.copy(member = found, memberError = null)
                 }
             }
+        }
+    }
+
+    /** Batch-mode counterpart of quickAddMember(): registers and adopts the basket member. */
+    fun quickAddBatchMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
+        viewModelScope.launch {
+            val created = repo.registerMember(fullName, phone, nationalId, address)
+            _batchState.update { it.copy(member = created, memberError = null) }
         }
     }
 
