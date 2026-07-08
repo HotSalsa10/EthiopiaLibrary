@@ -62,6 +62,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.ActivityType
+import com.ethiopialibrary.app.data.ActivityWithDetails
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
@@ -88,6 +90,7 @@ fun DashboardScreen(
     val overdue by vm.overdue.collectAsStateWithLifecycle()
     val overdueQuery by vm.overdueQuery.collectAsStateWithLifecycle()
     val dueSoon by vm.dueSoon.collectAsStateWithLifecycle()
+    val recentActivity by vm.recentActivity.collectAsStateWithLifecycle()
     val pendingSync by vm.pendingSync.collectAsStateWithLifecycle()
     val lastBackupAt by vm.lastBackupAt.collectAsStateWithLifecycle()
     val backupStaleSince by vm.backupStaleSince.collectAsStateWithLifecycle()
@@ -250,6 +253,17 @@ fun DashboardScreen(
         } else {
             overdue.forEach { loan ->
                 LoanAlertCard(loan, locale, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer) { renewTarget = loan }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+
+        // Recent activity: today only, last ~10, each row undoable same-day.
+        if (recentActivity.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            SectionHeader(stringResource(R.string.recent_activity))
+            Spacer(Modifier.height(12.dp))
+            recentActivity.forEach { item ->
+                ActivityRow(item) { vm.undoActivity(item.entry.id) }
                 Spacer(Modifier.height(10.dp))
             }
         }
@@ -497,4 +511,34 @@ private fun LoanAlertCard(
             Text(stringResource(R.string.renew))
         }
     }
+}
+
+@Composable
+private fun ActivityRow(item: ActivityWithDetails, onUndo: () -> Unit) {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    activityLabel(item.entry.type),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text("${item.bookTitle} — ${item.memberName}", style = MaterialTheme.typography.bodyLarge)
+            }
+            TextButton(onClick = onUndo) { Text(stringResource(R.string.undo)) }
+        }
+    }
+}
+
+@Composable
+private fun activityLabel(type: String): String = when (type) {
+    ActivityType.CHECKOUT.name -> stringResource(R.string.activity_checkout)
+    ActivityType.RETURN.name -> stringResource(R.string.activity_return)
+    ActivityType.RENEW.name -> stringResource(R.string.activity_renew)
+    ActivityType.UNDO.name -> stringResource(R.string.activity_undo)
+    else -> type // unreachable in practice; every writer uses ActivityType
 }

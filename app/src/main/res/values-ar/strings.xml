@@ -97,6 +97,14 @@
     <string name="export_csv">تصدير CSV</string>
     <string name="no_data">لا توجد بيانات بعد</string>
     <string name="due_soon_title">تستحق قريباً</string>
+
+    <string name="recent_activity">النشاط الأخير</string>
+    <string name="activity_checkout">تمت الإعارة</string>
+    <string name="activity_return">تم الإرجاع</string>
+    <string name="activity_renew">تم التجديد</string>
+    <string name="activity_undo">تم التراجع</string>
+    <string name="undo">تراجع</string>
+
     <string name="history_title">السجل</string>
     <string name="settings_max_books">الحد الأقصى للكتب لكل عضو (0 = غير محدود)</string>
     <string name="settings_due_soon">نافذة الاستحقاق القريب (أيام)</string>

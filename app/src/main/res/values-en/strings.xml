@@ -97,6 +97,14 @@
     <string name="export_csv">Export CSV</string>
     <string name="no_data">No data yet</string>
     <string name="due_soon_title">Due soon</string>
+
+    <string name="recent_activity">Recent activity</string>
+    <string name="activity_checkout">Checked out</string>
+    <string name="activity_return">Returned</string>
+    <string name="activity_renew">Renewed</string>
+    <string name="activity_undo">Undone</string>
+    <string name="undo">Undo</string>
+
     <string name="history_title">History</string>
     <string name="settings_max_books">Max books per member (0 = unlimited)</string>
     <string name="settings_due_soon">Due-soon window (days)</string>

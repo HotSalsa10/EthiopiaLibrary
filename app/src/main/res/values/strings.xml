@@ -106,6 +106,15 @@
     <string name="export_csv">CSV አውጣ</string>
     <string name="no_data">ገና መረጃ የለም</string>
     <string name="due_soon_title">በቅርቡ የሚመለሱ</string>
+
+    <!-- Recent activity + undo -->
+    <string name="recent_activity">የቅርብ ጊዜ እንቅስቃሴ</string>
+    <string name="activity_checkout">ተውሷል</string>
+    <string name="activity_return">ተመልሷል</string>
+    <string name="activity_renew">ታድሷል</string>
+    <string name="activity_undo">ተሽሯል</string>
+    <string name="undo">ቀልብስ</string>
+
     <string name="history_title">ታሪክ</string>
     <string name="settings_max_books">በአባል ከፍተኛ መጻሕፍት (0 = ያልተገደበ)</string>
     <string name="settings_due_soon">የቅርብ መመለሻ ጊዜ (ቀናት)</string>
