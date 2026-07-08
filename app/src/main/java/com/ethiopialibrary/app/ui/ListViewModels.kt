@@ -2,6 +2,7 @@ package com.ethiopialibrary.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiopialibrary.app.data.ActivityWithDetails
 import com.ethiopialibrary.app.data.BookWithCounts
 import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.DashboardStats
@@ -120,6 +121,14 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** Loans falling due within the configured window (not yet overdue). */
     val dueSoon: StateFlow<List<LoanWithDetails>> = flow { emitAll(repo.dueSoonLoans()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Today's desk activity feed, newest first. */
+    val recentActivity: StateFlow<List<ActivityWithDetails>> = flow { emitAll(repo.recentActivity()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun undoActivity(activityId: String) {
+        viewModelScope.launch { repo.undoActivity(activityId) }
+    }
 
     /** Changes waiting to reach the cloud mirror. */
     val pendingSync: StateFlow<Int> = repo.pendingSyncCount()

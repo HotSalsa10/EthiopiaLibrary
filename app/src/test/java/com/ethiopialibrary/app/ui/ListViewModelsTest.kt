@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -126,6 +127,37 @@ class ListViewModelsTest {
 
         val filtered = awaitValue(vm.overdue) { it.size == 1 }
         assertEquals("Fiqir", filtered.single().bookTitle)
+    }
+
+    @Test
+    fun `dashboard exposes recent activity`() {
+        runBlocking {
+            val book = repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            val member = repo.registerMember(fullName = "Abebe")
+            repo.checkout(copy.copyCode, member.memberCode)
+        }
+        val vm = DashboardViewModel(repo)
+
+        val activity = awaitValue(vm.recentActivity) { it.size == 1 }
+        assertEquals("Oromay", activity.single().bookTitle)
+    }
+
+    @Test
+    fun `dashboard undo reverts an activity entry`() {
+        runBlocking {
+            val book = repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            val member = repo.registerMember(fullName = "Abebe")
+            repo.checkout(copy.copyCode, member.memberCode)
+        }
+        val vm = DashboardViewModel(repo)
+        val entryId = awaitValue(vm.recentActivity) { it.size == 1 }.single().entry.id
+
+        vm.undoActivity(entryId)
+
+        val activity = awaitValue(vm.recentActivity) { it.size == 2 }
+        assertTrue(activity.any { it.entry.type == "UNDO" })
     }
 
     @Test
