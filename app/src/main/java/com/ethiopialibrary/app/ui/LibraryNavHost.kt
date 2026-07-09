@@ -4,6 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -29,8 +37,40 @@ fun LibraryNavHost(repo: LibraryRepository) {
     val back: () -> Unit = { nav.popBackStack() }
     val calendarMode by repo.calendarModeFlow().collectAsStateWithLifecycle(CalendarMode.DUAL)
 
+    // Global keyboard scaffold: Escape pops the back stack (no-op at the
+    // dashboard root, where there is no previous destination), and Ctrl+O/R/L
+    // jump straight to the three most-used desk actions. A Material 3
+    // AlertDialog opens in its own Android Dialog window, so key events while
+    // one is showing generally won't reach this handler - expected, not a bug.
+    val handleShortcut: (KeyEvent) -> Boolean = handler@{ event ->
+        if (event.type != KeyEventType.KeyDown) return@handler false
+        when {
+            event.key == Key.Escape -> {
+                if (nav.previousBackStackEntry != null) nav.popBackStack()
+                true
+            }
+            event.isCtrlPressed && event.key == Key.O -> {
+                nav.navigate("checkout")
+                true
+            }
+            event.isCtrlPressed && event.key == Key.R -> {
+                nav.navigate("return")
+                true
+            }
+            event.isCtrlPressed && event.key == Key.L -> {
+                nav.navigate("loans")
+                true
+            }
+            else -> false
+        }
+    }
+
     CompositionLocalProvider(LocalCalendarMode provides calendarMode) {
-        NavHost(navController = nav, startDestination = "dashboard") {
+        NavHost(
+            navController = nav,
+            startDestination = "dashboard",
+            modifier = Modifier.onPreviewKeyEvent(handleShortcut),
+        ) {
         composable("dashboard") {
             DashboardScreen(
                 vm = viewModel(factory = factory),
