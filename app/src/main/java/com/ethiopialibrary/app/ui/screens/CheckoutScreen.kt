@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +39,7 @@ import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.CheckoutViewModel
 import com.ethiopialibrary.app.ui.CodeEntry
 import com.ethiopialibrary.app.ui.PinOverrideDialog
+import com.ethiopialibrary.app.ui.theme.LibraryStatus
 
 @Composable
 fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
@@ -310,19 +310,14 @@ internal fun FoundMemberCard(member: MemberEntity) {
     }
 }
 
-// No amber/warning tone exists in the theme yet (overdue is styled as an error, i.e.
-// red) - defined locally the same way StarGold is, rather than widening the palette.
-private val WarningContainer = Color(0xFFFFF3CD)
-private val OnWarningContainer = Color(0xFF7A5B00)
-
 /** Acknowledge-to-continue warning (Koha pattern): informs, never blocks by itself. */
 @Composable
 internal fun OverdueWarningCard(overdueCount: Int, onContinue: () -> Unit) {
-    AppCard(modifier = Modifier.fillMaxWidth(), containerColor = WarningContainer) {
+    AppCard(modifier = Modifier.fillMaxWidth(), containerColor = LibraryStatus.dueSoonContainer) {
         Text(
             stringResource(R.string.overdue_warning, overdueCount),
             style = MaterialTheme.typography.titleMedium,
-            color = OnWarningContainer,
+            color = LibraryStatus.dueSoon,
         )
     }
     Spacer(Modifier.height(16.dp))

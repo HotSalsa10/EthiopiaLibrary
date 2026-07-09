@@ -6,10 +6,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -40,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -50,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
-import com.ethiopialibrary.app.ui.theme.LibraryBrushes
+import com.ethiopialibrary.app.ui.theme.LibraryStatus
 
 /**
  * The calendar(s) dates are shown in, provided once at the navigation root from
@@ -106,8 +109,7 @@ fun AppTopBar(
         }
         Text(
             title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
@@ -139,7 +141,7 @@ fun AppCard(
     contentPadding: Dp = 18.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = MaterialTheme.shapes.large
     val colors = CardDefaults.cardColors(containerColor = containerColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, pressedElevation = 5.dp)
     if (onClick != null) {
@@ -154,9 +156,14 @@ fun AppCard(
 }
 
 /**
- * Primary action: a tall, full-width pill with a rich green gradient fill, a soft
+ * Primary action: a tall, full-width pill with a solid primary fill, a soft
  * lifted shadow, and press-scale feedback. The 64dp height keeps it a comfortable
- * touch target on a shared tablet.
+ * touch target on a shared tablet. On a mouse (or while pressed) the fill tints
+ * to [LibraryStatus.hoverPrimary]; keyboard (Tab) focus draws a visible 2dp ring
+ * in [LibraryStatus.focusRing] around the pill.
+ *
+ * [shortcutHint] renders a small, low-emphasis badge (e.g. "Ctrl+O") near the
+ * bottom-trailing corner; leave it null for no visual change.
  */
 @Composable
 fun BigButton(
@@ -164,12 +171,21 @@ fun BigButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    shortcutHint: String? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = RoundedCornerShape(percent = 50)
-    val contentColor = if (enabled) Color.White else Color(0xFF8C8576)
-    Row(
+    val hovered by interaction.collectIsHoveredAsState()
+    val pressed by interaction.collectIsPressedAsState()
+    val focused by interaction.collectIsFocusedAsState()
+    val contentColor = if (enabled) Color.White else LibraryStatus.disabledContent
+    val fillColor = when {
+        !enabled -> LibraryStatus.disabledContainer
+        hovered || pressed -> LibraryStatus.hoverPrimary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
@@ -181,9 +197,9 @@ fun BigButton(
                 ambientColor = LibraryAccents.shadowGreen,
             )
             .clip(shape)
-            .background(
-                if (enabled) LibraryBrushes.primaryButton else SolidColor(Color(0xFFD8D1C3)),
-            )
+            .background(fillColor)
+            .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing, shape) else Modifier)
+            .hoverable(interaction)
             .clickable(
                 interactionSource = interaction,
                 indication = ripple(color = Color.White),
@@ -191,19 +207,33 @@ fun BigButton(
                 onClick = onClick,
             )
             .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        if (icon != null) {
-            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(12.dp))
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+            }
+            Text(
+                text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+            )
         }
-        Text(
-            text,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = contentColor,
-        )
+        if (shortcutHint != null) {
+            Text(
+                shortcutHint,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor.copy(alpha = 0.75f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 6.dp),
+            )
+        }
     }
 }
 
@@ -211,18 +241,22 @@ fun BigButton(
  * Secondary action: same tactile pill shape as [BigButton] but a clean white
  * surface with a hairline outline — green is reserved for the icon and label so
  * it reads as an accent, not a second primary button.
+ *
+ * [shortcutHint] renders the same small bottom-trailing badge as [BigButton];
+ * leave it null for no visual change.
  */
 @Composable
 fun BigOutlinedButton(
     text: String,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    shortcutHint: String? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = RoundedCornerShape(percent = 50)
     val accent = MaterialTheme.colorScheme.primary
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
@@ -237,24 +271,35 @@ fun BigOutlinedButton(
                 onClick = onClick,
             )
             .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        if (icon != null) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(10.dp))
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(
+                text,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium,
+                color = accent,
+            )
         }
-        Text(
-            text,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Medium,
-            color = accent,
-        )
+        if (shortcutHint != null) {
+            Text(
+                shortcutHint,
+                style = MaterialTheme.typography.labelSmall,
+                color = accent.copy(alpha = 0.75f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 6.dp),
+            )
+        }
     }
 }
-
-/** Warm amber used for rating stars, independent of the green brand palette. */
-private val StarGold = Color(0xFFF5A623)
 
 /**
  * Tappable 1–5 star row. Each star is a generous touch target sized for a shared
@@ -268,13 +313,13 @@ fun StarRatingInput(onRate: (Int) -> Unit, modifier: Modifier = Modifier) {
             Icon(
                 Icons.Filled.Star,
                 contentDescription = star.toString(),
-                tint = StarGold,
+                tint = LibraryStatus.starGold,
                 modifier = Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(50))
                     .clickable(
                         interactionSource = interaction,
-                        indication = ripple(color = StarGold),
+                        indication = ripple(color = LibraryStatus.starGold),
                         onClick = { onRate(star) },
                     ),
             )
@@ -286,7 +331,7 @@ fun StarRatingInput(onRate: (Int) -> Unit, modifier: Modifier = Modifier) {
 @Composable
 fun StarRatingDisplay(rating: Double, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Filled.Star, contentDescription = null, tint = StarGold, modifier = Modifier.size(20.dp))
+        Icon(Icons.Filled.Star, contentDescription = null, tint = LibraryStatus.starGold, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
         Text(
             String.format(java.util.Locale.US, "%.1f", rating),
