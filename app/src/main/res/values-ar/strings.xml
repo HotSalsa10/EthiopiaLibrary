@@ -18,6 +18,7 @@
     <string name="no_overdue">لا توجد كتب متأخرة</string>
 
     <string name="search_hint">بحث…</string>
+    <string name="clear_search">محو البحث</string>
     <string name="add_book">إضافة كتاب</string>
     <string name="add_category">إضافة تصنيف</string>
     <string name="category_code">الرمز (حرفان)</string>
@@ -38,6 +39,8 @@
     <string name="copy_status_retired">خارج الخدمة</string>
     <string name="on_loan">معارة</string>
     <string name="available">متاحة</string>
+    <string name="status_due_soon">تستحق قريباً</string>
+    <string name="status_overdue">متأخرة</string>
 
     <string name="add_member">إضافة عضو</string>
     <string name="field_full_name">الاسم الكامل</string>

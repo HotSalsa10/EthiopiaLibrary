@@ -15,7 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import com.ethiopialibrary.app.R
 
 /**
  * Shared search input: leading search icon, a trailing clear ("x") action that
@@ -43,7 +45,7 @@ fun AppSearchField(
         trailingIcon = {
             if (value.isNotBlank()) {
                 IconButton(onClick = { onValueChange("") }) {
-                    Icon(Icons.Filled.Close, contentDescription = null)
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.clear_search))
                 }
             }
         },

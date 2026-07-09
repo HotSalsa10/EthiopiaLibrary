@@ -55,17 +55,20 @@ fun LoanStatus.color(): Color = statusColor()
 fun LoanStatus.containerColor(): Color = statusContainerColor()
 
 /**
- * Localized label for this status. Reuses existing trilingual string
- * resources rather than duplicating fresh keys for text that already exists
- * verbatim elsewhere in the app (copy availability on BookDetail/CopyPicker,
- * the dashboard's overdue stat tile, and its due-soon section header).
+ * Localized label for this status. AVAILABLE/ON_LOAN reuse existing trilingual
+ * strings for text that already exists verbatim elsewhere in the app (copy
+ * availability on BookDetail/CopyPicker) — genuinely the same concept, so
+ * reuse is fine there. DUE_SOON/OVERDUE use their own dedicated `status_*`
+ * keys instead of the dashboard's due-soon section header / overdue stat-tile
+ * keys: those are owned by a later dashboard-redesign task and may be
+ * reworded independently of status-chip text.
  */
 @Composable
 fun LoanStatus.label(): String = when (this) {
     LoanStatus.AVAILABLE -> stringResource(R.string.available)
     LoanStatus.ON_LOAN -> stringResource(R.string.on_loan)
-    LoanStatus.DUE_SOON -> stringResource(R.string.due_soon_title)
-    LoanStatus.OVERDUE -> stringResource(R.string.stat_overdue)
+    LoanStatus.DUE_SOON -> stringResource(R.string.status_due_soon)
+    LoanStatus.OVERDUE -> stringResource(R.string.status_overdue)
 }
 
 /** Small pill badge: a leading dot plus the status's localized label. */
@@ -97,11 +100,15 @@ fun StatusBadge(status: LoanStatus, modifier: Modifier = Modifier) {
 /**
  * Same card language as [AppCard] (shape, elevation, content padding) plus a
  * 4dp status-colored leading edge flush against the card's start boundary.
- * Delegates to [AppCard] rather than reimplementing its styling: [AppCard] is
- * measured normally (establishing the real size), and the accent-edge overlay
- * uses `matchParentSize()` plus the same [MaterialTheme.shapes] token so its
- * clip exactly follows AppCard's rounded corners. Start-aligned so it flips
- * to the trailing edge automatically under RTL.
+ * Delegates to [AppCard] rather than reimplementing its styling: the incoming
+ * [modifier] is passed straight to the inner [AppCard] (not the outer wrapping
+ * [Box]) so a caller's `Modifier.fillMaxWidth()` reaches the real card surface
+ * instead of producing a full-width invisible Box around a content-width card.
+ * [AppCard] is measured normally (establishing the real size), and the
+ * accent-edge overlay uses `matchParentSize()` plus the same
+ * [MaterialTheme.shapes] token so its clip exactly follows AppCard's rounded
+ * corners. Start-aligned so it flips to the trailing edge automatically under
+ * RTL.
  */
 @Composable
 fun StatusEdgeCard(
@@ -110,8 +117,8 @@ fun StatusEdgeCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(modifier = modifier) {
-        AppCard(onClick = onClick, content = content)
+    Box {
+        AppCard(modifier = modifier, onClick = onClick, content = content)
         Box(
             modifier = Modifier
                 .matchParentSize()

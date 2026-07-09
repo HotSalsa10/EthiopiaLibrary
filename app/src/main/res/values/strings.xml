@@ -22,6 +22,7 @@
 
     <!-- Books -->
     <string name="search_hint">ፈልግ…</string>
+    <string name="clear_search">ፍለጋ አጽዳ</string>
     <string name="add_book">መጽሐፍ ጨምር</string>
     <string name="add_category">ምድብ ጨምር</string>
     <string name="category_code">ኮድ (2 ፊደላት)</string>
@@ -42,6 +43,8 @@
     <string name="copy_status_retired">ከአገልግሎት ውጭ</string>
     <string name="on_loan">ተውሷል</string>
     <string name="available">ይገኛል</string>
+    <string name="status_due_soon">በቅርቡ የሚመለሱ</string>
+    <string name="status_overdue">የዘገዩ</string>
 
     <!-- Members -->
     <string name="add_member">አባል ጨምር</string>

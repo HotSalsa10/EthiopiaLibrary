@@ -240,7 +240,11 @@ fun BigButton(
 /**
  * Secondary action: same tactile pill shape as [BigButton] but a clean white
  * surface with a hairline outline — green is reserved for the icon and label so
- * it reads as an accent, not a second primary button.
+ * it reads as an accent, not a second primary button. On a mouse hover the
+ * surface tints to [MaterialTheme.colorScheme.surfaceVariant] and the border
+ * tints to [MaterialTheme.colorScheme.primary]; keyboard (Tab) focus draws the
+ * same visible 2dp ring in [LibraryStatus.focusRing] as [BigButton], taking
+ * precedence over the hover border when both states are true.
  *
  * [shortcutHint] renders the same small bottom-trailing badge as [BigButton];
  * leave it null for no visual change.
@@ -256,6 +260,10 @@ fun BigOutlinedButton(
     val interaction = remember { MutableInteractionSource() }
     val shape = RoundedCornerShape(percent = 50)
     val accent = MaterialTheme.colorScheme.primary
+    val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
+    val fillColor = if (hovered) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+    val borderColor = if (hovered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -263,8 +271,10 @@ fun BigOutlinedButton(
             .pressScale(interaction)
             .shadow(2.dp, shape, spotColor = LibraryAccents.shadowSoft, ambientColor = LibraryAccents.shadowSoft)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+            .background(fillColor)
+            .border(1.dp, borderColor, shape)
+            .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing, shape) else Modifier)
+            .hoverable(interaction)
             .clickable(
                 interactionSource = interaction,
                 indication = ripple(color = accent),
