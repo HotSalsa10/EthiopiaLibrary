@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -25,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,9 +37,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
@@ -118,6 +124,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
 @Composable
 private fun AddCopyDialog(onDismiss: () -> Unit, onSave: (Int) -> Unit) {
     var volume by remember { mutableStateOf("0") }
+    val volumeFocus = remember { FocusRequester() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.add_copy)) },
@@ -127,6 +134,8 @@ private fun AddCopyDialog(onDismiss: () -> Unit, onSave: (Int) -> Unit) {
                 onValueChange = { volume = it.filter(Char::isDigit).take(2) },
                 label = { Text(stringResource(R.string.field_volume)) },
                 singleLine = true,
+                modifier = Modifier.focusRequester(volumeFocus),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             )
         },
         confirmButton = {
@@ -136,6 +145,7 @@ private fun AddCopyDialog(onDismiss: () -> Unit, onSave: (Int) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
+    LaunchedEffect(Unit) { volumeFocus.requestFocus() }
 }
 
 @Composable
@@ -148,6 +158,8 @@ private fun EditBookDialog(
     var author by remember { mutableStateOf(book.author) }
     var isbn by remember { mutableStateOf(book.isbn.orEmpty()) }
     var language by remember { mutableStateOf(book.language) }
+    val titleFocus = remember { FocusRequester() }
+    val authorFocus = remember { FocusRequester() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -157,15 +169,35 @@ private fun EditBookDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
-                OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.field_author)) }, singleLine = true)
+                OutlinedTextField(
+                    title, { title = it },
+                    label = { Text(stringResource(R.string.field_title)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(titleFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { authorFocus.requestFocus() }),
+                )
+                // The chain stops here: the next control is the language FilterChip
+                // row, so author gets Done instead of Next into it.
+                OutlinedTextField(
+                    author, { author = it },
+                    label = { Text(stringResource(R.string.field_author)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(authorFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                )
                 Text(stringResource(R.string.field_language), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(language == "am", { language = "am" }, label = { Text(stringResource(R.string.lang_amharic)) })
                     FilterChip(language == "ar", { language = "ar" }, label = { Text(stringResource(R.string.lang_arabic)) })
                     FilterChip(language == "en", { language = "en" }, label = { Text(stringResource(R.string.lang_english)) })
                 }
-                OutlinedTextField(isbn, { isbn = it }, label = { Text(stringResource(R.string.field_isbn)) }, singleLine = true)
+                OutlinedTextField(
+                    isbn, { isbn = it },
+                    label = { Text(stringResource(R.string.field_isbn)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                )
             }
         },
         confirmButton = {
@@ -187,6 +219,7 @@ private fun EditBookDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+    LaunchedEffect(Unit) { titleFocus.requestFocus() }
 }
 
 @Composable
