@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +31,7 @@ import com.ethiopialibrary.app.data.MemberStatus
 import com.ethiopialibrary.app.labels.exportAndShareLabels
 import com.ethiopialibrary.app.ui.AddMemberDialog
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
@@ -57,12 +57,13 @@ fun MembersScreen(
             .padding(20.dp),
     ) {
         AppTopBar(stringResource(R.string.nav_members), onBack)
-        OutlinedTextField(
+        AppSearchField(
             value = query,
             onValueChange = vm::setQuery,
+            placeholder = stringResource(R.string.search_hint),
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.search_hint)) },
-            singleLine = true,
+            autoFocus = true,
+            onSubmit = null,
         )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -75,7 +76,7 @@ fun MembersScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(members, key = { it.member.id }) { row ->
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),

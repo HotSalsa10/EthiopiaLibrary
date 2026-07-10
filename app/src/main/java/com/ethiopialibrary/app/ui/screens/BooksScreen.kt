@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -25,15 +27,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
@@ -41,6 +47,7 @@ import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.labels.exportAndShareLabels
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
@@ -68,12 +75,13 @@ fun BooksScreen(
             .padding(20.dp),
     ) {
         AppTopBar(stringResource(R.string.nav_books), onBack)
-        OutlinedTextField(
+        AppSearchField(
             value = query,
             onValueChange = vm::setQuery,
+            placeholder = stringResource(R.string.search_hint),
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.search_hint)) },
-            singleLine = true,
+            autoFocus = true,
+            onSubmit = null,
         )
         Spacer(Modifier.height(12.dp))
         // Category filter: "All" + a chip per category.
@@ -105,7 +113,7 @@ fun BooksScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(books, key = { it.book.id }) { row ->
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -191,17 +199,28 @@ private fun CategoryPicker(
 private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
+    val nameFocus = remember { FocusRequester() }
+    val codeFocus = remember { FocusRequester() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.add_category)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.field_category)) }, singleLine = true)
+                OutlinedTextField(
+                    name, { name = it },
+                    label = { Text(stringResource(R.string.field_category)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(nameFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { codeFocus.requestFocus() }),
+                )
                 OutlinedTextField(
                     code,
                     { code = it.filter(Char::isLetter).take(2).uppercase() },
                     label = { Text(stringResource(R.string.category_code)) },
                     singleLine = true,
+                    modifier = Modifier.focusRequester(codeFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 )
             }
         },
@@ -213,6 +232,7 @@ private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) ->
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
+    LaunchedEffect(Unit) { nameFocus.requestFocus() }
 }
 
 @Composable
@@ -228,6 +248,10 @@ private fun AddBookDialog(
     var isbn by remember { mutableStateOf("") }
     var copies by remember { mutableStateOf("1") }
     var language by remember { mutableStateOf("am") }
+    val titleFocus = remember { FocusRequester() }
+    val authorFocus = remember { FocusRequester() }
+    val isbnFocus = remember { FocusRequester() }
+    val copiesFocus = remember { FocusRequester() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -237,8 +261,23 @@ private fun AddBookDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
-                OutlinedTextField(author, { author = it }, label = { Text(stringResource(R.string.field_author)) }, singleLine = true)
+                OutlinedTextField(
+                    title, { title = it },
+                    label = { Text(stringResource(R.string.field_title)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(titleFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { authorFocus.requestFocus() }),
+                )
+                // The chain stops here: the next control is the CategoryPicker
+                // (a dropdown), so author gets Done instead of Next into it.
+                OutlinedTextField(
+                    author, { author = it },
+                    label = { Text(stringResource(R.string.field_author)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(authorFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                )
                 Text(stringResource(R.string.field_category), style = MaterialTheme.typography.labelLarge)
                 CategoryPicker(categories, categoryCode, { categoryCode = it }, onAddCategory)
                 Text(stringResource(R.string.field_language), style = MaterialTheme.typography.labelLarge)
@@ -247,12 +286,21 @@ private fun AddBookDialog(
                     FilterChip(language == "ar", { language = "ar" }, label = { Text(stringResource(R.string.lang_arabic)) })
                     FilterChip(language == "en", { language = "en" }, label = { Text(stringResource(R.string.lang_english)) })
                 }
-                OutlinedTextField(isbn, { isbn = it }, label = { Text(stringResource(R.string.field_isbn)) }, singleLine = true)
+                OutlinedTextField(
+                    isbn, { isbn = it },
+                    label = { Text(stringResource(R.string.field_isbn)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(isbnFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { copiesFocus.requestFocus() }),
+                )
                 OutlinedTextField(
                     copies,
                     { copies = it.filter(Char::isDigit) },
                     label = { Text(stringResource(R.string.field_copies)) },
                     singleLine = true,
+                    modifier = Modifier.focusRequester(copiesFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 )
             }
         },
@@ -275,4 +323,5 @@ private fun AddBookDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
+    LaunchedEffect(Unit) { titleFocus.requestFocus() }
 }
