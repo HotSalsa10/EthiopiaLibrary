@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -55,6 +53,7 @@ import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.BooksViewModel
+import com.ethiopialibrary.app.ui.PageColumn
 import kotlinx.coroutines.launch
 
 @Composable
@@ -72,11 +71,7 @@ fun BooksScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-    ) {
+    PageColumn(scrollable = false) {
         AppTopBar(stringResource(R.string.nav_books), onBack)
         AppSearchField(
             value = query,
@@ -116,27 +111,29 @@ fun BooksScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(books, key = { it.book.id }) { row ->
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onOpenBook(row.book.id) },
-                ) {
-                    Text(row.book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(row.book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        stringResource(
-                            R.string.available_of_total,
-                            row.availableCopies,
-                            row.totalCopies,
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (row.availableCopies > 0) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
-                    )
+        Box(Modifier.weight(1f)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(books, key = { it.book.id }) { row ->
+                    AppCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenBook(row.book.id) },
+                    ) {
+                        Text(row.book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(row.book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(
+                                R.string.available_of_total,
+                                row.availableCopies,
+                                row.totalCopies,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (row.availableCopies > 0) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                        )
+                    }
                 }
             }
         }

@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,6 +51,7 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.PageColumn
 import kotlinx.coroutines.launch
 
 @Composable
@@ -66,12 +65,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     var showEdit by remember { mutableStateOf(false) }
     var showAddCopy by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-    ) {
+    PageColumn {
         AppTopBar(book?.title.orEmpty(), onBack) {
             IconButton(onClick = { showEdit = true }) {
                 Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_book))

@@ -6,14 +6,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -47,6 +44,7 @@ import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -85,11 +83,7 @@ private fun PinGate(repo: LibraryRepository, onBack: () -> Unit, onUnlocked: () 
     var pin by remember { mutableStateOf("") }
     var wrong by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-    ) {
+    PageColumn(scrollable = false) {
         AppTopBar(stringResource(R.string.nav_settings), onBack)
         Column(
             Modifier
@@ -148,12 +142,7 @@ private fun SettingsContent(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-    ) {
+    PageColumn {
         AppTopBar(stringResource(R.string.nav_settings), onBack)
 
         // Cloud backup leads: it's the most important safety net for this app's

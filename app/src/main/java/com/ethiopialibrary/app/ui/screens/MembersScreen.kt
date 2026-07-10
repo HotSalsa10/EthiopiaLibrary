@@ -2,13 +2,11 @@ package com.ethiopialibrary.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +34,7 @@ import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.MembersViewModel
+import com.ethiopialibrary.app.ui.PageColumn
 import kotlinx.coroutines.launch
 
 @Composable
@@ -51,11 +50,7 @@ fun MembersScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-    ) {
+    PageColumn(scrollable = false) {
         AppTopBar(stringResource(R.string.nav_members), onBack)
         AppSearchField(
             value = query,
@@ -76,25 +71,27 @@ fun MembersScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(members, key = { it.member.id }) { row ->
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onOpenMember(row.member.id) },
-                ) {
-                    Text(row.member.fullName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(row.member.memberCode, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        stringResource(R.string.member_active_loans, row.activeLoans),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (row.member.status == MemberStatus.SUSPENDED) {
+        Box(Modifier.weight(1f)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(members, key = { it.member.id }) { row ->
+                    AppCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenMember(row.member.id) },
+                    ) {
+                        Text(row.member.fullName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(row.member.memberCode, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            stringResource(R.string.error_member_not_active),
+                            stringResource(R.string.member_active_loans, row.activeLoans),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (row.member.status == MemberStatus.SUSPENDED) {
+                            Text(
+                                stringResource(R.string.error_member_not_active),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
             }
