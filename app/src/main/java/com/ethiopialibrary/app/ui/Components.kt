@@ -263,7 +263,12 @@ fun BigOutlinedButton(
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsFocusedAsState()
     val fillColor = if (hovered) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-    val borderColor = if (hovered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val borderWidth = if (focused) 2.dp else 1.dp
+    val borderColor = when {
+        focused -> LibraryStatus.focusRing
+        hovered -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outlineVariant
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -272,8 +277,7 @@ fun BigOutlinedButton(
             .shadow(2.dp, shape, spotColor = LibraryAccents.shadowSoft, ambientColor = LibraryAccents.shadowSoft)
             .clip(shape)
             .background(fillColor)
-            .border(1.dp, borderColor, shape)
-            .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing, shape) else Modifier)
+            .border(borderWidth, borderColor, shape)
             .hoverable(interaction)
             .clickable(
                 interactionSource = interaction,
