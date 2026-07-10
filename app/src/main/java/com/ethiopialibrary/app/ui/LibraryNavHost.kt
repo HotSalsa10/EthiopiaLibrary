@@ -14,9 +14,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.ui.screens.BookDetailScreen
@@ -114,7 +116,10 @@ fun LibraryNavHost(repo: LibraryRepository) {
         composable("return") {
             ReturnScreen(vm = viewModel(factory = factory), onBack = back)
         }
-        composable("loans") {
+        composable(
+            "loans?filter={filter}",
+            arguments = listOf(navArgument("filter") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) {
             CurrentlyOutScreen(vm = viewModel(factory = factory), onBack = back)
         }
         composable("settings") {
