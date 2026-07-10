@@ -4,16 +4,17 @@ import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +37,7 @@ import com.ethiopialibrary.app.data.buildStatisticsCsv
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
+import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.StatisticsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,12 +50,7 @@ fun StatisticsScreen(vm: StatisticsViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-    ) {
+    PageColumn {
         AppTopBar(stringResource(R.string.nav_statistics), onBack)
 
         val s = stats
@@ -61,7 +60,7 @@ fun StatisticsScreen(vm: StatisticsViewModel, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            return
+            return@PageColumn
         }
 
         SectionCard(stringResource(R.string.nav_statistics)) {
@@ -123,7 +122,36 @@ private fun ListCard(title: String, rows: List<LabelCount>) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            rows.forEach { StatRow(it.label, it.count) }
+            val maxCount = rows.maxOfOrNull { it.count } ?: 1
+            rows.forEach { BarRow(it, maxCount) }
+        }
+    }
+}
+
+/** One ranked row: label + count, with a proportional bar underneath showing
+ * its share of the list's largest count. Dependency-free (plain Box fills). */
+@Composable
+private fun BarRow(row: LabelCount, maxCount: Int) {
+    Column(Modifier.padding(vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(row.label, style = MaterialTheme.typography.bodyLarge)
+            Text(row.count.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction = (row.count.toFloat() / maxCount).coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
         }
     }
 }
@@ -137,9 +165,9 @@ private fun StatRow(label: String, value: String) {
         Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.widthIn(min = 140.dp))
         Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }
