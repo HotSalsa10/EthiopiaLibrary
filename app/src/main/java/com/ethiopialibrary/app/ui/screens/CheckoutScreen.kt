@@ -1,14 +1,23 @@
 package com.ethiopialibrary.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -18,16 +27,20 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.CopyWithBook
+import com.ethiopialibrary.app.data.LoanEntity
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AddMemberDialog
@@ -38,8 +51,12 @@ import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.CheckoutViewModel
 import com.ethiopialibrary.app.ui.CodeEntry
+import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.PinOverrideDialog
+import com.ethiopialibrary.app.ui.StepHeader
+import com.ethiopialibrary.app.ui.TwoPaneRow
 import com.ethiopialibrary.app.ui.theme.LibraryStatus
+import java.util.Locale
 
 @Composable
 fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
@@ -50,108 +67,120 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
     var showBatch by remember { mutableStateOf(false) }
     var showAddMember by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-    ) {
-        AppTopBar(
-            stringResource(if (showBatch) R.string.batch_checkout_title else R.string.checkout_title),
-            onBack = if (showBatch) {
-                { vm.resetBatch(); showBatch = false }
-            } else {
-                onBack
-            },
-        )
+    val loan = state.completedLoan
+    // "The very first error, nothing picked yet" reads as a dead end (retry the
+    // search), same as success - neither is "in" the numbered flow, so both stay
+    // single-column in every orientation (item 9) and skip the StepHeader (item 1).
+    val isTerminal = loan != null || (state.error != null && state.copy == null)
+    val stepIndex: Int? = when {
+        showBatch -> null
+        loan != null -> null
+        state.error != null && state.copy == null -> null
+        state.copy == null -> 0
+        state.member == null -> 1
+        state.memberOverdueCount > 0 && !state.overdueWarningAcknowledged -> 2
+        else -> 2
+    }
 
-        if (showBatch) {
-            BatchCheckoutSection(vm, onExit = { showBatch = false })
-            return@Column
-        }
-
-        state.error?.let { error ->
-            ErrorCard(checkoutErrorText(error))
-            Spacer(Modifier.height(12.dp))
-        }
-
-        val loan = state.completedLoan
-        when {
-            loan != null -> {
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentPadding = 20.dp,
-                ) {
-                    Text(
-                        stringResource(R.string.checkout_success),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    state.copy?.let {
-                        Text(
-                            "${it.bookTitle} — ${it.copy.copyCode}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    Text(
-                        "${stringResource(R.string.due_date)}: " +
-                            DualCalendarFormatter.format(loan.dueAt, locale, LocalCalendarMode.current),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Spacer(Modifier.height(16.dp))
-                BigButton(stringResource(R.string.borrow_another)) {
-                    vm.startAnotherForSameMember()
-                }
-                Spacer(Modifier.height(8.dp))
-                BigOutlinedButton(stringResource(R.string.new_checkout)) { vm.reset() }
-            }
-
-            state.copy == null -> {
-                CopyPickerStep(
-                    query = copyQuery,
-                    results = copyResults,
-                    onQueryChange = vm::setCopyQuery,
-                    onPick = vm::submitCopyCode,
-                    // Checkout: only copies available to loan are selectable.
-                    selectable = { it.copy.status == CopyStatus.IN_SERVICE && !it.onLoan },
+    Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+        ) {
+            AppTopBar(
+                stringResource(if (showBatch) R.string.batch_checkout_title else R.string.checkout_title),
+                onBack = if (showBatch) {
+                    { vm.resetBatch(); showBatch = false }
+                } else {
+                    onBack
+                },
+            )
+            stepIndex?.let {
+                StepHeader(
+                    current = it,
+                    total = 3,
+                    labels = listOf(
+                        stringResource(R.string.checkout_step_book),
+                        stringResource(R.string.checkout_step_member),
+                        stringResource(R.string.checkout_step_confirm),
+                    ),
                 )
-                Spacer(Modifier.height(16.dp))
-                BigOutlinedButton(stringResource(R.string.batch_checkout_start)) { showBatch = true }
             }
+        }
 
-            state.member == null -> {
-                FoundCopyCard(state.copy!!)
-                Spacer(Modifier.height(16.dp))
-                CodeEntry(stringResource(R.string.enter_member_code), vm::submitMemberCode)
-                if (state.error == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
-                    Spacer(Modifier.height(8.dp))
-                    BigOutlinedButton(stringResource(R.string.add_member)) { showAddMember = true }
+        Box(Modifier.weight(1f).fillMaxSize()) {
+            when {
+                showBatch -> BatchCheckoutSection(vm, onExit = { showBatch = false })
+
+                isTerminal -> PageColumn {
+                    CheckoutTerminalContent(
+                        state = state,
+                        vm = vm,
+                        loan = loan,
+                        locale = locale,
+                        copyQuery = copyQuery,
+                        copyResults = copyResults,
+                        onShowBatch = { showBatch = true },
+                    )
                 }
-            }
 
-            state.memberOverdueCount > 0 && !state.overdueWarningAcknowledged -> {
-                FoundCopyCard(state.copy!!)
-                Spacer(Modifier.height(8.dp))
-                FoundMemberCard(state.member!!)
-                Spacer(Modifier.height(16.dp))
-                OverdueWarningCard(state.memberOverdueCount) { vm.acknowledgeOverdueWarning() }
-            }
-
-            else -> {
-                FoundCopyCard(state.copy!!)
-                Spacer(Modifier.height(8.dp))
-                FoundMemberCard(state.member!!)
-                Spacer(Modifier.height(16.dp))
-                LoanPeriodField(state.loanPeriodDays) { vm.setLoanPeriod(it) }
-                Spacer(Modifier.height(16.dp))
-                BigButton(stringResource(R.string.confirm_checkout)) { vm.confirm() }
+                else -> Column(Modifier.fillMaxSize()) {
+                    state.error?.let { error ->
+                        Box(Modifier.padding(horizontal = 20.dp)) {
+                            ErrorCard(checkoutErrorText(error))
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    BoxWithConstraints(Modifier.weight(1f).fillMaxSize()) {
+                        if (maxWidth > maxHeight) {
+                            TwoPaneRow(
+                                left = {
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(20.dp),
+                                    ) {
+                                        CheckoutActiveStepContent(
+                                            state = state,
+                                            vm = vm,
+                                            copyQuery = copyQuery,
+                                            copyResults = copyResults,
+                                            onShowBatch = { showBatch = true },
+                                            onShowAddMember = { showAddMember = true },
+                                        )
+                                    }
+                                },
+                                right = {
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(20.dp),
+                                    ) {
+                                        CheckoutReceiptContent(state.copy, state.member)
+                                    }
+                                },
+                            )
+                        } else {
+                            PageColumn {
+                                if (state.copy != null) {
+                                    CheckoutReceiptContent(state.copy, state.member)
+                                    Spacer(Modifier.height(16.dp))
+                                }
+                                CheckoutActiveStepContent(
+                                    state = state,
+                                    vm = vm,
+                                    copyQuery = copyQuery,
+                                    copyResults = copyResults,
+                                    onShowBatch = { showBatch = true },
+                                    onShowAddMember = { showAddMember = true },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -176,7 +205,135 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
     }
 }
 
-/** Member-first basket: scan the member once, then scan books repeatedly, then Confirm All. */
+/** Success card, or the very first (nothing-picked-yet) error + copy picker - both terminal (item 9). */
+@Composable
+private fun CheckoutTerminalContent(
+    state: CheckoutViewModel.UiState,
+    vm: CheckoutViewModel,
+    loan: LoanEntity?,
+    locale: Locale,
+    copyQuery: String,
+    copyResults: List<CopyWithBook>,
+    onShowBatch: () -> Unit,
+) {
+    if (loan != null) {
+        AppCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentPadding = 20.dp,
+        ) {
+            Text(
+                stringResource(R.string.checkout_success),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Spacer(Modifier.height(8.dp))
+            state.copy?.let {
+                Text(
+                    "${it.bookTitle} — ${it.copy.copyCode}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            Text(
+                "${stringResource(R.string.due_date)}: " +
+                    DualCalendarFormatter.format(loan.dueAt, locale, LocalCalendarMode.current),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        BigButton(stringResource(R.string.borrow_another)) { vm.startAnotherForSameMember() }
+        Spacer(Modifier.height(8.dp))
+        BigOutlinedButton(stringResource(R.string.new_checkout)) { vm.reset() }
+    } else {
+        state.error?.let { error ->
+            ErrorCard(checkoutErrorText(error))
+            Spacer(Modifier.height(12.dp))
+        }
+        CopyPickerStep(
+            query = copyQuery,
+            results = copyResults,
+            onQueryChange = vm::setCopyQuery,
+            onPick = vm::submitCopyCode,
+            // Checkout: only copies available to loan are selectable.
+            selectable = { it.copy.status == CopyStatus.IN_SERVICE && !it.onLoan },
+        )
+        Spacer(Modifier.height(16.dp))
+        BigOutlinedButton(stringResource(R.string.batch_checkout_start)) { onShowBatch() }
+    }
+}
+
+/**
+ * Whichever single-flow step is currently in progress: its interactive content only
+ * (no "already resolved" receipt cards - see [CheckoutReceiptContent]). Reused as-is
+ * for both portrait (stacked below the receipt) and landscape (left pane).
+ */
+@Composable
+private fun CheckoutActiveStepContent(
+    state: CheckoutViewModel.UiState,
+    vm: CheckoutViewModel,
+    copyQuery: String,
+    copyResults: List<CopyWithBook>,
+    onShowBatch: () -> Unit,
+    onShowAddMember: () -> Unit,
+) {
+    when {
+        state.copy == null -> {
+            CopyPickerStep(
+                query = copyQuery,
+                results = copyResults,
+                onQueryChange = vm::setCopyQuery,
+                onPick = vm::submitCopyCode,
+                // Checkout: only copies available to loan are selectable.
+                selectable = { it.copy.status == CopyStatus.IN_SERVICE && !it.onLoan },
+            )
+            Spacer(Modifier.height(16.dp))
+            BigOutlinedButton(stringResource(R.string.batch_checkout_start)) { onShowBatch() }
+        }
+
+        state.member == null -> {
+            CodeEntry(stringResource(R.string.enter_member_code), vm::submitMemberCode)
+            if (state.error == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
+                Spacer(Modifier.height(8.dp))
+                BigOutlinedButton(stringResource(R.string.add_member)) { onShowAddMember() }
+            }
+        }
+
+        state.memberOverdueCount > 0 && !state.overdueWarningAcknowledged -> {
+            OverdueWarningCard(state.memberOverdueCount) { vm.acknowledgeOverdueWarning() }
+        }
+
+        else -> {
+            LoanPeriodField(
+                initialDays = state.loanPeriodDays,
+                onConfirm = { vm.confirm() },
+                onChange = { vm.setLoanPeriod(it) },
+            )
+            Spacer(Modifier.height(16.dp))
+            BigButton(stringResource(R.string.confirm_checkout)) { vm.confirm() }
+        }
+    }
+}
+
+/** Cards for whatever's already resolved in the single-flow checkout ("receipt so far", item 9). */
+@Composable
+private fun CheckoutReceiptContent(copy: CopyWithBook?, member: MemberEntity?) {
+    copy?.let {
+        FoundCopyCard(it)
+        if (member != null) Spacer(Modifier.height(8.dp))
+    }
+    member?.let {
+        FoundMemberCard(it)
+    }
+}
+
+/**
+ * Member-first basket: scan the member once, then scan books repeatedly, then Confirm All.
+ * The banner at the top (item 2) is always visible so batch mode can never be mistaken
+ * for the single-item flow, and always names the active member once one is found.
+ */
 @Composable
 private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
     val state by vm.batchState.collectAsStateWithLifecycle()
@@ -187,70 +344,66 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
     var attempt by remember { mutableStateOf(0) }
     var showAddMember by remember { mutableStateOf(false) }
 
-    when {
-        results != null -> {
-            Text(stringResource(R.string.batch_results_heading), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(12.dp))
-            results.forEach { line ->
-                val success = line.outcome == CheckoutViewModel.BatchLineOutcome.SUCCESS
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = if (success) {
-                        MaterialTheme.colorScheme.primaryContainer
+    Column(Modifier.fillMaxSize()) {
+        BatchModeBanner(state)
+        Spacer(Modifier.height(16.dp))
+
+        when {
+            results != null -> PageColumn {
+                BatchResultsContent(results, vm, onExit)
+            }
+
+            else -> {
+                val activeError = if (state.member == null) state.memberError else state.copyError
+                activeError?.let {
+                    Box(Modifier.padding(horizontal = 20.dp)) {
+                        ErrorCard(checkoutErrorText(it))
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+                BoxWithConstraints(Modifier.weight(1f).fillMaxSize()) {
+                    if (maxWidth > maxHeight) {
+                        TwoPaneRow(
+                            left = {
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(20.dp),
+                                ) {
+                                    BatchActiveStepContent(
+                                        state = state,
+                                        vm = vm,
+                                        attempt = attempt,
+                                        onAttemptChange = { attempt = it },
+                                        onShowAddMember = { showAddMember = true },
+                                    )
+                                }
+                            },
+                            right = {
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(20.dp),
+                                ) {
+                                    BatchReceiptContent(state, onConfirmAll = { vm.confirmBatch() })
+                                }
+                            },
+                        )
                     } else {
-                        MaterialTheme.colorScheme.errorContainer
-                    },
-                ) {
-                    Text("${line.bookTitle} — " + stringResource(if (success) R.string.batch_line_success else R.string.batch_line_failed))
+                        PageColumn {
+                            BatchReceiptContent(state, onConfirmAll = { vm.confirmBatch() })
+                            BatchActiveStepContent(
+                                state = state,
+                                vm = vm,
+                                attempt = attempt,
+                                onAttemptChange = { attempt = it },
+                                onShowAddMember = { showAddMember = true },
+                            )
+                        }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-            }
-            Spacer(Modifier.height(8.dp))
-            BigButton(stringResource(R.string.batch_new)) { vm.resetBatch() }
-            Spacer(Modifier.height(8.dp))
-            BigOutlinedButton(stringResource(R.string.batch_done)) { vm.resetBatch(); onExit() }
-        }
-
-        state.member == null -> {
-            state.memberError?.let {
-                ErrorCard(checkoutErrorText(it))
-                Spacer(Modifier.height(12.dp))
-            }
-            CodeEntry(stringResource(R.string.enter_member_code), vm::submitBatchMemberCode)
-            if (state.memberError == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
-                Spacer(Modifier.height(8.dp))
-                BigOutlinedButton(stringResource(R.string.add_member)) { showAddMember = true }
-            }
-        }
-
-        else -> {
-            FoundMemberCard(state.member!!)
-            Spacer(Modifier.height(16.dp))
-
-            if (state.items.isNotEmpty()) {
-                Text(stringResource(R.string.batch_items_heading), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                state.items.forEach { line ->
-                    FoundCopyCard(line.copy)
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-
-            state.copyError?.let {
-                ErrorCard(checkoutErrorText(it))
-                Spacer(Modifier.height(12.dp))
-            }
-
-            key(attempt) {
-                CodeEntry(stringResource(R.string.enter_copy_code)) { code ->
-                    vm.addBatchCopyCode(code)
-                    attempt++
-                }
-            }
-
-            if (state.items.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                BigButton(stringResource(R.string.batch_confirm_all)) { vm.confirmBatch() }
             }
         }
     }
@@ -267,11 +420,119 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
 }
 
 /**
- * Editable loan length for this checkout, prefilled from the configured default.
- * Digits-only; an empty field is treated as the minimum so the loan is never zero.
+ * Persistent, state-dependent banner that is always visible at the top of batch mode
+ * regardless of which internal step is active, so batch can never read as the single-item
+ * flow, and the active member (once found) is always named without scrolling (item 2).
  */
 @Composable
-private fun LoanPeriodField(initialDays: Int, onChange: (Int) -> Unit) {
+private fun BatchModeBanner(state: CheckoutViewModel.BatchUiState) {
+    val text = when {
+        state.results != null -> stringResource(R.string.batch_banner_results)
+        state.member != null -> stringResource(R.string.batch_banner_with_member, state.member!!.fullName, state.items.size)
+        else -> stringResource(R.string.batch_banner_no_member)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.MenuBook,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/** Batch results: terminal, single-column in every orientation (item 9). */
+@Composable
+private fun BatchResultsContent(
+    results: List<CheckoutViewModel.BatchResultLine>,
+    vm: CheckoutViewModel,
+    onExit: () -> Unit,
+) {
+    Text(stringResource(R.string.batch_results_heading), style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(12.dp))
+    results.forEach { line ->
+        val success = line.outcome == CheckoutViewModel.BatchLineOutcome.SUCCESS
+        AppCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = if (success) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.errorContainer
+            },
+        ) {
+            Text("${line.bookTitle} — " + stringResource(if (success) R.string.batch_line_success else R.string.batch_line_failed))
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+    Spacer(Modifier.height(8.dp))
+    BigButton(stringResource(R.string.batch_new)) { vm.resetBatch() }
+    Spacer(Modifier.height(8.dp))
+    BigOutlinedButton(stringResource(R.string.batch_done)) { vm.resetBatch(); onExit() }
+}
+
+/** Whichever batch step is active: member CodeEntry, or the per-item CodeEntry (item 9). */
+@Composable
+private fun BatchActiveStepContent(
+    state: CheckoutViewModel.BatchUiState,
+    vm: CheckoutViewModel,
+    attempt: Int,
+    onAttemptChange: (Int) -> Unit,
+    onShowAddMember: () -> Unit,
+) {
+    if (state.member == null) {
+        CodeEntry(stringResource(R.string.enter_member_code), vm::submitBatchMemberCode)
+        if (state.memberError == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
+            Spacer(Modifier.height(8.dp))
+            BigOutlinedButton(stringResource(R.string.add_member)) { onShowAddMember() }
+        }
+    } else {
+        key(attempt) {
+            CodeEntry(stringResource(R.string.enter_copy_code)) { code ->
+                vm.addBatchCopyCode(code)
+                onAttemptChange(attempt + 1)
+            }
+        }
+    }
+}
+
+/** The accumulated basket so far: found member, the books in it, and Confirm All (item 9). */
+@Composable
+private fun BatchReceiptContent(state: CheckoutViewModel.BatchUiState, onConfirmAll: () -> Unit) {
+    state.member?.let {
+        FoundMemberCard(it)
+        Spacer(Modifier.height(16.dp))
+    }
+    if (state.items.isNotEmpty()) {
+        Text(stringResource(R.string.batch_items_heading), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        state.items.forEach { line ->
+            FoundCopyCard(line.copy)
+            Spacer(Modifier.height(8.dp))
+        }
+        BigButton(stringResource(R.string.batch_confirm_all)) { onConfirmAll() }
+    }
+}
+
+/**
+ * Editable loan length for this checkout, prefilled from the configured default.
+ * Digits-only; an empty field is treated as the minimum so the loan is never zero.
+ * [onConfirm], if given, fires when staff press the keyboard's Done action (item 7).
+ */
+@Composable
+private fun LoanPeriodField(initialDays: Int, onConfirm: (() -> Unit)? = null, onChange: (Int) -> Unit) {
     var text by remember { mutableStateOf(initialDays.toString()) }
     OutlinedTextField(
         value = text,
@@ -282,7 +543,8 @@ private fun LoanPeriodField(initialDays: Int, onChange: (Int) -> Unit) {
         },
         label = { Text(stringResource(R.string.settings_loan_period)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { onConfirm?.invoke() }),
         modifier = Modifier.fillMaxWidth(),
     )
 }

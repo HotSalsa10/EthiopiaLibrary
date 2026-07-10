@@ -177,6 +177,14 @@
     <string name="batch_line_success">Succeeded</string>
     <string name="batch_line_failed">Failed</string>
     <string name="batch_results_heading">Results:</string>
+    <string name="batch_banner_no_member">Batch checkout — scan or enter a member code</string>
+    <string name="batch_banner_with_member">Batch checkout for %1$s — %2$d book(s) so far</string>
+    <string name="batch_banner_results">Batch checkout — results</string>
+
+    <!-- Checkout step header -->
+    <string name="checkout_step_book">Book</string>
+    <string name="checkout_step_member">Member</string>
+    <string name="checkout_step_confirm">Confirm</string>
 
     <string name="staff_pin">Staff PIN</string>
     <string name="set_pin">Set PIN</string>

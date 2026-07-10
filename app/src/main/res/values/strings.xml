@@ -193,6 +193,14 @@
     <string name="batch_line_success">ተሳክቷል</string>
     <string name="batch_line_failed">አልተሳካም</string>
     <string name="batch_results_heading">ውጤቶች፦</string>
+    <string name="batch_banner_no_member">ብዙ መጽሐፍት ማዋስ — ቃኝ ወይም የአባል ኮድ ያስገቡ</string>
+    <string name="batch_banner_with_member">ለ%1$s ብዙ መጽሐፍት ማዋስ — እስካሁን %2$d መጽሐፍት</string>
+    <string name="batch_banner_results">ብዙ መጽሐፍት ማዋስ — ውጤቶች</string>
+
+    <!-- Checkout step header -->
+    <string name="checkout_step_book">መጽሐፍ</string>
+    <string name="checkout_step_member">አባል</string>
+    <string name="checkout_step_confirm">አረጋግጥ</string>
 
     <!-- Staff PIN -->
     <string name="staff_pin">የሰራተኛ ፒን</string>

@@ -177,6 +177,14 @@
     <string name="batch_line_success">نجحت</string>
     <string name="batch_line_failed">فشلت</string>
     <string name="batch_results_heading">النتائج:</string>
+    <string name="batch_banner_no_member">إعارة جماعية — امسح أو أدخل رمز العضو</string>
+    <string name="batch_banner_with_member">إعارة جماعية لـ%1$s — %2$d كتاب حتى الآن</string>
+    <string name="batch_banner_results">إعارة جماعية — النتائج</string>
+
+    <!-- Checkout step header -->
+    <string name="checkout_step_book">الكتاب</string>
+    <string name="checkout_step_member">العضو</string>
+    <string name="checkout_step_confirm">تأكيد</string>
 
     <string name="staff_pin">رمز PIN للموظفين</string>
     <string name="set_pin">تعيين رمز PIN</string>
