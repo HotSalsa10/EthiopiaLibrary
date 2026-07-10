@@ -392,8 +392,13 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                             },
                         )
                     } else {
+                        // Scan field stays first so it never gets pushed down the
+                        // screen as the (unbounded, per-scan-growing) item list below
+                        // it fills up - unlike the single-flow's receipt (at most two
+                        // small cards), batch's list can run to dozens of books in one
+                        // basket, so keeping the active scan target anchored near the
+                        // top matters here specifically.
                         PageColumn {
-                            BatchReceiptContent(state, onConfirmAll = { vm.confirmBatch() })
                             BatchActiveStepContent(
                                 state = state,
                                 vm = vm,
@@ -401,6 +406,8 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                                 onAttemptChange = { attempt = it },
                                 onShowAddMember = { showAddMember = true },
                             )
+                            Spacer(Modifier.height(16.dp))
+                            BatchReceiptContent(state, onConfirmAll = { vm.confirmBatch() })
                         }
                     }
                 }
