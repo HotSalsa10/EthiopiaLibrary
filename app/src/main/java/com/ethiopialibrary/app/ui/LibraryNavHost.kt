@@ -119,8 +119,9 @@ fun LibraryNavHost(repo: LibraryRepository) {
         composable(
             "loans?filter={filter}",
             arguments = listOf(navArgument("filter") { type = NavType.StringType; nullable = true; defaultValue = null }),
-        ) {
-            CurrentlyOutScreen(vm = viewModel(factory = factory), onBack = back)
+        ) { entry ->
+            val filter = entry.arguments?.getString("filter")
+            CurrentlyOutScreen(vm = viewModel(factory = factory), onBack = back, initialFilter = filter)
         }
         composable("settings") {
             SettingsScreen(vm = viewModel(factory = factory), repo = repo, onBack = back)

@@ -214,6 +214,18 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
         .flatMapLatest { repo.currentlyOutLoans(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /**
+     * Configured due-soon window, so the screen can classify each loan into
+     * due-soon/overdue/plain-on-loan without inventing a second, inconsistent
+     * definition of "due soon". Same repo call [SettingsViewModel] already makes.
+     */
+    private val _dueSoonDays = MutableStateFlow<Int?>(null)
+    val dueSoonDays: StateFlow<Int?> = _dueSoonDays.asStateFlow()
+
+    init {
+        viewModelScope.launch { _dueSoonDays.value = repo.dueSoonDays() }
+    }
+
     fun setQuery(value: String) {
         _query.value = value
     }
