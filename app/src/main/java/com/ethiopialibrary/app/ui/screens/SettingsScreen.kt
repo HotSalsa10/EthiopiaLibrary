@@ -43,6 +43,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.exportAndShareBackup
 import com.ethiopialibrary.app.dates.CalendarMode
+import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
@@ -155,98 +156,86 @@ private fun SettingsContent(
     ) {
         AppTopBar(stringResource(R.string.nav_settings), onBack)
 
-        SectionHeader(stringResource(R.string.settings_language))
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigOutlinedButton(stringResource(R.string.lang_amharic), Modifier.weight(1f)) {
-                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("am"))
-            }
-            BigOutlinedButton(stringResource(R.string.lang_arabic), Modifier.weight(1f)) {
-                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
-            }
-            BigOutlinedButton(stringResource(R.string.lang_english), Modifier.weight(1f)) {
-                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
+        // Cloud backup leads: it's the most important safety net for this app's
+        // data, so it gets top billing ahead of every other setting.
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            CloudBackupSection(repo)
+            Spacer(Modifier.height(12.dp))
+            // Off-device insurance, independent of Firebase: a plain SQLite copy
+            // shared to Drive/WhatsApp/USB. Works fully offline.
+            BigOutlinedButton(stringResource(R.string.export_backup_file)) {
+                scope.launch { exportAndShareBackup(context, repo) }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
-        SectionHeader(stringResource(R.string.settings_calendar))
-        Spacer(Modifier.height(12.dp))
-        val calendarOptions = listOf(
-            CalendarMode.DUAL to R.string.calendar_dual,
-            CalendarMode.ETHIOPIAN to R.string.calendar_ethiopian,
-            CalendarMode.GREGORIAN to R.string.calendar_gregorian,
-        )
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            calendarOptions.forEachIndexed { index, (mode, labelRes) ->
-                SegmentedButton(
-                    selected = calendarMode == mode,
-                    onClick = { vm.setCalendarMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, calendarOptions.size),
-                ) { Text(stringResource(labelRes)) }
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            SectionHeader(stringResource(R.string.settings_language))
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigOutlinedButton(stringResource(R.string.lang_amharic), Modifier.weight(1f)) {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("am"))
+                }
+                BigOutlinedButton(stringResource(R.string.lang_arabic), Modifier.weight(1f)) {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
+                }
+                BigOutlinedButton(stringResource(R.string.lang_english), Modifier.weight(1f)) {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+
+            SectionHeader(stringResource(R.string.settings_calendar))
+            Spacer(Modifier.height(12.dp))
+            val calendarOptions = listOf(
+                CalendarMode.DUAL to R.string.calendar_dual,
+                CalendarMode.ETHIOPIAN to R.string.calendar_ethiopian,
+                CalendarMode.GREGORIAN to R.string.calendar_gregorian,
+            )
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                calendarOptions.forEachIndexed { index, (mode, labelRes) ->
+                    SegmentedButton(
+                        selected = calendarMode == mode,
+                        onClick = { vm.setCalendarMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, calendarOptions.size),
+                    ) { Text(stringResource(labelRes)) }
+                }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
-        SectionHeader(stringResource(R.string.settings_loan_period))
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = daysText,
-            onValueChange = { daysText = it.filter(Char::isDigit) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        )
-        Spacer(Modifier.height(12.dp))
-        BigButton(stringResource(R.string.save)) {
-            daysText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setLoanPeriodDays)
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            SectionHeader(stringResource(R.string.settings_lending_rules))
+            Spacer(Modifier.height(12.dp))
+            NumericSettingRow(
+                label = stringResource(R.string.settings_loan_period),
+                value = daysText,
+                onValueChange = { daysText = it.filter(Char::isDigit) },
+                onSave = { daysText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setLoanPeriodDays) },
+            )
+            Spacer(Modifier.height(20.dp))
+            NumericSettingRow(
+                label = stringResource(R.string.settings_max_books),
+                value = maxBooksText,
+                onValueChange = { maxBooksText = it.filter(Char::isDigit) },
+                onSave = { maxBooksText.toIntOrNull()?.takeIf { it >= 0 }?.let(vm::setMaxBooks) },
+            )
+            Spacer(Modifier.height(20.dp))
+            NumericSettingRow(
+                label = stringResource(R.string.settings_due_soon),
+                value = dueSoonText,
+                onValueChange = { dueSoonText = it.filter(Char::isDigit) },
+                onSave = { dueSoonText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setDueSoonDays) },
+            )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
-        SectionHeader(stringResource(R.string.settings_max_books))
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = maxBooksText,
-            onValueChange = { maxBooksText = it.filter(Char::isDigit) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        )
-        Spacer(Modifier.height(12.dp))
-        BigButton(stringResource(R.string.save)) {
-            maxBooksText.toIntOrNull()?.takeIf { it >= 0 }?.let(vm::setMaxBooks)
-        }
-        Spacer(Modifier.height(24.dp))
-
-        SectionHeader(stringResource(R.string.settings_due_soon))
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = dueSoonText,
-            onValueChange = { dueSoonText = it.filter(Char::isDigit) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        )
-        Spacer(Modifier.height(12.dp))
-        BigButton(stringResource(R.string.save)) {
-            dueSoonText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setDueSoonDays)
-        }
-        Spacer(Modifier.height(24.dp))
-
-        SectionHeader(stringResource(R.string.staff_pin))
-        Spacer(Modifier.height(12.dp))
-        BigOutlinedButton(
-            stringResource(if (hasPin) R.string.change_pin else R.string.set_pin),
-        ) { showSetPin = true }
-        Spacer(Modifier.height(24.dp))
-
-        CloudBackupSection(repo)
-
-        // Off-device insurance, independent of Firebase: a plain SQLite copy
-        // shared to Drive/WhatsApp/USB. Works fully offline.
-        Spacer(Modifier.height(12.dp))
-        BigOutlinedButton(stringResource(R.string.export_backup_file)) {
-            scope.launch { exportAndShareBackup(context, repo) }
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            SectionHeader(stringResource(R.string.staff_pin))
+            Spacer(Modifier.height(12.dp))
+            BigOutlinedButton(
+                stringResource(if (hasPin) R.string.change_pin else R.string.set_pin),
+            ) { showSetPin = true }
         }
     }
 
@@ -263,6 +252,28 @@ private fun SettingsContent(
             },
         )
     }
+}
+
+/** One "label, number field, save button" unit shared by the three lending-rule
+ * settings; each call site keeps its own validation/save logic. */
+@Composable
+private fun NumericSettingRow(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSave: () -> Unit,
+) {
+    SectionHeader(label)
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    )
+    Spacer(Modifier.height(8.dp))
+    BigButton(stringResource(R.string.save)) { onSave() }
 }
 
 @Composable
