@@ -12,23 +12,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.ethiopialibrary.app.R
 
-/** Scan-or-type entry used by checkout and return: camera first, keyboard always available. */
+/**
+ * Scan-or-type entry used by checkout and return: camera first, keyboard always available.
+ * The text field is unconditionally mounted (not gated on [scanning]), so it autofocuses
+ * once per composition - including every fresh instance batch mode creates per scan via
+ * its `key(attempt)` wrapper, so focus naturally lands ready for the next code each time.
+ */
 @Composable
 fun CodeEntry(hint: String, onSubmit: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     var scanning by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
 
     Column {
         if (scanning) {
@@ -57,7 +66,9 @@ fun CodeEntry(hint: String, onSubmit: (String) -> Unit) {
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
             label = { Text(hint) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
@@ -72,5 +83,8 @@ fun CodeEntry(hint: String, onSubmit: (String) -> Unit) {
         BigOutlinedButton(stringResource(R.string.find)) {
             if (text.isNotBlank()) onSubmit(text.trim())
         }
+    }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 }

@@ -1,13 +1,9 @@
 package com.ethiopialibrary.app.ui.screens
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +21,7 @@ import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.LocalCalendarMode
+import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.ReturnViewModel
 import com.ethiopialibrary.app.ui.StarRatingInput
 
@@ -35,12 +32,10 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
     val copyResults by vm.copyResults.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-    ) {
+    // Not named among the three screens this redesign gives a landscape two-pane
+    // layout (dashboard/checkout/currently-out) - Return just gets the max-width
+    // column treatment, in every orientation.
+    PageColumn {
         AppTopBar(stringResource(R.string.return_title), onBack)
 
         state.error?.let {
@@ -50,17 +45,17 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
 
         when {
             state.returned != null && state.awaitingRating -> {
-                ReturnSuccessCard(wasOverdue = state.wasOverdue == true)
-                Spacer(Modifier.height(20.dp))
-                Text(
-                    stringResource(R.string.rate_member_prompt),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(12.dp))
-                StarRatingInput(onRate = { vm.rateMember(it) })
-                Spacer(Modifier.height(16.dp))
-                BigOutlinedButton(stringResource(R.string.skip)) { vm.skipRating() }
+                ReturnSuccessCard(wasOverdue = state.wasOverdue == true) {
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        stringResource(R.string.rate_member_prompt),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    StarRatingInput(onRate = { vm.rateMember(it) })
+                    Spacer(Modifier.height(16.dp))
+                    BigOutlinedButton(stringResource(R.string.skip)) { vm.skipRating() }
+                }
             }
 
             state.returned != null -> {
@@ -106,8 +101,16 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
     }
 }
 
+/**
+ * [content], when given, renders inside this same card - e.g. the rating prompt
+ * right below the returned-book heading, so the whole moment reads as one card
+ * rather than a card followed by loose page content.
+ */
 @Composable
-private fun ReturnSuccessCard(wasOverdue: Boolean) {
+private fun ReturnSuccessCard(
+    wasOverdue: Boolean,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
+) {
     AppCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -116,7 +119,6 @@ private fun ReturnSuccessCard(wasOverdue: Boolean) {
         Text(
             stringResource(R.string.return_success),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
         if (wasOverdue) {
@@ -127,5 +129,6 @@ private fun ReturnSuccessCard(wasOverdue: Boolean) {
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        content?.invoke(this)
     }
 }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,9 +21,12 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.CopyWithBook
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
+import com.ethiopialibrary.app.ui.LoanStatus
 import com.ethiopialibrary.app.ui.ScannerView
+import com.ethiopialibrary.app.ui.StatusBadge
 
 /**
  * Scan-or-search copy finder shared by checkout and return. Scanning a QR submits
@@ -64,12 +66,18 @@ fun CopyPickerStep(
     }
 
     Spacer(Modifier.height(12.dp))
-    OutlinedTextField(
+    AppSearchField(
         value = query,
         onValueChange = onQueryChange,
+        placeholder = stringResource(R.string.search_copy_hint),
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.search_copy_hint)) },
-        singleLine = true,
+        autoFocus = true,
+        onSubmit = {
+            // Conservative: only auto-pick when exactly one row is actually
+            // selectable, never guess among several ambiguous matches.
+            val eligible = results.filter(selectable)
+            if (eligible.size == 1) onPick(eligible.single().copy.copyCode)
+        },
     )
     Spacer(Modifier.height(12.dp))
     if (query.isNotBlank() && results.isEmpty()) {
@@ -85,16 +93,14 @@ fun CopyPickerStep(
     }
 }
 
-/** One search result: book title, copy code (+ shelf), and loan/condition status. */
+/**
+ * One search result: book title, copy code (+ shelf), and loan/condition status.
+ * On-loan and available are genuine [LoanStatus] concepts and get the shared
+ * [StatusBadge]; lost/damaged/retired are copy *condition*, not loan status, so
+ * they keep their existing plain-text treatment rather than being force-fit.
+ */
 @Composable
 private fun CopyResultCard(row: CopyWithBook, selectable: Boolean, onPick: (String) -> Unit) {
-    val statusRes = when {
-        row.onLoan -> R.string.on_loan
-        row.copy.status == CopyStatus.IN_SERVICE -> R.string.available
-        row.copy.status == CopyStatus.LOST -> R.string.copy_status_lost
-        row.copy.status == CopyStatus.DAMAGED -> R.string.copy_status_damaged
-        else -> R.string.copy_status_retired
-    }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     AppCard(
         modifier = Modifier.fillMaxWidth(),
@@ -115,10 +121,22 @@ private fun CopyResultCard(row: CopyWithBook, selectable: Boolean, onPick: (Stri
             style = MaterialTheme.typography.bodyLarge,
             color = muted,
         )
-        Text(
-            stringResource(statusRes),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (selectable) MaterialTheme.colorScheme.primary else muted,
-        )
+        Spacer(Modifier.height(4.dp))
+        when {
+            row.onLoan -> StatusBadge(LoanStatus.ON_LOAN)
+            row.copy.status == CopyStatus.IN_SERVICE -> StatusBadge(LoanStatus.AVAILABLE)
+            else -> {
+                val statusRes = when (row.copy.status) {
+                    CopyStatus.LOST -> R.string.copy_status_lost
+                    CopyStatus.DAMAGED -> R.string.copy_status_damaged
+                    else -> R.string.copy_status_retired
+                }
+                Text(
+                    stringResource(statusRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = muted,
+                )
+            }
+        }
     }
 }
