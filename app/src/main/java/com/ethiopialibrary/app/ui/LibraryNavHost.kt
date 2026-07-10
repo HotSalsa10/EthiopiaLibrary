@@ -1,10 +1,14 @@
 package com.ethiopialibrary.app.ui
 
+import androidx.compose.foundation.focusable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -38,12 +42,24 @@ fun LibraryNavHost(repo: LibraryRepository) {
     val factory = remember(repo) { LibraryVmFactory(repo) }
     val back: () -> Unit = { nav.popBackStack() }
     val calendarMode by repo.calendarModeFlow().collectAsStateWithLifecycle(CalendarMode.DUAL)
+    // Fallback focus holder: the dashboard (start destination) never
+    // autofocuses anything by design, so without this there can be no focused
+    // node in the tree at all on a cold launch (and again after every Esc back
+    // to the dashboard) - a known Compose scenario where onPreviewKeyEvent can
+    // fail to fire for lack of a focus path to dispatch along. Purely a
+    // fallback: any screen's own autofocused field steals focus from this the
+    // moment it mounts, which is the desired behavior.
+    val rootFocusRequester = remember { FocusRequester() }
 
     // Global keyboard scaffold: Escape pops the back stack (no-op at the
     // dashboard root, where there is no previous destination), and Ctrl+O/R/L
     // jump straight to the three most-used desk actions. A Material 3
     // AlertDialog opens in its own Android Dialog window, so key events while
     // one is showing generally won't reach this handler - expected, not a bug.
+    // Each Ctrl+ branch first checks it isn't already on the target route:
+    // this guards against hardware key-repeat stacking duplicate back-stack
+    // entries while the combo is held, and against a stray repeat press
+    // silently resetting an in-progress checkout/return once already there.
     val handleShortcut: (KeyEvent) -> Boolean = handler@{ event ->
         if (event.type != KeyEventType.KeyDown) return@handler false
         when {
@@ -52,15 +68,24 @@ fun LibraryNavHost(repo: LibraryRepository) {
                 true
             }
             event.isCtrlPressed && event.key == Key.O -> {
-                nav.navigate("checkout")
+                if (nav.currentDestination?.route != "checkout") {
+                    nav.navigate("checkout") { launchSingleTop = true }
+                }
                 true
             }
             event.isCtrlPressed && event.key == Key.R -> {
-                nav.navigate("return")
+                if (nav.currentDestination?.route != "return") {
+                    nav.navigate("return") { launchSingleTop = true }
+                }
                 true
             }
             event.isCtrlPressed && event.key == Key.L -> {
-                nav.navigate("loans")
+                // currentDestination.route is the registered route pattern
+                // ("loans?filter={filter}"), not an instantiated path with the
+                // actual filter value substituted in.
+                if (nav.currentDestination?.route != "loans?filter={filter}") {
+                    nav.navigate("loans") { launchSingleTop = true }
+                }
                 true
             }
             else -> false
@@ -71,7 +96,10 @@ fun LibraryNavHost(repo: LibraryRepository) {
         NavHost(
             navController = nav,
             startDestination = "dashboard",
-            modifier = Modifier.onPreviewKeyEvent(handleShortcut),
+            modifier = Modifier
+                .focusRequester(rootFocusRequester)
+                .focusable()
+                .onPreviewKeyEvent(handleShortcut),
         ) {
         composable("dashboard") {
             DashboardScreen(
@@ -130,5 +158,8 @@ fun LibraryNavHost(repo: LibraryRepository) {
             StatisticsScreen(vm = viewModel(factory = factory), onBack = back)
         }
         }
+    }
+    LaunchedEffect(Unit) {
+        rootFocusRequester.requestFocus()
     }
 }
