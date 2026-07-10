@@ -79,7 +79,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
         }
         book?.let { b ->
             Text(b.author, style = MaterialTheme.typography.titleMedium)
-            b.isbn?.let { Text("ISBN: $it", style = MaterialTheme.typography.bodyMedium) }
+            b.isbn?.let { Text(stringResource(R.string.isbn_label, it), style = MaterialTheme.typography.bodyMedium) }
         }
         Spacer(Modifier.height(12.dp))
         BigButton(stringResource(R.string.add_copy)) { showAddCopy = true }

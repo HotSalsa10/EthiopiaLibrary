@@ -28,6 +28,7 @@
     <string name="field_category">Category</string>
     <string name="field_language">Language</string>
     <string name="field_isbn">ISBN (optional)</string>
+    <string name="isbn_label">ISBN: %1$s</string>
     <string name="field_copies">Number of copies</string>
     <string name="available_of_total">%1$d of %2$d available</string>
     <string name="export_labels">Export QR labels (PDF)</string>
@@ -126,6 +127,7 @@
     <string name="calendar_dual">Both</string>
     <string name="calendar_ethiopian">Ethiopian</string>
     <string name="calendar_gregorian">Gregorian</string>
+    <string name="settings_lending_rules">Lending rules</string>
     <string name="settings_loan_period">Loan period (days)</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>

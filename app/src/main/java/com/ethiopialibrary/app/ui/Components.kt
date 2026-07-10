@@ -42,6 +42,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -344,11 +345,12 @@ fun StarRatingInput(onRate: (Int) -> Unit, modifier: Modifier = Modifier) {
 /** Read-only rating: one gold star plus the value (e.g. "4.2"). */
 @Composable
 fun StarRatingDisplay(rating: Double, modifier: Modifier = Modifier) {
+    val locale = LocalConfiguration.current.locales[0]
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Filled.Star, contentDescription = null, tint = LibraryStatus.starGold, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
         Text(
-            String.format(java.util.Locale.US, "%.1f", rating),
+            String.format(locale, "%.1f", rating),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,

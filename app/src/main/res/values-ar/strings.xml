@@ -28,6 +28,7 @@
     <string name="field_category">التصنيف</string>
     <string name="field_language">اللغة</string>
     <string name="field_isbn">‏ISBN (اختياري)</string>
+    <string name="isbn_label">‏ISBN: %1$s</string>
     <string name="field_copies">عدد النسخ</string>
     <string name="available_of_total">‏%1$d من %2$d متاح</string>
     <string name="export_labels">تصدير ملصقات QR ‏(PDF)</string>
@@ -126,6 +127,7 @@
     <string name="calendar_dual">كلاهما</string>
     <string name="calendar_ethiopian">إثيوبي</string>
     <string name="calendar_gregorian">ميلادي</string>
+    <string name="settings_lending_rules">قواعد الإعارة</string>
     <string name="settings_loan_period">مدة الإعارة (بالأيام)</string>
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>

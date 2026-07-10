@@ -32,6 +32,7 @@
     <string name="field_category">ምድብ</string>
     <string name="field_language">ቋንቋ</string>
     <string name="field_isbn">ISBN (አማራጭ)</string>
+    <string name="isbn_label">ISBN: %1$s</string>
     <string name="field_copies">የቅጂዎች ብዛት</string>
     <string name="available_of_total">%1$d ከ %2$d ይገኛል</string>
     <string name="export_labels">የQR መለያዎችን አውጣ (PDF)</string>
@@ -138,6 +139,7 @@
     <string name="calendar_dual">ሁለቱም</string>
     <string name="calendar_ethiopian">ኢትዮጵያዊ</string>
     <string name="calendar_gregorian">ግሪጎሪያን</string>
+    <string name="settings_lending_rules">የመዋስ ደንቦች</string>
     <string name="settings_loan_period">የመዋስ ጊዜ (በቀናት)</string>
     <string name="save">አስቀምጥ</string>
     <string name="cancel">ሰርዝ</string>
