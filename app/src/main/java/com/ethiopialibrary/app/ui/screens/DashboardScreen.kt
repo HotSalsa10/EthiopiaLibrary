@@ -5,9 +5,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.AssignmentReturn
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CloudDone
@@ -35,7 +40,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
@@ -58,25 +62,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.ActivityType
 import com.ethiopialibrary.app.data.ActivityWithDetails
+import com.ethiopialibrary.app.data.DashboardStats
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.sync.SyncWorker
 import com.ethiopialibrary.app.sync.connectivityFlow
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.DashboardViewModel
+import com.ethiopialibrary.app.ui.LoanStatus
 import com.ethiopialibrary.app.ui.LocalCalendarMode
+import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import com.ethiopialibrary.app.ui.SectionHeader
+import com.ethiopialibrary.app.ui.StatusBadge
+import com.ethiopialibrary.app.ui.StatusEdgeCard
+import com.ethiopialibrary.app.ui.TwoPaneRow
 import com.ethiopialibrary.app.ui.pressScale
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
+import com.ethiopialibrary.app.ui.theme.LibraryStatus
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -116,155 +128,268 @@ fun DashboardScreen(
             onDismiss = { renewTarget = null },
         )
     }
+    val onRenewRequest: (LoanWithDetails) -> Unit = { renewTarget = it }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp, vertical = 24.dp),
-    ) {
-        // Brand header: logo, localized name, and a discreet backup indicator.
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.library_logo),
-                contentDescription = stringResource(R.string.app_name),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.height(88.dp),
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(12.dp))
-            BackupChip(lastBackupAt, pendingSync, backupStaleSince, locale)
-        }
+    // Gentle, dismissible once-per-day suggestion when internet is available
+    // and changes are waiting - never a blocking dialog. State and callbacks
+    // live here, once, same as renewTarget/RenewConfirmDialog above; only the
+    // visual layout below branches on orientation.
+    val nudgeWanted by vm.backupNudgeWanted.collectAsStateWithLifecycle()
+    val online by remember { connectivityFlow(context) }.collectAsStateWithLifecycle(false)
+    val onBackupNow: () -> Unit = {
+        SyncWorker.backupNow(context)
+        Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
+        vm.dismissBackupNudge()
+    }
+    val onLater: () -> Unit = { vm.dismissBackupNudge() }
 
-        // Gentle, dismissible once-per-day suggestion when internet is
-        // available and changes are waiting - never a blocking dialog.
-        val nudgeWanted by vm.backupNudgeWanted.collectAsStateWithLifecycle()
-        val online by remember { connectivityFlow(context) }.collectAsStateWithLifecycle(false)
-        if (nudgeWanted && online) {
-            Spacer(Modifier.height(20.dp))
-            BackupNudgeCard(
-                onBackupNow = {
-                    SyncWorker.backupNow(context)
-                    Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
-                    vm.dismissBackupNudge()
+    // BoxWithConstraints is the density-independent way to tell a wider-than-tall
+    // tablet orientation from a taller-than-wide one, without a WindowSizeClass
+    // dependency: landscape gets a two-pane layout, portrait a single column.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth > maxHeight) {
+            TwoPaneRow(
+                left = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                        if (nudgeWanted && online) {
+                            BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
+                        }
+                        PrimaryActionsRow(onNavigate)
+                        DashboardSecondaryNav(onNavigate)
+                        stats?.let { s -> StatTilesGrid(s, onNavigate) }
+                    }
                 },
-                onLater = { vm.dismissBackupNudge() },
+                right = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        DueSoonSection(dueSoon, locale, onRenewRequest)
+                        OverdueSection(overdue, overdueQuery, vm::setOverdueQuery, locale, onRenewRequest)
+                        ActivityFeedSection(recentActivity, vm::undoActivity)
+                    }
+                },
             )
+        } else {
+            PageColumn {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                    if (nudgeWanted && online) {
+                        BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
+                    }
+                    PrimaryActionsRow(onNavigate)
+                    DashboardSecondaryNav(onNavigate)
+                    stats?.let { s -> StatTilesRow(s, onNavigate) }
+                    DueSoonSection(dueSoon, locale, onRenewRequest)
+                    OverdueSection(overdue, overdueQuery, vm::setOverdueQuery, locale, onRenewRequest)
+                    ActivityFeedSection(recentActivity, vm::undoActivity)
+                }
+            }
         }
-        Spacer(Modifier.height(28.dp))
+    }
+}
 
-        // Primary actions
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            BigButton(
-                stringResource(R.string.nav_checkout),
-                Modifier.weight(1f),
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-            ) { onNavigate("checkout") }
-            BigButton(
-                stringResource(R.string.nav_return),
-                Modifier.weight(1f),
-                icon = Icons.AutoMirrored.Filled.AssignmentReturn,
-            ) { onNavigate("return") }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        // Secondary navigation as a single segmented row
-        SegmentedNavRow(
-            listOf(
-                NavSegment(Icons.Filled.Book, stringResource(R.string.nav_books)) { onNavigate("books") },
-                NavSegment(Icons.Filled.People, stringResource(R.string.nav_members)) { onNavigate("members") },
-                NavSegment(Icons.Filled.BarChart, stringResource(R.string.nav_statistics)) { onNavigate("statistics") },
-                NavSegment(Icons.Filled.Settings, stringResource(R.string.nav_settings)) { onNavigate("settings") },
-            ),
+/** Compact brand header: small logo, app name (ellipsized if long), and a discreet backup indicator. */
+@Composable
+private fun BrandHeader(
+    lastBackupAt: Long?,
+    pendingSync: Int,
+    backupStaleSince: Long?,
+    locale: Locale,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.library_logo),
+            contentDescription = stringResource(R.string.app_name),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.height(44.dp),
         )
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(
+            stringResource(R.string.app_name),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        BackupChip(lastBackupAt, pendingSync, backupStaleSince, locale)
+    }
+}
 
-        // Stat tiles
-        stats?.let { s ->
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatTile(
-                    Modifier.weight(1f), Icons.Filled.Book,
-                    LibraryAccents.books, LibraryAccents.booksBg,
-                    s.totalBooks, stringResource(R.string.stat_total_books),
-                )
-                StatTile(
-                    Modifier.weight(1f), Icons.Filled.People,
-                    LibraryAccents.members, LibraryAccents.membersBg,
-                    s.totalMembers, stringResource(R.string.stat_total_members),
-                )
-                StatTile(
-                    Modifier.weight(1f), Icons.Filled.LocalLibrary,
-                    LibraryAccents.loans, LibraryAccents.loansBg,
-                    s.activeLoans, stringResource(R.string.stat_active_loans),
-                    onClick = { onNavigate("loans") },
-                )
-                StatTile(
-                    Modifier.weight(1f), Icons.Filled.Schedule,
-                    LibraryAccents.overdue, LibraryAccents.overdueBg,
-                    s.overdueCount, stringResource(R.string.stat_overdue),
-                    valueColor = if (s.overdueCount > 0) LibraryAccents.overdue else null,
-                )
-            }
-            Spacer(Modifier.height(28.dp))
+/** The two most-used desk actions, each hinting its keyboard shortcut for mouse+keyboard use. */
+@Composable
+private fun PrimaryActionsRow(onNavigate: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        BigButton(
+            stringResource(R.string.nav_checkout),
+            Modifier.weight(1f),
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            shortcutHint = "Ctrl+O",
+        ) { onNavigate("checkout") }
+        BigButton(
+            stringResource(R.string.nav_return),
+            Modifier.weight(1f),
+            icon = Icons.AutoMirrored.Filled.AssignmentReturn,
+            shortcutHint = "Ctrl+R",
+        ) { onNavigate("return") }
+    }
+}
+
+/** Secondary navigation as a single segmented row; factored out so both layout branches share one list. */
+@Composable
+private fun DashboardSecondaryNav(onNavigate: (String) -> Unit) {
+    SegmentedNavRow(
+        listOf(
+            NavSegment(Icons.Filled.Book, stringResource(R.string.nav_books)) { onNavigate("books") },
+            NavSegment(Icons.Filled.People, stringResource(R.string.nav_members)) { onNavigate("members") },
+            NavSegment(Icons.Filled.BarChart, stringResource(R.string.nav_statistics)) { onNavigate("statistics") },
+            NavSegment(Icons.Filled.Settings, stringResource(R.string.nav_settings)) { onNavigate("settings") },
+        ),
+    )
+}
+
+@Composable
+private fun BooksStatTile(modifier: Modifier, stats: DashboardStats, onNavigate: (String) -> Unit) {
+    StatTile(
+        modifier, Icons.Filled.Book,
+        LibraryAccents.books, LibraryAccents.booksBg,
+        stats.totalBooks, stringResource(R.string.stat_total_books),
+        onClick = { onNavigate("books") },
+    )
+}
+
+@Composable
+private fun MembersStatTile(modifier: Modifier, stats: DashboardStats, onNavigate: (String) -> Unit) {
+    StatTile(
+        modifier, Icons.Filled.People,
+        LibraryAccents.members, LibraryAccents.membersBg,
+        stats.totalMembers, stringResource(R.string.stat_total_members),
+        onClick = { onNavigate("members") },
+    )
+}
+
+@Composable
+private fun ActiveLoansStatTile(modifier: Modifier, stats: DashboardStats, onNavigate: (String) -> Unit) {
+    StatTile(
+        modifier, Icons.Filled.LocalLibrary,
+        LibraryAccents.loans, LibraryAccents.loansBg,
+        stats.activeLoans, stringResource(R.string.stat_active_loans),
+        onClick = { onNavigate("loans") },
+    )
+}
+
+@Composable
+private fun OverdueStatTile(modifier: Modifier, stats: DashboardStats, onNavigate: (String) -> Unit) {
+    StatTile(
+        modifier, Icons.Filled.Schedule,
+        LibraryAccents.overdue, LibraryAccents.overdueBg,
+        stats.overdueCount, stringResource(R.string.stat_overdue),
+        valueColor = if (stats.overdueCount > 0) LibraryAccents.overdue else null,
+        onClick = { onNavigate("loans?filter=overdue") },
+    )
+}
+
+/** Portrait arrangement: all four stat tiles in one row. */
+@Composable
+private fun StatTilesRow(stats: DashboardStats, onNavigate: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        BooksStatTile(Modifier.weight(1f), stats, onNavigate)
+        MembersStatTile(Modifier.weight(1f), stats, onNavigate)
+        ActiveLoansStatTile(Modifier.weight(1f), stats, onNavigate)
+        OverdueStatTile(Modifier.weight(1f), stats, onNavigate)
+    }
+}
+
+/** Landscape left-pane arrangement: a 2x2 grid, since the pane is roughly half the screen's width. */
+@Composable
+private fun StatTilesGrid(stats: DashboardStats, onNavigate: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            BooksStatTile(Modifier.weight(1f), stats, onNavigate)
+            MembersStatTile(Modifier.weight(1f), stats, onNavigate)
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            ActiveLoansStatTile(Modifier.weight(1f), stats, onNavigate)
+            OverdueStatTile(Modifier.weight(1f), stats, onNavigate)
+        }
+    }
+}
 
-        // Due soon section
-        if (dueSoon.isNotEmpty()) {
+@Composable
+private fun DueSoonSection(
+    dueSoon: List<LoanWithDetails>,
+    locale: Locale,
+    onRenew: (LoanWithDetails) -> Unit,
+) {
+    if (dueSoon.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionHeader(stringResource(R.string.due_soon_title))
-            Spacer(Modifier.height(12.dp))
             dueSoon.forEach { loan ->
-                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer) { renewTarget = loan }
-                Spacer(Modifier.height(10.dp))
+                LoanAlertCard(loan, locale, LoanStatus.DUE_SOON) { onRenew(loan) }
             }
-            Spacer(Modifier.height(16.dp))
         }
+    }
+}
 
-        // Overdue section. The filter appears once there are overdue loans (or a
-        // query is active); an empty result then means "no match" rather than none.
+/** The overdue section's search field is always visible now - no layout jump as results arrive. */
+@Composable
+private fun OverdueSection(
+    overdue: List<LoanWithDetails>,
+    overdueQuery: String,
+    onQueryChange: (String) -> Unit,
+    locale: Locale,
+    onRenew: (LoanWithDetails) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(stringResource(R.string.overdue_title))
-        Spacer(Modifier.height(12.dp))
-        val showOverdueFilter = overdue.isNotEmpty() || overdueQuery.isNotBlank()
-        if (showOverdueFilter) {
-            OutlinedTextField(
-                value = overdueQuery,
-                onValueChange = vm::setOverdueQuery,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.search_hint)) },
-                singleLine = true,
-            )
-            Spacer(Modifier.height(12.dp))
-        }
+        AppSearchField(
+            value = overdueQuery,
+            onValueChange = onQueryChange,
+            placeholder = stringResource(R.string.search_hint),
+            modifier = Modifier.fillMaxWidth(),
+            autoFocus = false,
+        )
         if (overdue.isEmpty()) {
             Text(
-                stringResource(if (showOverdueFilter) R.string.no_data else R.string.no_overdue),
+                stringResource(if (overdueQuery.isNotBlank()) R.string.no_data else R.string.no_overdue),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             overdue.forEach { loan ->
-                LoanAlertCard(loan, locale, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer) { renewTarget = loan }
-                Spacer(Modifier.height(10.dp))
+                LoanAlertCard(loan, locale, LoanStatus.OVERDUE) { onRenew(loan) }
             }
         }
+    }
+}
 
-        // Recent activity: today only, last ~10, each row undoable same-day.
-        if (recentActivity.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
+@Composable
+private fun ActivityFeedSection(
+    recentActivity: List<ActivityWithDetails>,
+    onUndo: (String) -> Unit,
+) {
+    if (recentActivity.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SectionHeader(stringResource(R.string.recent_activity))
-            Spacer(Modifier.height(12.dp))
             recentActivity.forEach { item ->
-                ActivityRow(item) { vm.undoActivity(item.entry.id) }
-                Spacer(Modifier.height(10.dp))
+                ActivityRow(item) { onUndo(item.entry.id) }
             }
         }
     }
@@ -370,7 +495,7 @@ private data class NavSegment(val icon: ImageVector, val label: String, val onCl
 /** Secondary destinations grouped into one clean control with hairline dividers. */
 @Composable
 private fun SegmentedNavRow(items: List<NavSegment>) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = MaterialTheme.shapes.large
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -390,9 +515,14 @@ private fun SegmentedNavRow(items: List<NavSegment>) {
                 )
             }
             val interaction = remember { MutableInteractionSource() }
+            val hovered by interaction.collectIsHoveredAsState()
+            val focused by interaction.collectIsFocusedAsState()
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .then(if (hovered) Modifier.background(MaterialTheme.colorScheme.surfaceVariant) else Modifier)
+                    .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing) else Modifier)
+                    .hoverable(interaction)
                     .clickable(
                         interactionSource = interaction,
                         indication = ripple(),
@@ -430,14 +560,22 @@ private fun StatTile(
     onClick: () -> Unit = {},
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val shape = RoundedCornerShape(20.dp)
+    val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = MaterialTheme.shapes.large
     Box(
         modifier = modifier
-            .height(132.dp)
+            // 140dp = the original 132dp plus the exact +8dp that displaySmall's
+            // 48sp line height adds over headlineLarge's 40sp (both confirmed
+            // against the real M3 token bytecode), so the icon/number/label
+            // padding stays the same proportions as before, not tighter.
+            .height(140.dp)
             .pressScale(interaction)
             .shadow(3.dp, shape, spotColor = LibraryAccents.shadowCard, ambientColor = LibraryAccents.shadowCard)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
+            .background(if (hovered) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
+            .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing, shape) else Modifier)
+            .hoverable(interaction)
             .clickable(interactionSource = interaction, indication = ripple()) { onClick() },
     ) {
         // Faint metric watermark, bleeding off the bottom-end corner for depth.
@@ -447,7 +585,7 @@ private fun StatTile(
             tint = accent.copy(alpha = 0.06f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .size(132.dp),
+                .size(140.dp),
         )
         Column(
             modifier = Modifier
@@ -467,8 +605,7 @@ private fun StatTile(
             Column {
                 Text(
                     "$value",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displaySmall,
                     color = valueColor ?: MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
@@ -485,28 +622,28 @@ private fun StatTile(
 private fun LoanAlertCard(
     item: LoanWithDetails,
     locale: Locale,
-    container: Color,
-    onContainer: Color,
+    status: LoanStatus,
     onRenew: () -> Unit,
 ) {
-    AppCard(modifier = Modifier.fillMaxWidth(), containerColor = container) {
+    StatusEdgeCard(status = status, modifier = Modifier.fillMaxWidth()) {
         Text(
             "${item.bookTitle} — ${item.copyCode}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = onContainer,
         )
         Text(
             "${item.memberName} (${item.memberCode})",
             style = MaterialTheme.typography.bodyLarge,
-            color = onContainer,
         )
         Text(
             "${stringResource(R.string.due_date)}: " +
                 DualCalendarFormatter.format(item.loan.dueAt, locale, LocalCalendarMode.current),
             style = MaterialTheme.typography.bodyMedium,
-            color = onContainer,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(8.dp))
+        StatusBadge(status)
+        Spacer(Modifier.height(4.dp))
         TextButton(onClick = onRenew) {
             Text(stringResource(R.string.renew))
         }
@@ -525,11 +662,19 @@ private fun ActivityRow(item: ActivityWithDetails, onUndo: () -> Unit) {
                 Text(
                     activityLabel(item.entry.type),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = activityColor(item.entry.type),
                 )
                 Text("${item.bookTitle} — ${item.memberName}", style = MaterialTheme.typography.bodyLarge)
             }
-            TextButton(onClick = onUndo) { Text(stringResource(R.string.undo)) }
+            TextButton(onClick = onUndo) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.undo))
+            }
         }
     }
 }
@@ -542,3 +687,23 @@ private fun activityLabel(type: String): String = when (type) {
     ActivityType.UNDO.name -> stringResource(R.string.activity_undo)
     else -> type // unreachable in practice; every writer uses ActivityType
 }
+
+/**
+ * Pure ActivityType -> color lookup, for quicker scanning of the activity feed:
+ * a book leaving the shelf, one coming back, a gold renewal, and a muted
+ * correction read differently at a glance. The two theme colors that aren't
+ * plain [LibraryStatus] constants are passed in (not read via MaterialTheme
+ * directly) so this stays plain-JUnit-testable - the same pure/composable
+ * split Wave A used for its `LoanStatus` -> color mapping.
+ */
+internal fun activityTypeColor(type: String, secondary: Color, onSurfaceVariant: Color): Color = when (type) {
+    ActivityType.CHECKOUT.name -> LibraryStatus.onLoan
+    ActivityType.RETURN.name -> LibraryStatus.available
+    ActivityType.RENEW.name -> secondary
+    ActivityType.UNDO.name -> onSurfaceVariant
+    else -> onSurfaceVariant // unreachable in practice; every writer uses ActivityType
+}
+
+@Composable
+private fun activityColor(type: String): Color =
+    activityTypeColor(type, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSurfaceVariant)
