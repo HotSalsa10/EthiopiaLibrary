@@ -161,7 +161,9 @@ fun AppCard(
  * lifted shadow, and press-scale feedback. The 64dp height keeps it a comfortable
  * touch target on a shared tablet. On a mouse (or while pressed) the fill tints
  * to [LibraryStatus.hoverPrimary]; keyboard (Tab) focus draws a visible 2dp ring
- * in [LibraryStatus.focusRing] around the pill.
+ * in [MaterialTheme.colorScheme.onPrimary] around the pill (white, not
+ * [LibraryStatus.focusRing] — that green would be invisible against this
+ * button's own green fill).
  *
  * [shortcutHint] renders a small, low-emphasis badge (e.g. "Ctrl+O") near the
  * bottom-trailing corner; leave it null for no visual change.
@@ -199,7 +201,7 @@ fun BigButton(
             )
             .clip(shape)
             .background(fillColor)
-            .then(if (focused) Modifier.border(2.dp, LibraryStatus.focusRing, shape) else Modifier)
+            .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.onPrimary, shape) else Modifier)
             .hoverable(interaction)
             .clickable(
                 interactionSource = interaction,
@@ -243,9 +245,11 @@ fun BigButton(
  * surface with a hairline outline — green is reserved for the icon and label so
  * it reads as an accent, not a second primary button. On a mouse hover the
  * surface tints to [MaterialTheme.colorScheme.surfaceVariant] and the border
- * tints to [MaterialTheme.colorScheme.primary]; keyboard (Tab) focus draws the
- * same visible 2dp ring in [LibraryStatus.focusRing] as [BigButton], taking
- * precedence over the hover border when both states are true.
+ * tints to [MaterialTheme.colorScheme.primary]; keyboard (Tab) focus draws a
+ * visible 2dp ring in [LibraryStatus.focusRing], which reads clearly here
+ * against this button's light fill (unlike [BigButton], which uses
+ * [MaterialTheme.colorScheme.onPrimary] instead since its fill is green),
+ * taking precedence over the hover border when both states are true.
  *
  * [shortcutHint] renders the same small bottom-trailing badge as [BigButton];
  * leave it null for no visual change.
