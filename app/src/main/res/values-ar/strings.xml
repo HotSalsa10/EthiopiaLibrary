@@ -53,6 +53,9 @@
     <string name="activate_member">تفعيل العضو</string>
     <string name="member_card">بطاقة العضوية</string>
     <string name="export_member_cards">تصدير بطاقات الأعضاء (PDF)</string>
+    <string name="show_member_card">إظهار بطاقة العضوية</string>
+    <string name="hide_member_card">إخفاء بطاقة العضوية</string>
+    <string name="member_no_active_loans">لا توجد كتب معارة</string>
 
     <string name="checkout_title">إعارة كتاب</string>
     <string name="enter_copy_code">أدخل رمز النسخة (مثال B-0001)</string>

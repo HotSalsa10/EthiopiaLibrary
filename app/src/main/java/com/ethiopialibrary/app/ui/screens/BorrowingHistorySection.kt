@@ -3,6 +3,8 @@ package com.ethiopialibrary.app.ui.screens
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +16,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppCard
+import com.ethiopialibrary.app.ui.EmptyState
 import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.StarRatingDisplay
@@ -35,10 +38,9 @@ fun BorrowingHistorySection(
     SectionHeader(stringResource(R.string.history_title))
     Spacer(Modifier.height(8.dp))
     if (history.isEmpty()) {
-        Text(
-            stringResource(R.string.no_data),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        EmptyState(
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            message = stringResource(R.string.no_data),
         )
     } else {
         history.forEach { item ->

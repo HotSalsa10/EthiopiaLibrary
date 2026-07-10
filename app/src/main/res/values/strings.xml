@@ -58,6 +58,9 @@
     <string name="activate_member">አባል አንቃ</string>
     <string name="member_card">የአባልነት ካርድ</string>
     <string name="export_member_cards">የአባል ካርዶችን አውጣ (PDF)</string>
+    <string name="show_member_card">የአባልነት ካርድ አሳይ</string>
+    <string name="hide_member_card">የአባልነት ካርድ ደብቅ</string>
+    <string name="member_no_active_loans">የተዋሰ መጽሐፍ የለም</string>
 
     <!-- Checkout -->
     <string name="checkout_title">መጽሐፍ መዋስ</string>
