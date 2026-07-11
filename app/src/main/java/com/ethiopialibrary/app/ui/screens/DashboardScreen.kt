@@ -666,14 +666,16 @@ private fun ActivityRow(item: ActivityWithDetails, onUndo: () -> Unit) {
                 )
                 Text("${item.bookTitle} — ${item.memberName}", style = MaterialTheme.typography.bodyLarge)
             }
-            TextButton(onClick = onUndo) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Undo,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.undo))
+            if (item.entry.undoneAt == null) {
+                TextButton(onClick = onUndo) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.undo))
+                }
             }
         }
     }
