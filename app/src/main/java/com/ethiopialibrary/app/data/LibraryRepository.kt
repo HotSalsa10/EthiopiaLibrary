@@ -482,12 +482,14 @@ class LibraryRepository(
     /**
      * Reverts a CHECKOUT/RETURN/RENEW entry (checkout -> soft-delete the loan; return ->
      * un-return it; renew -> restore the pre-renewal due date), re-syncs the loan, and logs
-     * the undo as its own entry. Returns false if the entry/loan is gone or isn't undoable
-     * (e.g. it's already an UNDO entry - undoing an undo isn't supported).
+     * the undo as its own entry. Returns false if the entry/loan is gone, isn't undoable
+     * (e.g. it's already an UNDO entry - undoing an undo isn't supported), or has already
+     * been undone (a repeat click on the same row is rejected, not re-applied).
      */
     suspend fun undoActivity(activityId: String): Boolean =
         db.withTransaction {
             val entry = db.activityLogDao().byId(activityId) ?: return@withTransaction false
+            if (entry.undoneAt != null) return@withTransaction false // already undone - reject the repeat click
             val loan = db.loanDao().byId(entry.loanId) ?: return@withTransaction false
             val t = now()
             when (entry.type) {
@@ -497,6 +499,7 @@ class LibraryRepository(
                 else -> return@withTransaction false
             }
             enqueueSync("loan", loan.id)
+            db.activityLogDao().markUndone(entry.id, t)
             db.activityLogDao().insert(ActivityLogEntity(id = newId(), type = ActivityType.UNDO.name, loanId = loan.id, at = t))
             true
         }

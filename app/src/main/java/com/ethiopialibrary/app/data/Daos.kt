@@ -496,6 +496,10 @@ interface ActivityLogDao {
     @Query("SELECT * FROM activity_log WHERE id = :id")
     suspend fun byId(id: String): ActivityLogEntity?
 
+    /** Stamps [id]'s undoneAt so a repeat Undo click on the same row is rejected. */
+    @Query("UPDATE activity_log SET undoneAt = :at WHERE id = :id")
+    suspend fun markUndone(id: String, at: Long)
+
     /** Feed for the dashboard: entries since [since], newest first. */
     @Query("SELECT * FROM activity_log WHERE at >= :since ORDER BY at DESC LIMIT :limit")
     fun recent(since: Long, limit: Int): Flow<List<ActivityLogEntity>>

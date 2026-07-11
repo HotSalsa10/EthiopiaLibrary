@@ -396,6 +396,54 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `a second undo of the same entry returns false`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+
+        val first = repo.undoActivity(checkoutEntry.entry.id)
+        val second = repo.undoActivity(checkoutEntry.entry.id)
+
+        assertTrue(first)
+        assertFalse(second)
+    }
+
+    @Test
+    fun `a repeat undo does not insert a second UNDO log entry`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+
+        repo.undoActivity(checkoutEntry.entry.id)
+        val undoCountAfterFirst = repo.recentActivity().first().count { it.entry.type == ActivityType.UNDO.name }
+
+        repo.undoActivity(checkoutEntry.entry.id)
+        val undoCountAfterSecond = repo.recentActivity().first().count { it.entry.type == ActivityType.UNDO.name }
+
+        assertEquals(1, undoCountAfterFirst)
+        assertEquals(1, undoCountAfterSecond)
+    }
+
+    @Test
+    fun `undoing an entry once still succeeds and stamps its undoneAt`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+
+        val undone = repo.undoActivity(checkoutEntry.entry.id)
+
+        assertTrue(undone)
+        // Happy path is unchanged: the copy is freed again.
+        assertNull(repo.activeLoanDetailedForCopy(copies[0].copyCode))
+        // New behavior: the original entry itself is now marked undone.
+        val reloaded = repo.recentActivity().first().first { it.entry.id == checkoutEntry.entry.id }
+        assertNotNull(reloaded.entry.undoneAt)
+    }
+
+    @Test
     fun `renewing a returned loan reports NotActive`() = runBlocking {
         val (_, copies) = addBookWithCopies(1)
         val member = addMember()
