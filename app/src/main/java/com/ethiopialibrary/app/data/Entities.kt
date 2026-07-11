@@ -172,7 +172,9 @@ enum class ActivityType { CHECKOUT, RETURN, RENEW, UNDO }
 /**
  * Desk activity journal: one row per loan action, newest surfacing on the
  * dashboard feed. [prevDueAt] preserves the pre-renewal due date so a renew
- * can be undone; local-only (never synced - the loans themselves sync).
+ * can be undone; [undoneAt] is stamped when this entry has been undone, so a
+ * repeat click on the same row's Undo button can be rejected; local-only
+ * (never synced - the loans themselves sync).
  */
 @Entity(tableName = "activity_log", indices = [Index("at")])
 data class ActivityLogEntity(
@@ -181,4 +183,5 @@ data class ActivityLogEntity(
     val loanId: String,
     val at: Long,
     val prevDueAt: Long? = null,
+    val undoneAt: Long? = null,
 )

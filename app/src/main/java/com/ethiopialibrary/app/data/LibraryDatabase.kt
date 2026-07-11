@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SettingEntity::class,
         ActivityLogEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class LibraryDatabase : RoomDatabase() {

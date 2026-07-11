@@ -29,5 +29,12 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_3_4)
+    /** v5: activity_log gains undoneAt, so a repeat-undo click on the same entry can be rejected. */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `activity_log` ADD COLUMN `undoneAt` INTEGER")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_3_4, MIGRATION_4_5)
 }
