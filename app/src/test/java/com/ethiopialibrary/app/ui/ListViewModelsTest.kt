@@ -236,11 +236,11 @@ class ListViewModelsTest {
     fun `renew reports success for an active loan`() {
         val (_, loanId) = checkoutOneCopy()
         val vm = CurrentlyOutViewModel(repo)
-        val result = MutableStateFlow<Boolean?>(null)
+        val result = MutableStateFlow<com.ethiopialibrary.app.data.RenewResult?>(null)
 
         vm.renew(loanId) { result.value = it }
 
-        assertEquals(true, awaitValue(result) { it != null })
+        assertTrue(awaitValue(result) { it != null } is com.ethiopialibrary.app.data.RenewResult.Success)
     }
 
     @Test
@@ -248,11 +248,11 @@ class ListViewModelsTest {
         val (copyCode, loanId) = checkoutOneCopy()
         runBlocking { repo.returnBook(copyCode) }
         val vm = CurrentlyOutViewModel(repo)
-        val result = MutableStateFlow<Boolean?>(null)
+        val result = MutableStateFlow<com.ethiopialibrary.app.data.RenewResult?>(null)
 
         vm.renew(loanId) { result.value = it }
 
-        assertEquals(false, awaitValue(result) { it != null })
+        assertTrue(awaitValue(result) { it != null } is com.ethiopialibrary.app.data.RenewResult.NotActive)
     }
 
     @Test

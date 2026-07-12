@@ -33,6 +33,10 @@ android {
         targetSdk = 35
         versionCode = 13
         versionName = "1.9.0"
+        // Clock-sanity gate (R3): a device clock before this build ever
+        // existed means the RTC was reset (dead battery, no NTP offline),
+        // not a small drift - see util/ClockSanity.kt.
+        buildConfigField("long", "BUILD_TIME_MS", "${System.currentTimeMillis()}L")
     }
 
     signingConfigs {

@@ -45,6 +45,7 @@ import com.ethiopialibrary.app.ui.ReturnConfirmDialog
 import com.ethiopialibrary.app.ui.StatusBadge
 import com.ethiopialibrary.app.ui.StatusEdgeCard
 import com.ethiopialibrary.app.ui.color
+import com.ethiopialibrary.app.ui.renewResultMessageRes
 import java.util.Locale
 
 // Same value DashboardScreen.kt uses locally; no shared constant exists to import.
@@ -95,9 +96,8 @@ fun CurrentlyOutScreen(
             newDueAt = preview,
             locale = locale,
             onConfirm = {
-                vm.renew(target.loan.id) { success ->
-                    val message = if (success) R.string.renew_done else R.string.error_renew_not_active
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                vm.renew(target.loan.id) { result ->
+                    Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
             },

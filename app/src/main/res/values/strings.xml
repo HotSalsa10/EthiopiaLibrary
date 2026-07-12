@@ -186,6 +186,7 @@
     <string name="backup_nudge_later">ቆይቶ</string>
     <string name="announcement_dismiss">ዝጋ</string>
     <string name="update_required_banner">አዲስ ስሪት ይገኛል። ይህን ጡባዊ ለማዘመን ጠባቂውን ያነጋግሩ።</string>
+    <string name="error_clock_wrong">የጡባዊው ቀን የተሳሳተ ነው። በቅንብሮች ውስጥ ቀን እና ሰዓት አስተካክለው እንደገና ይሞክሩ።</string>
     <string name="export_backup_file">የምትኬ ፋይል አጋራ</string>
     <string name="currently_out">አሁን የተወሰዱ</string>
     <string name="no_books_out">አሁን የተወሰደ መጽሐፍ የለም</string>

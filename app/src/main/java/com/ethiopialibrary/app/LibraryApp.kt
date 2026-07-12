@@ -28,7 +28,7 @@ class LibraryApp : Application() {
     val database: LibraryDatabase by lazy { LibraryDatabase.create(this) }
 
     val repository: LibraryRepository by lazy {
-        LibraryRepository(database, Clock.systemDefaultZone())
+        LibraryRepository(database, Clock.systemDefaultZone(), buildTimeMillis = BuildConfig.BUILD_TIME_MS)
     }
 
     override fun onCreate() {

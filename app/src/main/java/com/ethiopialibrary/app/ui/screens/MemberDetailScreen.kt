@@ -51,7 +51,6 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.data.MemberStatus
-import com.ethiopialibrary.app.data.RenewResult
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.labels.LabelGenerator
 import com.ethiopialibrary.app.ui.AppCard
@@ -65,6 +64,7 @@ import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.StarRatingDisplay
 import com.ethiopialibrary.app.ui.TwoPaneRow
+import com.ethiopialibrary.app.ui.renewResultMessageRes
 import com.ethiopialibrary.app.ui.safeLaunch
 import java.util.Locale
 
@@ -93,9 +93,8 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
             locale = LocalConfiguration.current.locales[0],
             onConfirm = {
                 scope.safeLaunch {
-                    val success = repo.renewLoan(target.loan.id) is RenewResult.Success
-                    val message = if (success) R.string.renew_done else R.string.error_renew_not_active
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    val result = repo.renewLoan(target.loan.id)
+                    Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
             },

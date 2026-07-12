@@ -173,6 +173,7 @@
     <string name="backup_nudge_later">لاحقًا</string>
     <string name="announcement_dismiss">إغلاق</string>
     <string name="update_required_banner">يتوفر إصدار أحدث. يرجى الاتصال بالمسؤول عن الصيانة لتحديث هذا الجهاز اللوحي.</string>
+    <string name="error_clock_wrong">تاريخ الجهاز اللوحي غير صحيح. صحح التاريخ والوقت في الإعدادات، ثم حاول مرة أخرى.</string>
     <string name="export_backup_file">تصدير ملف النسخة الاحتياطية</string>
     <string name="currently_out">المعارة حاليًا</string>
     <string name="no_books_out">لا توجد كتب معارة حاليًا</string>

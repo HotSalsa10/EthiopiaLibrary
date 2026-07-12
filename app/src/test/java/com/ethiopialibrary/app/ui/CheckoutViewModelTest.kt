@@ -98,4 +98,23 @@ class CheckoutViewModelTest {
         assertFalse(state.inFlight)
         assertEquals(1, state.results!!.size)
     }
+
+    @Test
+    fun `confirm surfaces the clock-wrong error and creates no loan`() {
+        val (copyCode, memberCode) = addCopyAndMember()
+        val wrongClockRepo = LibraryRepository(db, clock, buildTimeMillis = clock.instant().toEpochMilli() + 1)
+        val vm = CheckoutViewModel(wrongClockRepo)
+        vm.submitCopyCode(copyCode)
+        awaitValue(vm.state) { it.copy != null }
+        vm.submitMemberCode(memberCode)
+        awaitValue(vm.state) { it.member != null }
+
+        vm.confirm()
+
+        val state = awaitValue(vm.state) { it.error != null }
+        assertEquals(CheckoutViewModel.CheckoutUiError.CLOCK_WRONG, state.error)
+        assertNull(state.completedLoan)
+        val activeLoans = runBlocking { repo.activeLoansForMember(repo.memberByCode(memberCode)!!.id).first() }
+        assertEquals(0, activeLoans.size)
+    }
 }

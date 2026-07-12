@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.sync.RemoteDirectives
 import com.ethiopialibrary.app.sync.remoteDirectivesFromSettings
+import com.ethiopialibrary.app.util.clockLooksWrong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -27,6 +28,7 @@ sealed interface CheckoutResult {
     data object MemberNotFound : CheckoutResult
     data object MemberNotActive : CheckoutResult
     data object LimitReached : CheckoutResult
+    data object ClockWrong : CheckoutResult
 }
 
 sealed interface ReturnResult {
@@ -38,6 +40,7 @@ sealed interface ReturnResult {
 sealed interface RenewResult {
     data class Success(val loan: LoanEntity) : RenewResult
     data object NotActive : RenewResult
+    data object ClockWrong : RenewResult
 }
 
 sealed interface AddCategoryResult {
@@ -56,6 +59,14 @@ class LibraryRepository(
     private val clock: Clock,
     /** How often time-sensitive Flows (overdue/due-soon) re-bind "now" - overridable in tests. */
     private val tickMillis: Long = 60_000L,
+    /**
+     * This build's own compile time (see [com.ethiopialibrary.app.util.clockLooksWrong]);
+     * defaults to 0 (clock can never look wrong) so the ~20+ existing call
+     * sites that construct a repository with a fixed test clock aren't
+     * affected - only production (BuildConfig.BUILD_TIME_MS) and tests that
+     * opt into exercising the gate pass a real value.
+     */
+    private val buildTimeMillis: Long = 0L,
 ) {
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
@@ -81,6 +92,11 @@ class LibraryRepository(
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
+
+    private fun isClockWrong(): Boolean = clockLooksWrong(now(), buildTimeMillis)
+
+    /** Live: re-evaluates every [tickMillis] so fixing the date without an app restart clears the Dashboard banner. */
+    fun clockWrong(): Flow<Boolean> = tick().map { nowMs -> clockLooksWrong(nowMs, buildTimeMillis) }
 
     /** Midnight in the clock's own zone - the boundary for "today" in the activity feed. */
     private fun startOfToday(): Long =
@@ -262,6 +278,7 @@ class LibraryRepository(
         allowOverLimit: Boolean = false,
     ): CheckoutResult =
         db.withTransaction {
+            if (isClockWrong()) return@withTransaction CheckoutResult.ClockWrong
             val copy = db.bookCopyDao().byCode(copyCode)
                 ?: return@withTransaction CheckoutResult.CopyNotFound
             val member = db.memberDao().byCode(memberCode)
@@ -337,6 +354,7 @@ class LibraryRepository(
      */
     suspend fun renewLoan(loanId: String): RenewResult =
         db.withTransaction {
+            if (isClockWrong()) return@withTransaction RenewResult.ClockWrong
             val loan = db.loanDao().byId(loanId)
             if (loan == null || loan.returnedAt != null || loan.isDeleted) {
                 return@withTransaction RenewResult.NotActive

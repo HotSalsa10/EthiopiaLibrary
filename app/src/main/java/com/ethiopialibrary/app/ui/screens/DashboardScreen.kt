@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
@@ -74,7 +75,6 @@ import com.ethiopialibrary.app.data.ActivityWithDetails
 import com.ethiopialibrary.app.data.DashboardStats
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
-import com.ethiopialibrary.app.data.RenewResult
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.sync.SyncWorker
 import com.ethiopialibrary.app.sync.announcementText
@@ -93,6 +93,7 @@ import com.ethiopialibrary.app.ui.StatusBadge
 import com.ethiopialibrary.app.ui.StatusEdgeCard
 import com.ethiopialibrary.app.ui.TwoPaneRow
 import com.ethiopialibrary.app.ui.pressScale
+import com.ethiopialibrary.app.ui.renewResultMessageRes
 import com.ethiopialibrary.app.ui.safeLaunch
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
 import com.ethiopialibrary.app.ui.theme.LibraryStatus
@@ -105,6 +106,7 @@ fun DashboardScreen(
     onNavigate: (String) -> Unit,
 ) {
     val stats by vm.stats.collectAsStateWithLifecycle()
+    val clockWrong by vm.clockWrong.collectAsStateWithLifecycle()
     val overdue by vm.overdue.collectAsStateWithLifecycle()
     val overdueQuery by vm.overdueQuery.collectAsStateWithLifecycle()
     val dueSoon by vm.dueSoon.collectAsStateWithLifecycle()
@@ -131,9 +133,8 @@ fun DashboardScreen(
             locale = locale,
             onConfirm = {
                 scope.safeLaunch {
-                    val success = repo.renewLoan(target.loan.id) is RenewResult.Success
-                    val message = if (success) R.string.renew_done else R.string.error_renew_not_active
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    val result = repo.renewLoan(target.loan.id)
+                    Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
             },
@@ -184,6 +185,9 @@ fun DashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                        if (clockWrong) {
+                            ClockWrongBanner()
+                        }
                         if (updateBannerNeeded) {
                             UpdateRequiredBanner()
                         }
@@ -219,6 +223,9 @@ fun DashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                    if (clockWrong) {
+                        ClockWrongBanner()
+                    }
                     if (updateBannerNeeded) {
                         UpdateRequiredBanner()
                     }
@@ -524,6 +531,27 @@ private fun BackupNudgeCard(onBackupNow: () -> Unit, onLater: () -> Unit) {
             TextButton(onClick = onLater) { Text(stringResource(R.string.backup_nudge_later)) }
             Spacer(Modifier.width(8.dp))
             TextButton(onClick = onBackupNow) { Text(stringResource(R.string.backup_now)) }
+        }
+    }
+}
+
+/** Persistent, error-styled: the tablet's own clock predates this build, blocking checkouts and renews. */
+@Composable
+private fun ClockWrongBanner() {
+    AppCard(containerColor = MaterialTheme.colorScheme.errorContainer) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.error_clock_wrong),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

@@ -615,5 +615,6 @@ private fun checkoutErrorText(error: CheckoutViewModel.CheckoutUiError): String 
         CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND -> R.string.error_member_not_found
         CheckoutViewModel.CheckoutUiError.MEMBER_NOT_ACTIVE -> R.string.error_member_not_active
         CheckoutViewModel.CheckoutUiError.LIMIT_REACHED -> R.string.error_limit_reached
+        CheckoutViewModel.CheckoutUiError.CLOCK_WRONG -> R.string.error_clock_wrong
     },
 )

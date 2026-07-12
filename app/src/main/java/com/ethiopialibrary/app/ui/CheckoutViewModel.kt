@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     enum class CheckoutUiError {
-        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED,
+        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED, CLOCK_WRONG,
     }
 
     enum class BatchLineOutcome { SUCCESS, FAILED }
@@ -177,6 +177,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
                 CheckoutResult.MemberNotFound -> CheckoutUiError.MEMBER_NOT_FOUND
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
+                CheckoutResult.ClockWrong -> CheckoutUiError.CLOCK_WRONG
                 CheckoutResult.LimitReached -> {
                     // Hard block becomes a staff-PIN-gated override instead of a dead end.
                     _state.update {
@@ -220,6 +221,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
                 CheckoutResult.MemberNotFound -> CheckoutUiError.MEMBER_NOT_FOUND
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
+                CheckoutResult.ClockWrong -> CheckoutUiError.CLOCK_WRONG
                 // Unreachable: allowOverLimit=true bypasses this in repo.checkout().
                 CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
                 is CheckoutResult.Success -> return@safeLaunch

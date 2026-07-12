@@ -443,6 +443,65 @@ class LibraryRepositoryTest {
         job.cancel()
     }
 
+    // ---------- clock sanity gate (R3) ----------
+    // A device clock reset to before this build's own compile time (dead
+    // battery, no NTP offline) would permanently corrupt every dueAt written
+    // from that point on - checkout/renew must refuse rather than silently
+    // write a corrupt due date. Returns stay allowed (see the dedicated test).
+
+    @Test
+    fun `checkout is refused when the device clock predates this build`() = runBlocking {
+        val wrongClockRepo = LibraryRepository(db, clock, buildTimeMillis = clock.instant().toEpochMilli() + 1)
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+
+        val result = wrongClockRepo.checkout(copies[0].copyCode, member.memberCode)
+
+        assertTrue(result is CheckoutResult.ClockWrong)
+        assertEquals(0, repo.activeLoansForMember(member.id).first().size)
+    }
+
+    @Test
+    fun `renew is refused when the device clock predates this build`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        val originalDueAt = loan.dueAt
+        val wrongClockRepo = LibraryRepository(db, clock, buildTimeMillis = clock.instant().toEpochMilli() + 1)
+
+        val result = wrongClockRepo.renewLoan(loan.id)
+
+        assertTrue(result is RenewResult.ClockWrong)
+        assertEquals(originalDueAt, repo.activeLoanDetailedForCopy(copies[0].copyCode)!!.loan.dueAt)
+    }
+
+    @Test
+    fun `return is still allowed when the device clock predates this build`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        val wrongClockRepo = LibraryRepository(db, clock, buildTimeMillis = clock.instant().toEpochMilli() + 1)
+
+        val result = wrongClockRepo.returnBook(copies[0].copyCode)
+
+        assertTrue(result is ReturnResult.Success)
+    }
+
+    @Test
+    fun `clockWrong reflects the live clock without a new subscription`() = runBlocking {
+        val futureBuildTime = clock.instant().toEpochMilli() + 3 * 24 * 60 * 60 * 1000L // 3 days out
+        val fastRepo = LibraryRepository(db, clock, tickMillis = 20L, buildTimeMillis = futureBuildTime)
+
+        val states = MutableStateFlow<Boolean?>(null)
+        val job = launch { fastRepo.clockWrong().collect { states.value = it } }
+        withTimeout(2_000) { states.first { it == true } }
+
+        clock.advanceDays(4) // clock now past the "build time"
+
+        withTimeout(2_000) { states.first { it == false } }
+        job.cancel()
+    }
+
     // ---------- activity log + undo (Wave 5 item 6) ----------
 
     @Test

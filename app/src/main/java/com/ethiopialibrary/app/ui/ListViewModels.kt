@@ -2,6 +2,7 @@ package com.ethiopialibrary.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.ActivityWithDetails
 import com.ethiopialibrary.app.data.AddCategoryResult
 import com.ethiopialibrary.app.data.BookWithCounts
@@ -111,6 +112,10 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     val stats: StateFlow<DashboardStats?> = repo.dashboardStats()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Live clock-sanity gate (R3): true blocks new checkouts/renews and shows a Dashboard banner. */
+    val clockWrong: StateFlow<Boolean> = repo.clockWrong()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Free-text filter for the overdue list: book title/author, copy code, or member. */
     private val _overdueQuery = MutableStateFlow("")
@@ -253,11 +258,11 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** Due date a renewal would set, for the confirm dialog's preview. */
     suspend fun renewPreviewDueAt(loanId: String): Long = repo.renewalPreviewDueAt(loanId)
 
-    /** [onDone] gets false when the loan was no longer active (already returned,
-     * undone, or deleted) - the caller must not report a false success. */
-    fun renew(loanId: String, onDone: (Boolean) -> Unit) {
+    /** [onDone] gets the outcome so the caller can show the specific reason a
+     * renewal failed (already returned/undone/deleted, or the clock gate). */
+    fun renew(loanId: String, onDone: (RenewResult) -> Unit) {
         viewModelScope.safeLaunch {
-            onDone(repo.renewLoan(loanId) is RenewResult.Success)
+            onDone(repo.renewLoan(loanId))
         }
     }
 
@@ -268,6 +273,13 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
             onDone(repo.returnBook(copyCode) is ReturnResult.Success)
         }
     }
+}
+
+/** Toast message for a renew attempt; shared by every renew call site (Dashboard, member detail, currently-out). */
+fun renewResultMessageRes(result: RenewResult): Int = when (result) {
+    is RenewResult.Success -> R.string.renew_done
+    RenewResult.NotActive -> R.string.error_renew_not_active
+    RenewResult.ClockWrong -> R.string.error_clock_wrong
 }
 
 class StatisticsViewModel(private val repo: LibraryRepository) : ViewModel() {
