@@ -222,6 +222,23 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `staff pin hash survives backup and restore`() = runBlocking {
+        // Fail-open otherwise: a restored tablet would silently drop the PIN
+        // guard on destructive settings until someone thinks to re-set it.
+        repo.setStaffPin("1234")
+        engine.drainOutbox()
+
+        val db2 = freshDb()
+        val repo2 = LibraryRepository(db2, clock)
+        try {
+            SyncEngine(db2, cloud, clock).restore()
+            assertTrue(repo2.verifyStaffPin("1234"))
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
     fun `restore reports manifest missing when the cloud predates manifests`() = runBlocking {
         // Docs present but no meta_manifest doc - as if written by an older
         // app version that existed before manifests were introduced.

@@ -538,7 +538,10 @@ class LibraryRepository(
     // ---------- staff PIN (guards destructive settings) ----------
 
     suspend fun setStaffPin(pin: String) {
-        db.settingsDao().put(SettingEntity(SettingKeys.STAFF_PIN_HASH, hashPin(pin)))
+        db.withTransaction {
+            db.settingsDao().put(SettingEntity(SettingKeys.STAFF_PIN_HASH, hashPin(pin)))
+            enqueueSync("setting", SettingKeys.STAFF_PIN_HASH)
+        }
     }
 
     suspend fun verifyStaffPin(pin: String): Boolean =
