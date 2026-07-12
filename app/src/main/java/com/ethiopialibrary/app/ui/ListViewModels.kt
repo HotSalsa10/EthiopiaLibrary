@@ -239,7 +239,7 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     /** Due date a renewal would set, for the confirm dialog's preview. */
-    suspend fun renewPreviewDueAt(): Long = repo.renewalPreviewDueAt()
+    suspend fun renewPreviewDueAt(loanId: String): Long = repo.renewalPreviewDueAt(loanId)
 
     /** [onDone] gets false when the loan was no longer active (already returned,
      * undone, or deleted) - the caller must not report a false success. */

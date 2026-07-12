@@ -85,7 +85,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
     var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt() }
+        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt(target.loan.id) }
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,

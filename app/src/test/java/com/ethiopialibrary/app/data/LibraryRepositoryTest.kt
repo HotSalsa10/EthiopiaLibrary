@@ -302,6 +302,50 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `renewing a custom-period loan never shortens its due date`() = runBlocking {
+        // A loan checked out with a longer-than-default period, renewed early,
+        // must not be pulled BACK to a nearer date computed from the global setting.
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 60) as CheckoutResult.Success).loan
+        val originalDueAt = loan.dueAt
+
+        clock.advanceDays(5) // the global 14-day renew would compute day 19, short of day 60
+        val result = repo.renewLoan(loan.id)
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals(originalDueAt, (result as RenewResult.Success).loan.dueAt)
+    }
+
+    @Test
+    fun `renewing a custom-period loan past its due date extends it normally`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 5) as CheckoutResult.Success).loan
+
+        clock.advanceDays(4) // still within the 5-day period, but the global renew extends further
+        val result = repo.renewLoan(loan.id)
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals(
+            clock.instant().plus(14, ChronoUnit.DAYS).toEpochMilli(),
+            (result as RenewResult.Success).loan.dueAt,
+        )
+    }
+
+    @Test
+    fun `renewalPreviewDueAt never previews an earlier date than the loan currently has`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 60) as CheckoutResult.Success).loan
+
+        clock.advanceDays(5)
+        val preview = repo.renewalPreviewDueAt(loan.id)
+
+        assertEquals(loan.dueAt, preview)
+    }
+
+    @Test
     fun `renewing clears overdue status`() = runBlocking {
         val (_, copies) = addBookWithCopies(1)
         val member = addMember()

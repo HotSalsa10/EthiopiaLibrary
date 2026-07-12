@@ -311,7 +311,11 @@ class LibraryRepository(
     suspend fun memberAverageRating(memberId: String): Double? =
         db.loanDao().averageRatingForMember(memberId)
 
-    /** "Can I keep it another week?" - extends the due date from today. */
+    /**
+     * "Can I keep it another week?" - extends the due date from today. Never
+     * shortens it: a loan checked out with a longer-than-default period keeps
+     * its later due date if the global setting would compute a nearer one.
+     */
     suspend fun renewLoan(loanId: String): RenewResult =
         db.withTransaction {
             val loan = db.loanDao().byId(loanId)
@@ -321,7 +325,7 @@ class LibraryRepository(
             val t = now()
             val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
                 ?: DEFAULT_LOAN_PERIOD_DAYS
-            val renewed = loan.copy(dueAt = t + periodDays * MILLIS_PER_DAY, updatedAt = t)
+            val renewed = loan.copy(dueAt = maxOf(loan.dueAt, t + periodDays * MILLIS_PER_DAY), updatedAt = t)
             db.loanDao().update(renewed)
             enqueueSync("loan", renewed.id)
             db.activityLogDao().insert(
@@ -414,8 +418,15 @@ class LibraryRepository(
     suspend fun loanPeriodDays(): Int =
         db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull() ?: DEFAULT_LOAN_PERIOD_DAYS
 
-    /** The due date a renew would set (today + the configured loan period), for a confirm preview. */
-    suspend fun renewalPreviewDueAt(): Long = now() + loanPeriodDays() * MILLIS_PER_DAY
+    /**
+     * The due date renewing [loanId] would actually set, for a confirm preview -
+     * mirrors renewLoan()'s never-shorten rule so the preview never lies.
+     */
+    suspend fun renewalPreviewDueAt(loanId: String): Long {
+        val computed = now() + loanPeriodDays() * MILLIS_PER_DAY
+        val currentDueAt = db.loanDao().byId(loanId)?.dueAt
+        return if (currentDueAt != null) maxOf(currentDueAt, computed) else computed
+    }
 
     fun pendingSyncCount(): Flow<Int> = db.syncQueueDao().pendingCount()
 

@@ -88,7 +88,7 @@ fun CurrentlyOutScreen(
     val now = System.currentTimeMillis()
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = vm.renewPreviewDueAt() }
+        val preview by produceState<Long?>(null, target) { value = vm.renewPreviewDueAt(target.loan.id) }
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,

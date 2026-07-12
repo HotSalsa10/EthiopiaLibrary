@@ -118,7 +118,7 @@ fun DashboardScreen(
     }
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt() }
+        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt(target.loan.id) }
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,
