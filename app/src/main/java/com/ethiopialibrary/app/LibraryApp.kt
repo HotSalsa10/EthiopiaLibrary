@@ -10,6 +10,7 @@ import com.ethiopialibrary.app.sync.FirestoreCloudStore
 import com.ethiopialibrary.app.sync.SyncEngine
 import com.ethiopialibrary.app.sync.SyncLocator
 import com.ethiopialibrary.app.sync.SyncWorker
+import com.ethiopialibrary.app.util.CrashReporter
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,8 @@ class LibraryApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
+
         // Sync stays dormant until Firebase is configured (google-services.json
         // present) AND the library account is signed in.
         SyncLocator.engineFactory = factory@{

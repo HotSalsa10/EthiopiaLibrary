@@ -2,6 +2,7 @@ package com.ethiopialibrary.app.ui
 
 import android.util.Log
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.util.CrashReporter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ fun CoroutineScope.safeLaunch(block: suspend CoroutineScope.() -> Unit): Job = l
         throw ce
     } catch (e: Exception) {
         Log.e("EthiopiaLibrary", "unhandled error in a UI-triggered write", e)
+        CrashReporter.record(e)
         UiErrorBus.errors.tryEmit(R.string.error_write_failed)
     }
 }

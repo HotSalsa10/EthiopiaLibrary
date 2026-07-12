@@ -1,11 +1,13 @@
 package com.ethiopialibrary.app.ui
 
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.util.CrashReporter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,6 +17,11 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class SafeLaunchTest {
+
+    @After
+    fun tearDown() {
+        CrashReporter.recorder = null
+    }
 
     @Test
     fun `a thrown exception is caught and emits the generic error resource`() = runTest {
@@ -27,6 +34,18 @@ class SafeLaunchTest {
         assertTrue(job.isCompleted)
         assertTrue(R.string.error_write_failed in received)
         collector.cancel()
+    }
+
+    @Test
+    fun `a thrown exception is recorded to CrashReporter as a non-fatal`() = runTest {
+        val recorded = mutableListOf<Throwable>()
+        CrashReporter.recorder = { recorded += it }
+        val thrown = RuntimeException("simulated write failure")
+
+        safeLaunch { throw thrown }
+        advanceUntilIdle()
+
+        assertTrue(recorded.single() === thrown)
     }
 
     @Test

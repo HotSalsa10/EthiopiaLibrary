@@ -8,10 +8,14 @@ plugins {
     // Loaded but only applied when google-services.json exists, so the
     // project builds before the Firebase console setup is done.
     alias(libs.plugins.google.services) apply false
+    alias(libs.plugins.firebase.crashlytics) apply false
 }
 
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+    // Auto-uploads proguard/R8 mapping files on assembleRelease so
+    // Crashlytics can de-obfuscate stack traces from the shipped build.
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 val keystoreProperties = Properties().apply {
@@ -110,6 +114,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
