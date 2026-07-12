@@ -27,6 +27,10 @@ data class UpdateReadyInfo(
     val apkPath: String,
 )
 
+/** True when [ready] is both present and actually newer than what's currently running. */
+fun updateAvailable(ready: UpdateReadyInfo?, currentVersionCode: Int): Boolean =
+    ready != null && ready.versionCode > currentVersionCode
+
 sealed interface ManifestParseResult {
     data class Valid(val manifest: UpdateManifest) : ManifestParseResult
     data object Malformed : ManifestParseResult

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ethiopialibrary.app.BuildConfig
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.exportAndShareBackup
@@ -48,6 +49,9 @@ import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.SettingsViewModel
 import com.ethiopialibrary.app.ui.safeLaunch
+import com.ethiopialibrary.app.update.PackageInstallerUpdateInstaller
+import com.ethiopialibrary.app.update.UpdateWorker
+import com.ethiopialibrary.app.update.updateAvailable
 import kotlinx.coroutines.launch
 
 /**
@@ -160,6 +164,11 @@ private fun SettingsContent(
         Spacer(Modifier.height(16.dp))
 
         AppCard(modifier = Modifier.fillMaxWidth()) {
+            UpdateSection(repo)
+        }
+        Spacer(Modifier.height(16.dp))
+
+        AppCard(modifier = Modifier.fillMaxWidth()) {
             SectionHeader(stringResource(R.string.settings_language))
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -250,6 +259,49 @@ private fun SettingsContent(
                 }
             },
         )
+    }
+}
+
+/**
+ * Self-update: shows the running version, and once UpdateWorker has
+ * downloaded and verified a newer signed build, an install button. The
+ * permission check/request happens right here rather than earlier, since
+ * "install unknown apps" only needs granting the moment staff actually
+ * tries to install - not before there's anything to install.
+ */
+@Composable
+private fun UpdateSection(repo: LibraryRepository) {
+    val context = LocalContext.current
+    val readyInfo by repo.updateReadyInfo().collectAsStateWithLifecycle(null)
+    val available = updateAvailable(readyInfo, BuildConfig.VERSION_CODE)
+
+    SectionHeader(stringResource(R.string.app_update))
+    Spacer(Modifier.height(12.dp))
+    Text(
+        stringResource(R.string.current_version, BuildConfig.VERSION_NAME),
+        style = MaterialTheme.typography.bodyLarge,
+    )
+    Spacer(Modifier.height(12.dp))
+    if (available && readyInfo != null) {
+        Text(
+            stringResource(R.string.update_available, readyInfo!!.versionName),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(8.dp))
+        BigButton(stringResource(R.string.install_update)) {
+            val installer = PackageInstallerUpdateInstaller(context)
+            if (installer.canInstall()) {
+                installer.install(readyInfo!!.apkPath)
+            } else {
+                installer.requestInstallPermission()
+            }
+        }
+    } else {
+        BigOutlinedButton(stringResource(R.string.check_for_update)) {
+            UpdateWorker.checkNow(context)
+            Toast.makeText(context, R.string.update_check_started, Toast.LENGTH_SHORT).show()
+        }
     }
 }
 

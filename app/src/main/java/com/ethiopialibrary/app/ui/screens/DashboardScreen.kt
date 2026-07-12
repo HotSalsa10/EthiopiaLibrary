@@ -80,6 +80,8 @@ import com.ethiopialibrary.app.sync.SyncWorker
 import com.ethiopialibrary.app.sync.announcementText
 import com.ethiopialibrary.app.sync.connectivityFlow
 import com.ethiopialibrary.app.sync.updateRequired
+import com.ethiopialibrary.app.update.PackageInstallerUpdateInstaller
+import com.ethiopialibrary.app.update.updateAvailable
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.BigButton
@@ -170,6 +172,20 @@ fun DashboardScreen(
     }
     val updateBannerNeeded = updateRequired(remoteDirectives, BuildConfig.VERSION_CODE)
 
+    // Self-update (Wave 4): a downloaded-and-verified build waiting to
+    // install. "Later" only hides it for this session (not persisted) -
+    // unlike the announcement/backup nudge, there's no reason to make an
+    // available update easy to silence long-term.
+    val updateReadyInfo by repo.updateReadyInfo().collectAsStateWithLifecycle(null)
+    val selfUpdateAvailable = updateAvailable(updateReadyInfo, BuildConfig.VERSION_CODE)
+    var selfUpdateDismissed by remember { mutableStateOf(false) }
+    val onInstallSelfUpdate: () -> Unit = {
+        updateReadyInfo?.let { info ->
+            val installer = PackageInstallerUpdateInstaller(context)
+            if (installer.canInstall()) installer.install(info.apkPath) else installer.requestInstallPermission()
+        }
+    }
+
     // BoxWithConstraints is the density-independent way to tell a wider-than-tall
     // tablet orientation from a taller-than-wide one, without a WindowSizeClass
     // dependency: landscape gets a two-pane layout, portrait a single column.
@@ -193,6 +209,13 @@ fun DashboardScreen(
                         }
                         announcement?.let { (id, text) ->
                             AnnouncementCard(text = text, onDismiss = { vm.dismissAnnouncement(id) })
+                        }
+                        if (selfUpdateAvailable && !selfUpdateDismissed && updateReadyInfo != null) {
+                            UpdateReadyCard(
+                                versionName = updateReadyInfo!!.versionName,
+                                onInstallNow = onInstallSelfUpdate,
+                                onLater = { selfUpdateDismissed = true },
+                            )
                         }
                         if (nudgeWanted && online) {
                             BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
@@ -231,6 +254,13 @@ fun DashboardScreen(
                     }
                     announcement?.let { (id, text) ->
                         AnnouncementCard(text = text, onDismiss = { vm.dismissAnnouncement(id) })
+                    }
+                    if (selfUpdateAvailable && !selfUpdateDismissed && updateReadyInfo != null) {
+                        UpdateReadyCard(
+                            versionName = updateReadyInfo!!.versionName,
+                            onInstallNow = onInstallSelfUpdate,
+                            onLater = { selfUpdateDismissed = true },
+                        )
                     }
                     if (nudgeWanted && online) {
                         BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
@@ -505,6 +535,35 @@ private fun BackupChip(
 
 private const val STALE_BACKUP_WARNING_DAYS = 3
 private const val MILLIS_PER_DAY = 86_400_000L
+
+/** A downloaded-and-verified build is waiting to install; "Later" only hides it for this session. */
+@Composable
+private fun UpdateReadyCard(versionName: String, onInstallNow: () -> Unit, onLater: () -> Unit) {
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.SystemUpdate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.update_available, versionName),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onLater) { Text(stringResource(R.string.backup_nudge_later)) }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onInstallNow) { Text(stringResource(R.string.install_update)) }
+        }
+    }
+}
 
 /** Suggests a backup while internet is around; both actions quiet it for the day. */
 @Composable

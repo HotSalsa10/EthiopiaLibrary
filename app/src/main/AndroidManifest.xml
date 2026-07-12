@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Timing the gentle "internet is back - backup?" suggestion. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Self-update (Wave 4): installing a downloaded, verified APK without Play. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -48,6 +50,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Receives the PackageInstaller session's outcome (Wave 4 self-update). -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
 
     </application>
 

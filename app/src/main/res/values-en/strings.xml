@@ -174,6 +174,12 @@
     <string name="announcement_dismiss">Dismiss</string>
     <string name="update_required_banner">A newer version is available. Contact the maintainer to update this tablet.</string>
     <string name="error_clock_wrong">The tablet\'s date is wrong. Fix Date &amp; time in Settings, then try again.</string>
+    <string name="app_update">App update</string>
+    <string name="current_version">Current version: %1$s</string>
+    <string name="update_available">Version %1$s is ready to install</string>
+    <string name="install_update">Install update</string>
+    <string name="check_for_update">Check for update</string>
+    <string name="update_check_started">Checking for updates…</string>
     <string name="export_backup_file">Export backup file</string>
     <string name="currently_out">Currently out</string>
     <string name="no_books_out">No books are out right now</string>

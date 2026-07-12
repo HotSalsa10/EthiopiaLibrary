@@ -91,4 +91,24 @@ class UpdateManifestTest {
     fun `certMatchesPinnedRelease rejects a different cert`() {
         assertFalse(certMatchesPinnedRelease("0000000000000000000000000000000000000000000000000000000000000000"))
     }
+
+    // ---------- updateAvailable ----------
+
+    @Test
+    fun `no ready info means no update available`() {
+        assertFalse(updateAvailable(null, currentVersionCode = 14))
+    }
+
+    @Test
+    fun `a ready version newer than the running build is available`() {
+        val ready = UpdateReadyInfo(versionCode = 15, versionName = "2.0.1", apkPath = "/cache/update-15.apk")
+        assertTrue(updateAvailable(ready, currentVersionCode = 14))
+    }
+
+    @Test
+    fun `a ready version at or below the running build is not available (already installed)`() {
+        val ready = UpdateReadyInfo(versionCode = 14, versionName = "2.0.0", apkPath = "/cache/update-14.apk")
+        assertFalse(updateAvailable(ready, currentVersionCode = 14))
+        assertFalse(updateAvailable(ready, currentVersionCode = 15))
+    }
 }
