@@ -55,9 +55,15 @@ if ($null -ne $previousVersionCode -and $previousVersionCode -ge $versionCode) {
 }
 
 # --- build: full test suite, then the signed release APK ---
+# testDebugUnitTest, not the bare `test` task: the exported Room schema
+# JSONs are debug-only assets (see app/build.gradle.kts), so
+# MigrationTest's fixtures aren't visible to testReleaseUnitTest at all -
+# that variant fails on FileNotFoundException regardless of migration
+# correctness. testDebugUnitTest exercises the identical business logic
+# and is what gates every commit in this project.
 Write-Host "Running tests and building the signed release APK..."
-& .\gradlew.bat test assembleRelease
-if ($LASTEXITCODE -ne 0) { throw "gradlew test assembleRelease failed" }
+& .\gradlew.bat testDebugUnitTest assembleRelease
+if ($LASTEXITCODE -ne 0) { throw "gradlew testDebugUnitTest assembleRelease failed" }
 
 $apkPath = Join-Path $repoRoot "app\build\outputs\apk\release\app-release.apk"
 if (-not (Test-Path $apkPath)) { throw "Expected release APK not found at $apkPath" }
