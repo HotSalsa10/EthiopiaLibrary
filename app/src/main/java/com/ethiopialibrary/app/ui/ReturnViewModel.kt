@@ -32,6 +32,9 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
         // The step is skippable, so this can clear without a rating being stored.
         val awaitingRating: Boolean = false,
         val error: ReturnUiError? = null,
+        // True while confirmReturn()'s write is in flight - blocks a double-tap
+        // from re-submitting against the (still non-null, not-yet-cleared) loan.
+        val inFlight: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -64,19 +67,26 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     fun confirmReturn() {
-        val loan = _state.value.loan ?: return
+        val snapshot = _state.value
+        val loan = snapshot.loan ?: return
+        if (snapshot.inFlight) return // a fast double-tap must not re-submit while the first is still writing
+        _state.update { it.copy(inFlight = true) }
         viewModelScope.safeLaunch {
             when (val result = repo.returnBook(loan.copyCode)) {
                 is ReturnResult.Success ->
                     _state.update {
                         it.copy(
+                            // Clear the stale loan so a stray repeat can't re-trigger
+                            // this branch and stack a "no active loan" error over it.
+                            loan = null,
                             returned = result.loan,
                             wasOverdue = result.wasOverdue,
                             awaitingRating = true,
+                            inFlight = false,
                         )
                     }
                 else ->
-                    _state.update { it.copy(error = ReturnUiError.NO_ACTIVE_LOAN) }
+                    _state.update { it.copy(error = ReturnUiError.NO_ACTIVE_LOAN, inFlight = false) }
             }
         }
     }

@@ -312,7 +312,7 @@ private fun CheckoutActiveStepContent(
                 onChange = { vm.setLoanPeriod(it) },
             )
             Spacer(Modifier.height(16.dp))
-            BigButton(stringResource(R.string.confirm_checkout)) { vm.confirm() }
+            BigButton(stringResource(R.string.confirm_checkout), enabled = !state.inFlight) { vm.confirm() }
         }
     }
 }
@@ -529,7 +529,7 @@ private fun BatchReceiptContent(state: CheckoutViewModel.BatchUiState, onConfirm
             FoundCopyCard(line.copy)
             Spacer(Modifier.height(8.dp))
         }
-        BigButton(stringResource(R.string.batch_confirm_all)) { onConfirmAll() }
+        BigButton(stringResource(R.string.batch_confirm_all), enabled = !state.inFlight) { onConfirmAll() }
     }
 }
 

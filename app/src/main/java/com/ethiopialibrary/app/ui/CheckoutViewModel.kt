@@ -43,6 +43,9 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val copyError: CheckoutUiError? = null,
         // Null while still building the basket; set once Confirm All has run.
         val results: List<BatchResultLine>? = null,
+        // True while confirmBatch()'s loop is in flight - blocks a double-tap
+        // from re-running the whole basket a second time.
+        val inFlight: Boolean = false,
     )
 
     data class UiState(
@@ -59,6 +62,9 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         // True after confirm() hits LimitReached, prompting a staff-PIN override dialog.
         val awaitingPinOverride: Boolean = false,
         val pinOverrideError: Boolean = false,
+        // True while confirm()/confirmWithPinOverride()'s write is in flight - blocks
+        // a double-tap from re-submitting the same checkout a second time.
+        val inFlight: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -158,11 +164,13 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val snapshot = _state.value
         val copy = snapshot.copy ?: return
         val member = snapshot.member ?: return
+        if (snapshot.inFlight) return // a fast double-tap must not re-submit while the first is still writing
+        _state.update { it.copy(inFlight = true) }
         viewModelScope.safeLaunch {
             val period = snapshot.loanPeriodDays
             val error = when (val result = repo.checkout(copy.copy.copyCode, member.memberCode, period)) {
                 is CheckoutResult.Success -> {
-                    _state.update { it.copy(completedLoan = result.loan, error = null) }
+                    _state.update { it.copy(completedLoan = result.loan, error = null, inFlight = false) }
                     return@safeLaunch
                 }
                 CheckoutResult.CopyNotFound -> CheckoutUiError.COPY_NOT_FOUND
@@ -171,11 +179,13 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
                 CheckoutResult.LimitReached -> {
                     // Hard block becomes a staff-PIN-gated override instead of a dead end.
-                    _state.update { it.copy(error = null, awaitingPinOverride = true, pinOverrideError = false) }
+                    _state.update {
+                        it.copy(error = null, awaitingPinOverride = true, pinOverrideError = false, inFlight = false)
+                    }
                     return@safeLaunch
                 }
             }
-            _state.update { it.copy(error = error) }
+            _state.update { it.copy(error = error, inFlight = false) }
         }
     }
 
@@ -184,9 +194,11 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val snapshot = _state.value
         val copy = snapshot.copy ?: return
         val member = snapshot.member ?: return
+        if (snapshot.inFlight) return
+        _state.update { it.copy(inFlight = true) }
         viewModelScope.safeLaunch {
             if (!repo.verifyStaffPin(pin)) {
-                _state.update { it.copy(pinOverrideError = true) }
+                _state.update { it.copy(pinOverrideError = true, inFlight = false) }
                 return@safeLaunch
             }
             val period = snapshot.loanPeriodDays
@@ -198,6 +210,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                         error = null,
                         awaitingPinOverride = false,
                         pinOverrideError = false,
+                        inFlight = false,
                     )
                 }
                 return@safeLaunch
@@ -211,7 +224,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
                 is CheckoutResult.Success -> return@safeLaunch
             }
-            _state.update { it.copy(awaitingPinOverride = false, error = error) }
+            _state.update { it.copy(awaitingPinOverride = false, error = error, inFlight = false) }
         }
     }
 
@@ -309,7 +322,8 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
     fun confirmBatch() {
         val snapshot = _batchState.value
         val member = snapshot.member ?: return
-        if (snapshot.items.isEmpty()) return
+        if (snapshot.items.isEmpty() || snapshot.inFlight || snapshot.results != null) return
+        _batchState.update { it.copy(inFlight = true) }
         viewModelScope.safeLaunch {
             val results = snapshot.items.map { line ->
                 val result = repo.checkout(line.copy.copy.copyCode, member.memberCode)
@@ -319,7 +333,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                     outcome = if (result is CheckoutResult.Success) BatchLineOutcome.SUCCESS else BatchLineOutcome.FAILED,
                 )
             }
-            _batchState.update { it.copy(results = results) }
+            _batchState.update { it.copy(results = results, inFlight = false) }
         }
     }
 

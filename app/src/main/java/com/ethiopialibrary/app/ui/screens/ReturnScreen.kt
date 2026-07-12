@@ -95,7 +95,7 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                BigButton(stringResource(R.string.confirm_return)) { vm.confirmReturn() }
+                BigButton(stringResource(R.string.confirm_return), enabled = !state.inFlight) { vm.confirmReturn() }
             }
         }
     }
