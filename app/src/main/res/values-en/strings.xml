@@ -111,6 +111,7 @@
     <string name="activity_renew">Renewed</string>
     <string name="activity_undo">Undone</string>
     <string name="undo">Undo</string>
+    <string name="undo_not_available">This action can no longer be undone - the book has moved on.</string>
 
     <string name="history_title">History</string>
     <string name="settings_max_books">Max books per member (0 = unlimited)</string>

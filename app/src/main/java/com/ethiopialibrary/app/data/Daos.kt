@@ -523,6 +523,14 @@ interface ActivityLogDao {
     @Query("UPDATE activity_log SET undoneAt = :at WHERE id = :id")
     suspend fun markUndone(id: String, at: Long)
 
+    /**
+     * How many activity entries on [loanId] happened after [at] - undo only
+     * allows the most recent action on a loan; a later RENEW, RETURN,
+     * CHECKOUT, or UNDO means state has moved on and this entry is stale.
+     */
+    @Query("SELECT COUNT(*) FROM activity_log WHERE loanId = :loanId AND at > :at")
+    suspend fun countNewerForLoan(loanId: String, at: Long): Int
+
     /** Feed for the dashboard: entries since [since], newest first. */
     @Query("SELECT * FROM activity_log WHERE at >= :since ORDER BY at DESC LIMIT :limit")
     fun recent(since: Long, limit: Int): Flow<List<ActivityLogEntity>>

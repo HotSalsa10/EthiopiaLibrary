@@ -459,6 +459,62 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `undoing a return is rejected if the copy has since been re-checked-out`() = runBlocking {
+        // Regression: un-returning after a different loan already claimed the
+        // copy would leave two loans with returnedAt = null on one copy.
+        val (_, copies) = addBookWithCopies(1)
+        val memberA = addMember("Member A")
+        val memberB = addMember("Member B")
+        repo.checkout(copies[0].copyCode, memberA.memberCode)
+        repo.returnBook(copies[0].copyCode)
+        val returnEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.RETURN.name }
+        repo.checkout(copies[0].copyCode, memberB.memberCode)
+
+        val undone = repo.undoActivity(returnEntry.entry.id)
+
+        assertFalse(undone)
+        val active = repo.activeLoanDetailedForCopy(copies[0].copyCode)
+        assertEquals(memberB.id, active?.loan?.memberId) // still only member B's loan is active
+    }
+
+    @Test
+    fun `undoing a checkout is rejected if the loan was already returned`() = runBlocking {
+        // Regression: undoing a stale CHECKOUT row would soft-delete a
+        // completed loan out of history.
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        val checkoutEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.CHECKOUT.name }
+        repo.returnBook(copies[0].copyCode)
+
+        val undone = repo.undoActivity(checkoutEntry.entry.id)
+
+        assertFalse(undone)
+        val stored = db.loanDao().byId(loan.id)!!
+        assertFalse(stored.isDeleted)
+        assertNotNull(stored.returnedAt)
+    }
+
+    @Test
+    fun `undoing the older of two stacked renews is rejected`() = runBlocking {
+        // Regression: undoing an out-of-order renew would restore a due date
+        // that's already been superseded by a later renew.
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+        repo.renewLoan(loan.id)
+        val firstRenewEntry = repo.recentActivity().first().first { it.entry.type == ActivityType.RENEW.name }
+        clock.advanceDays(1)
+        repo.renewLoan(loan.id)
+        val afterSecondRenewDueAt = repo.activeLoanDetailedForCopy(copies[0].copyCode)!!.loan.dueAt
+
+        val undone = repo.undoActivity(firstRenewEntry.entry.id)
+
+        assertFalse(undone)
+        assertEquals(afterSecondRenewDueAt, repo.activeLoanDetailedForCopy(copies[0].copyCode)!!.loan.dueAt)
+    }
+
+    @Test
     fun `renewing a returned loan reports NotActive`() = runBlocking {
         val (_, copies) = addBookWithCopies(1)
         val member = addMember()

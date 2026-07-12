@@ -126,8 +126,11 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
     val recentActivity: StateFlow<List<ActivityWithDetails>> = flow { emitAll(repo.recentActivity()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun undoActivity(activityId: String) {
-        viewModelScope.launch { repo.undoActivity(activityId) }
+    /** [onResult] gets false when the entry is stale (shadowed by a later action on
+     * the same loan, already undone, or the loan's state no longer matches) - the
+     * caller shows a toast instead of pretending the undo silently succeeded. */
+    fun undoActivity(activityId: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch { onResult(repo.undoActivity(activityId)) }
     }
 
     /** Changes waiting to reach the cloud mirror. */

@@ -487,19 +487,38 @@ class LibraryRepository(
      * Reverts a CHECKOUT/RETURN/RENEW entry (checkout -> soft-delete the loan; return ->
      * un-return it; renew -> restore the pre-renewal due date), re-syncs the loan, and logs
      * the undo as its own entry. Returns false if the entry/loan is gone, isn't undoable
-     * (e.g. it's already an UNDO entry - undoing an undo isn't supported), or has already
-     * been undone (a repeat click on the same row is rejected, not re-applied).
+     * (e.g. it's already an UNDO entry - undoing an undo isn't supported), has already
+     * been undone (a repeat click on the same row is rejected, not re-applied), is shadowed
+     * by a later action on the same loan (only the most recent action is undoable), or the
+     * loan's current state no longer matches what the entry assumes (e.g. undoing a RETURN
+     * after the copy was re-checked-out under a different loan would otherwise leave two
+     * active loans on one copy).
      */
     suspend fun undoActivity(activityId: String): Boolean =
         db.withTransaction {
             val entry = db.activityLogDao().byId(activityId) ?: return@withTransaction false
             if (entry.undoneAt != null) return@withTransaction false // already undone - reject the repeat click
             val loan = db.loanDao().byId(entry.loanId) ?: return@withTransaction false
+            if (db.activityLogDao().countNewerForLoan(entry.loanId, entry.at) > 0) {
+                return@withTransaction false // a later action on this loan shadows this entry
+            }
             val t = now()
             when (entry.type) {
-                ActivityType.CHECKOUT.name -> db.loanDao().update(loan.copy(isDeleted = true, updatedAt = t))
-                ActivityType.RETURN.name -> db.loanDao().update(loan.copy(returnedAt = null, updatedAt = t))
-                ActivityType.RENEW.name -> db.loanDao().update(loan.copy(dueAt = entry.prevDueAt ?: loan.dueAt, updatedAt = t))
+                ActivityType.CHECKOUT.name -> {
+                    if (loan.returnedAt != null || loan.isDeleted) return@withTransaction false
+                    db.loanDao().update(loan.copy(isDeleted = true, updatedAt = t))
+                }
+                ActivityType.RETURN.name -> {
+                    if (loan.returnedAt == null) return@withTransaction false
+                    // A different loan record may have re-claimed this copy since
+                    // the return; un-returning would then create two active loans.
+                    if (db.loanDao().activeLoanForCopy(loan.copyId) != null) return@withTransaction false
+                    db.loanDao().update(loan.copy(returnedAt = null, updatedAt = t))
+                }
+                ActivityType.RENEW.name -> {
+                    if (loan.returnedAt != null || loan.isDeleted) return@withTransaction false
+                    db.loanDao().update(loan.copy(dueAt = entry.prevDueAt ?: loan.dueAt, updatedAt = t))
+                }
                 else -> return@withTransaction false
             }
             enqueueSync("loan", loan.id)

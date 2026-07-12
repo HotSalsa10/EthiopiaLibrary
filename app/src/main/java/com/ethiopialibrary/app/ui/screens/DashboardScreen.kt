@@ -110,6 +110,11 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
+    val onUndo: (String) -> Unit = { id ->
+        vm.undoActivity(id) { ok ->
+            if (!ok) Toast.makeText(context, R.string.undo_not_available, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     renewTarget?.let { target ->
         val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt() }
@@ -176,7 +181,7 @@ fun DashboardScreen(
                     ) {
                         DueSoonSection(dueSoon, locale, onRenewRequest)
                         OverdueSection(overdue, overdueQuery, vm::setOverdueQuery, locale, onRenewRequest)
-                        ActivityFeedSection(recentActivity, vm::undoActivity)
+                        ActivityFeedSection(recentActivity, onUndo)
                     }
                 },
             )

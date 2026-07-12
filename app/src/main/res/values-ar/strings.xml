@@ -111,6 +111,7 @@
     <string name="activity_renew">تم التجديد</string>
     <string name="activity_undo">تم التراجع</string>
     <string name="undo">تراجع</string>
+    <string name="undo_not_available">لم يعد بالإمكان التراجع عن هذا الإجراء - انتقل الكتاب إلى حالة أخرى.</string>
 
     <string name="history_title">السجل</string>
     <string name="settings_max_books">الحد الأقصى للكتب لكل عضو (0 = غير محدود)</string>

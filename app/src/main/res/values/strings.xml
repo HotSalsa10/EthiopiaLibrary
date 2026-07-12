@@ -121,6 +121,7 @@
     <string name="activity_renew">ታድሷል</string>
     <string name="activity_undo">ተሽሯል</string>
     <string name="undo">ቀልብስ</string>
+    <string name="undo_not_available">ይህ ተግባር መልሶ ሊቀለበስ አይችልም — መጽሐፉ ተንቀሳቅሷል።</string>
 
     <string name="history_title">ታሪክ</string>
     <string name="settings_max_books">በአባል ከፍተኛ መጻሕፍት (0 = ያልተገደበ)</string>
