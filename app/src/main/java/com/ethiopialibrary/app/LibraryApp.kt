@@ -12,6 +12,12 @@ import com.ethiopialibrary.app.sync.SyncLocator
 import com.ethiopialibrary.app.sync.SyncWorker
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Clock
 
@@ -33,6 +39,17 @@ class LibraryApp : Application() {
             SyncEngine(database, FirestoreCloudStore(), Clock.systemDefaultZone())
         }
         SyncWorker.schedule(this)
+
+        // Throttled backup on data change: cuts the recovery point from the
+        // 24h periodic worker down to ~10 minutes whenever online, without
+        // polling - WorkManager's own KEEP policy coalesces the bursts of
+        // triggers a normal desk session produces into one scheduled upload.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            repository.pendingSyncCount()
+                .filter { it > 0 }
+                .distinctUntilChanged()
+                .collect { SyncWorker.debouncedBackup(this@LibraryApp) }
+        }
 
         MaintenanceLocator.managerFactory = { context ->
             MaintenanceManager(

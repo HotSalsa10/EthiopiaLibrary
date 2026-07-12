@@ -43,6 +43,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         private const val MAX_ATTEMPTS = 10
         private const val UNIQUE_PERIODIC = "cloud-backup-periodic"
         private const val UNIQUE_ONESHOT = "cloud-backup-now"
+        private const val UNIQUE_DEBOUNCED = "cloud-backup-debounced"
+        private const val DEBOUNCE_MINUTES = 10L
 
         private val connected =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
@@ -73,6 +75,25 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 UNIQUE_ONESHOT,
                 ExistingWorkPolicy.REPLACE,
                 OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(connected).build(),
+            )
+        }
+
+        /**
+         * Throttled backup triggered by a local data change: the first change
+         * after a drain schedules an upload ~10 minutes out; KEEP means every
+         * further call before it fires is a no-op, so steady desk activity
+         * coalesces into one upload instead of one per write. Cuts the worst-
+         * case recovery point from the 24h periodic backup down to ~10 minutes
+         * whenever the tablet is online.
+         */
+        fun debouncedBackup(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                UNIQUE_DEBOUNCED,
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<SyncWorker>()
+                    .setConstraints(connected)
+                    .setInitialDelay(DEBOUNCE_MINUTES, TimeUnit.MINUTES)
+                    .build(),
             )
         }
 
