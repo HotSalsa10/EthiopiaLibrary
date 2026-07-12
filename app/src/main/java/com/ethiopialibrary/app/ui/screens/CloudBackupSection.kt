@@ -130,10 +130,17 @@ fun CloudBackupSection(repo: LibraryRepository) {
                             val message = runCatching {
                                 SyncLocator.engine(context)?.restore()
                             }.fold(
-                                onSuccess = { restored ->
+                                onSuccess = { outcome ->
+                                    val warnings = outcome?.let { it.skippedMalformed + it.orphansDropped } ?: 0
                                     when {
-                                        restored == null -> context.getString(R.string.restore_failed)
-                                        restored == 0 -> context.getString(R.string.restore_cloud_empty)
+                                        outcome == null -> context.getString(R.string.restore_failed)
+                                        // Checked before the empty-cloud case: a manifest
+                                        // that promised more than came back is the alarming
+                                        // signal even when the total restored is 0.
+                                        outcome.incomplete -> context.getString(R.string.restore_may_be_incomplete)
+                                        outcome.restored == 0 -> context.getString(R.string.restore_cloud_empty)
+                                        warnings > 0 ->
+                                            context.getString(R.string.restore_done_with_warnings, warnings)
                                         else -> context.getString(R.string.restore_done)
                                     }
                                 },

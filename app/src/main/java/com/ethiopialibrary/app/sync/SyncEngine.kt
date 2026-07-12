@@ -23,13 +23,21 @@ class SyncEngine(
 
         /** Firestore allows at most 500 writes per atomic batch commit. */
         const val FIRESTORE_BATCH_LIMIT = 500
+
+        /** Collection/doc holding the backup-completeness manifest (see [drainOutbox]). */
+        internal const val META_COLLECTION = "meta"
+        internal const val MANIFEST_DOC_ID = "manifest"
     }
 
     /**
      * Uploads pending outbox entries in write order as atomic batches
-     * (fewer round-trips on flaky internet, all-or-nothing per chunk).
-     * Stops at the first failed chunk (WorkManager retries later with
-     * backoff); committed chunks stay marked and never re-upload.
+     * (fewer round-trips on flaky internet, all-or-nothing per chunk), then
+     * writes a manifest doc (row counts per table) LAST so its presence in
+     * the cloud certifies a complete drain - a restore compares against it
+     * to detect a torn backup instead of silently reporting success.
+     * Stops at the first failed chunk or a failed manifest write
+     * (WorkManager retries later with backoff); committed chunks stay
+     * marked and never re-upload.
      */
     suspend fun drainOutbox(): SyncResult {
         val pending = db.syncQueueDao().pending()
@@ -51,9 +59,27 @@ class SyncEngine(
             chunk.forEach { db.syncQueueDao().markSynced(it.localId, t) }
             uploaded += chunk.size
         }
+        try {
+            writeManifest()
+        } catch (e: Exception) {
+            recordResult("error:${e.javaClass.simpleName}")
+            return SyncResult.Failure(uploaded, e.message)
+        }
         db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
         recordResult(RESULT_OK)
         return SyncResult.Success(uploaded)
+    }
+
+    private suspend fun writeManifest() {
+        val manifest = mapOf<String, Any?>(
+            "categories" to db.categoryDao().count().toLong(),
+            "books" to db.bookDao().totalRowCount().toLong(),
+            "book_copies" to db.bookCopyDao().totalRowCount().toLong(),
+            "members" to db.memberDao().totalRowCount().toLong(),
+            "loans" to db.loanDao().totalRowCount().toLong(),
+            "completedAt" to now(),
+        )
+        cloud.upsertBatch(listOf(CloudUpsert(META_COLLECTION, MANIFEST_DOC_ID, manifest)))
     }
 
     /** Current entity state at upload time: replaying old outbox rows is harmless. */
@@ -72,14 +98,32 @@ class SyncEngine(
      * Disaster recovery onto a fresh tablet: pulls every collection, writes
      * them in one local transaction, then recomputes the B-/M- code
      * sequences from the restored data so new codes can never collide.
+     *
+     * Also compares what actually came back against the last manifest
+     * written by [drainOutbox]: fewer documents than the manifest promised
+     * means the backup that produced them was torn (interrupted mid-upload)
+     * and the restore is [RestoreOutcome.incomplete] - that must reach the
+     * operator rather than a bare "success".
      */
-    suspend fun restore(): Int {
-        val categories = cloud.fetchAll("categories").mapDocs("categories", ::categoryFrom)
-        val books = cloud.fetchAll("books").mapDocs("books", ::bookFrom)
-        val copies = cloud.fetchAll("book_copies").mapDocs("book_copies", ::copyFrom)
-        val members = cloud.fetchAll("members").mapDocs("members", ::memberFrom)
-        val loans = cloud.fetchAll("loans").mapDocs("loans", ::loanFrom)
+    suspend fun restore(): RestoreOutcome {
+        val categoriesRaw = cloud.fetchAll("categories")
+        val booksRaw = cloud.fetchAll("books")
+        val copiesRaw = cloud.fetchAll("book_copies")
+        val membersRaw = cloud.fetchAll("members")
+        val loansRaw = cloud.fetchAll("loans")
         val config = cloud.fetchAll("config")
+        val manifest = cloud.fetchAll(META_COLLECTION).toMap()[MANIFEST_DOC_ID]
+
+        val categoriesResult = categoriesRaw.mapDocs("categories", ::categoryFrom)
+        val booksResult = booksRaw.mapDocs("books", ::bookFrom)
+        val copiesResult = copiesRaw.mapDocs("book_copies", ::copyFrom)
+        val membersResult = membersRaw.mapDocs("members", ::memberFrom)
+        val loansResult = loansRaw.mapDocs("loans", ::loanFrom)
+        val categories = categoriesResult.items
+        val books = booksResult.items
+        val copies = copiesResult.items
+        val members = membersResult.items
+        val loans = loansResult.items
 
         // Drop referentially-orphaned children whose parent document was
         // malformed-and-skipped (or never reached the cloud), so a foreign-key
@@ -89,6 +133,7 @@ class SyncEngine(
         val copyIds = validCopies.mapTo(HashSet()) { it.id }
         val memberIds = members.mapTo(HashSet()) { it.id }
         val validLoans = loans.filter { it.copyId in copyIds && it.memberId in memberIds }
+        val orphansDropped = (copies.size - validCopies.size) + (loans.size - validLoans.size)
 
         db.withTransaction {
             db.categoryDao().upsertAll(categories)
@@ -105,7 +150,25 @@ class SyncEngine(
             db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
             recordResult(RESULT_OK)
         }
-        return categories.size + books.size + validCopies.size + members.size + validLoans.size
+
+        val fetchedCounts = mapOf(
+            "categories" to categoriesRaw.size,
+            "books" to booksRaw.size,
+            "book_copies" to copiesRaw.size,
+            "members" to membersRaw.size,
+            "loans" to loansRaw.size,
+        )
+        return RestoreOutcome(
+            restored = categories.size + books.size + validCopies.size + members.size + validLoans.size,
+            skippedMalformed = categoriesResult.skipped + booksResult.skipped + copiesResult.skipped +
+                membersResult.skipped + loansResult.skipped,
+            orphansDropped = orphansDropped,
+            incomplete = manifest != null && fetchedCounts.any { (table, fetched) ->
+                val expected = (manifest[table] as? Number)?.toInt()
+                expected != null && fetched < expected
+            },
+            manifestMissing = manifest == null,
+        )
     }
 
     private suspend fun recordResult(value: String) {
@@ -121,21 +184,44 @@ class SyncEngine(
 
     private fun codeNumber(code: String): Int? = code.substringAfter('-', "").toIntOrNull()
 
+    /** Parsed entities plus a count of documents skipped as malformed. */
+    private data class MapDocsResult<T>(val items: List<T>, val skipped: Int)
+
     /**
      * Maps cloud documents into entities, skipping any single document that
      * can't be parsed (e.g. a partially-written record from an interrupted
      * older backup) rather than aborting the whole restore. One damaged row
-     * must never block recovering everything else.
+     * must never block recovering everything else - but the skip count is
+     * carried back so the operator sees it instead of it only reaching logcat.
      */
     private fun <T> List<Pair<String, Map<String, Any?>>>.mapDocs(
         collection: String,
         transform: (String, Map<String, Any?>) -> T,
-    ): List<T> = mapNotNull { (id, m) ->
-        runCatching { transform(id, m) }.getOrElse { e ->
-            android.util.Log.w("LibrarySync", "skipping malformed $collection/$id: ${e.message}")
-            null
+    ): MapDocsResult<T> {
+        var skipped = 0
+        val items = mapNotNull { (id, m) ->
+            runCatching { transform(id, m) }.getOrElse { e ->
+                android.util.Log.w("LibrarySync", "skipping malformed $collection/$id: ${e.message}")
+                skipped++
+                null
+            }
         }
+        return MapDocsResult(items, skipped)
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
 }
+
+/**
+ * Outcome of [SyncEngine.restore]. [incomplete] is the important signal: it
+ * means fewer documents came back than the last manifest promised, i.e. the
+ * backup that produced them was interrupted mid-upload - the operator must
+ * be told rather than shown a bare "restore complete".
+ */
+data class RestoreOutcome(
+    val restored: Int,
+    val skippedMalformed: Int,
+    val orphansDropped: Int,
+    val incomplete: Boolean,
+    val manifestMissing: Boolean,
+)

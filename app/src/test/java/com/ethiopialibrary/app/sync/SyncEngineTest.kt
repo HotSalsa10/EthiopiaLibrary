@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -129,7 +130,8 @@ class SyncEngineTest {
 
         engine.drainOutbox()
 
-        assertEquals(listOf(4), cloud.batchSizes)
+        // The data batch, then the 1-doc manifest written last.
+        assertEquals(listOf(4, 1), cloud.batchSizes)
     }
 
     @Test
@@ -148,7 +150,97 @@ class SyncEngineTest {
 
         cloud.failOn = null
         assertEquals(2, (chunkedEngine.drainOutbox() as SyncResult.Success).uploaded)
-        assertEquals(listOf(2, 2), cloud.batchSizes)
+        assertEquals(listOf(2, 2, 1), cloud.batchSizes) // second data chunk, then the manifest
+    }
+
+    // ---------- backup manifest ----------
+
+    @Test
+    fun `drain writes a manifest doc after the data, capturing total row counts`() = runBlocking {
+        seedLibrary() // 1 book, 1 copy, 1 member, 1 loan; 0 categories
+
+        val result = engine.drainOutbox()
+
+        assertTrue(result is SyncResult.Success)
+        val manifest = cloud.collections.getValue("meta").getValue("manifest")
+        assertEquals(0L, manifest["categories"])
+        assertEquals(1L, manifest["books"])
+        assertEquals(1L, manifest["book_copies"])
+        assertEquals(1L, manifest["members"])
+        assertEquals(1L, manifest["loans"])
+        assertNotNull(manifest["completedAt"])
+    }
+
+    @Test
+    fun `a failed chunk aborts the drain before any manifest is written`() = runBlocking {
+        seedLibrary()
+        cloud.failOn = { collection, _ -> collection == "books" }
+
+        engine.drainOutbox()
+
+        assertTrue(cloud.collections["meta"].orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `restore reports complete with no manifest issues when nothing was lost`() = runBlocking {
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val member = repo.registerMember(fullName = "Abebe")
+        val copyCode = repo.copyLabelRows().single().code
+        repo.checkout(copyCode, member.memberCode)
+        engine.drainOutbox()
+
+        val db2 = freshDb()
+        try {
+            val outcome = SyncEngine(db2, cloud, clock).restore()
+
+            assertFalse(outcome.incomplete)
+            assertFalse(outcome.manifestMissing)
+            assertEquals(0, outcome.skippedMalformed)
+            assertEquals(0, outcome.orphansDropped)
+            assertEquals(4, outcome.restored) // book, copy, member, loan (0 categories)
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
+    fun `restore reports incomplete when fewer documents exist than the last manifest promised`() = runBlocking {
+        repo.addBook(title = "Oromay", author = "A", categoryCode = "C", language = "am")
+        engine.drainOutbox() // manifest now says books=1
+
+        // Simulate a torn upload: the book document never actually reached the
+        // cloud, even though the manifest (written from local counts) claims it did.
+        cloud.collections.getValue("books").clear()
+
+        val db2 = freshDb()
+        try {
+            val outcome = SyncEngine(db2, cloud, clock).restore()
+            assertTrue(outcome.incomplete)
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
+    fun `restore reports manifest missing when the cloud predates manifests`() = runBlocking {
+        // Docs present but no meta_manifest doc - as if written by an older
+        // app version that existed before manifests were introduced.
+        cloud.collections["books"] = mutableMapOf(
+            "b1" to mapOf(
+                "title" to "Old Book", "author" to "A", "categoryCode" to "C", "bookNumber" to 1L,
+                "language" to "am", "isbn" to null, "notes" to null,
+                "createdAt" to 1L, "updatedAt" to 1L, "isDeleted" to false,
+            ),
+        )
+
+        val db2 = freshDb()
+        try {
+            val outcome = SyncEngine(db2, cloud, clock).restore()
+            assertTrue(outcome.manifestMissing)
+            assertFalse(outcome.incomplete) // no manifest to compare against - can't claim incomplete
+        } finally {
+            db2.close()
+        }
     }
 
     // ---------- honest status reporting ----------
@@ -315,9 +407,9 @@ class SyncEngineTest {
         repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
         engine.drainOutbox()
 
-        val restored = engine.restore() // same db, already populated
+        val outcome = engine.restore() // same db, already populated
 
-        assertTrue(restored > 0)
+        assertTrue(outcome.restored > 0)
         assertEquals(1, repo.booksWithCounts("").first().size)
         assertEquals(1, repo.copyLabelRows().size)
     }
@@ -336,9 +428,10 @@ class SyncEngineTest {
         val db2 = freshDb()
         val repo2 = LibraryRepository(db2, clock)
         try {
-            val restored = SyncEngine(db2, cloud, clock).restore()
+            val outcome = SyncEngine(db2, cloud, clock).restore()
 
-            assertTrue(restored > 0)
+            assertTrue(outcome.restored > 0)
+            assertEquals(1, outcome.skippedMalformed)
             // Only the well-formed book made it in; the malformed one was skipped.
             assertEquals(1, repo2.booksWithCounts("").first().size)
         } finally {
@@ -360,8 +453,9 @@ class SyncEngineTest {
         val repo2 = LibraryRepository(db2, clock)
         try {
             // Must not throw a foreign-key error; the orphaned loan is dropped.
-            SyncEngine(db2, cloud, clock).restore()
+            val outcome = SyncEngine(db2, cloud, clock).restore()
 
+            assertEquals(1, outcome.orphansDropped) // the loan, orphaned by its missing copy
             assertEquals(1, repo2.membersWithLoanCounts("").first().size)
             assertNull(repo2.activeLoanDetailedForCopy(copyCode))
         } finally {

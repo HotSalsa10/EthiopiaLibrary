@@ -157,6 +157,8 @@
     <string name="restore_network_error">No internet connection. Connect and try again.</string>
     <string name="restore_permission_denied">This account is not allowed to access the backup.</string>
     <string name="restore_cloud_empty">No backup found in the cloud.</string>
+    <string name="restore_may_be_incomplete">The restored data may be incomplete - the backup that produced it may have been interrupted. Please contact the maintainer.</string>
+    <string name="restore_done_with_warnings">Restore complete, but %1$d record(s) were skipped.</string>
     <string name="backup_nudge_text">Internet is available — back up now?</string>
     <string name="backup_nudge_later">Later</string>
     <string name="export_backup_file">Export backup file</string>

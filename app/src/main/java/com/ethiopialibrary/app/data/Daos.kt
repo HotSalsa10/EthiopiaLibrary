@@ -87,6 +87,10 @@ interface BookDao {
     @Query("SELECT COUNT(*) FROM books WHERE isDeleted = 0")
     suspend fun titleCount(): Int
 
+    /** Every row including soft-deleted ones - what the cloud mirror actually holds. */
+    @Query("SELECT COUNT(*) FROM books")
+    suspend fun totalRowCount(): Int
+
     @Query(
         """
         SELECT COALESCE((SELECT cat.name FROM categories cat WHERE cat.code = b.categoryCode), b.categoryCode) AS label,
@@ -218,6 +222,10 @@ interface BookCopyDao {
 
     @Query("SELECT COUNT(*) FROM book_copies WHERE isDeleted = 0 AND status = 'IN_SERVICE'")
     suspend fun copyCount(): Int
+
+    /** Every row including soft-deleted ones - what the cloud mirror actually holds. */
+    @Query("SELECT COUNT(*) FROM book_copies")
+    suspend fun totalRowCount(): Int
 }
 
 @Dao
@@ -262,6 +270,10 @@ interface MemberDao {
     @Query("SELECT COUNT(*) FROM members WHERE isDeleted = 0")
     suspend fun memberCount(): Int
 
+    /** Every row including soft-deleted ones - what the cloud mirror actually holds. */
+    @Query("SELECT COUNT(*) FROM members")
+    suspend fun totalRowCount(): Int
+
     @Query("SELECT COUNT(*) FROM members WHERE isDeleted = 0 AND joinedAt >= :start AND joinedAt < :end")
     suspend fun newMembersBetween(start: Long, end: Long): Int
 }
@@ -276,6 +288,10 @@ interface LoanDao {
 
     @Query("SELECT * FROM loans WHERE copyId = :copyId AND returnedAt IS NULL AND isDeleted = 0 LIMIT 1")
     suspend fun activeLoanForCopy(copyId: String): LoanEntity?
+
+    /** Every row including soft-deleted ones - what the cloud mirror actually holds. */
+    @Query("SELECT COUNT(*) FROM loans")
+    suspend fun totalRowCount(): Int
 
     @Query("SELECT * FROM loans WHERE returnedAt IS NULL AND dueAt < :now AND isDeleted = 0 ORDER BY dueAt")
     suspend fun overdue(now: Long): List<LoanEntity>
