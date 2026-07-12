@@ -432,7 +432,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT strftime('%Y-%m', l.borrowedAt / 1000, 'unixepoch') AS label, COUNT(*) AS count
+        SELECT strftime('%Y-%m', l.borrowedAt / 1000, 'unixepoch', '+3 hours') AS label, COUNT(*) AS count
         FROM loans l WHERE l.borrowedAt >= :since AND l.isDeleted = 0
         GROUP BY label ORDER BY label
         """,

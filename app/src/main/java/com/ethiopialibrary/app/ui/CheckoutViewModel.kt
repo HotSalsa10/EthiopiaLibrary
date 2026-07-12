@@ -91,7 +91,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     /** Staff override of the loan length for the current checkout. */
     fun setLoanPeriod(days: Int) {
-        _state.update { it.copy(loanPeriodDays = days.coerceAtLeast(1)) }
+        _state.update { it.copy(loanPeriodDays = days.coerceIn(1, LibraryRepository.MAX_LOAN_PERIOD_DAYS)) }
     }
 
     fun submitCopyCode(code: String) {

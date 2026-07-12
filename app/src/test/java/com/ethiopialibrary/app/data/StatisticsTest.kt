@@ -11,6 +11,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class StatisticsTest {
@@ -98,6 +99,23 @@ class StatisticsTest {
         s = repo.computeStatistics()
         assertEquals(0, s.checkoutsLast30)
         assertEquals(1, s.checkoutsPrev30)
+    }
+
+    @Test
+    fun `monthly loan buckets use Ethiopia's UTC+3 offset, not UTC`() = runBlocking {
+        // 21:30 UTC on June 30 is already 00:30 on July 1 in UTC+3 - the
+        // checkout must land in July's bucket, not June's.
+        val lateClock = TestClock(Instant.parse("2026-06-30T21:30:00Z"))
+        val lateRepo = LibraryRepository(db, lateClock)
+        lateRepo.addBookWithCopies(title = "A", author = "x", categoryCode = "C", language = "am", copies = 1)
+        val copyCode = lateRepo.copyLabelRows().single().code
+        val member = lateRepo.registerMember(fullName = "M")
+        lateRepo.checkout(copyCode, member.memberCode)
+
+        val s = lateRepo.computeStatistics()
+
+        assertTrue(s.monthlyLoans.any { it.label == "2026-07" })
+        assertTrue(s.monthlyLoans.none { it.label == "2026-06" })
     }
 
     @Test

@@ -201,21 +201,30 @@ private fun SettingsContent(
                 label = stringResource(R.string.settings_loan_period),
                 value = daysText,
                 onValueChange = { daysText = it.filter(Char::isDigit) },
-                onSave = { daysText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setLoanPeriodDays) },
+                onSave = {
+                    daysText.toIntOrNull()?.takeIf { it in 1..LibraryRepository.MAX_LOAN_PERIOD_DAYS }
+                        ?.let(vm::setLoanPeriodDays)
+                },
             )
             Spacer(Modifier.height(20.dp))
             NumericSettingRow(
                 label = stringResource(R.string.settings_max_books),
                 value = maxBooksText,
                 onValueChange = { maxBooksText = it.filter(Char::isDigit) },
-                onSave = { maxBooksText.toIntOrNull()?.takeIf { it >= 0 }?.let(vm::setMaxBooks) },
+                onSave = {
+                    maxBooksText.toIntOrNull()?.takeIf { it in 0..LibraryRepository.MAX_BOOKS_PER_MEMBER_CEILING }
+                        ?.let(vm::setMaxBooks)
+                },
             )
             Spacer(Modifier.height(20.dp))
             NumericSettingRow(
                 label = stringResource(R.string.settings_due_soon),
                 value = dueSoonText,
                 onValueChange = { dueSoonText = it.filter(Char::isDigit) },
-                onSave = { dueSoonText.toIntOrNull()?.takeIf { it > 0 }?.let(vm::setDueSoonDays) },
+                onSave = {
+                    dueSoonText.toIntOrNull()?.takeIf { it in 1..LibraryRepository.MAX_DUE_SOON_DAYS }
+                        ?.let(vm::setDueSoonDays)
+                },
             )
         }
         Spacer(Modifier.height(16.dp))

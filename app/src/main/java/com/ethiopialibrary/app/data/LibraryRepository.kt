@@ -57,6 +57,9 @@ class LibraryRepository(
 ) {
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
+        const val MAX_LOAN_PERIOD_DAYS = 365
+        const val MAX_BOOKS_PER_MEMBER_CEILING = 50
+        const val MAX_DUE_SOON_DAYS = 60
         private const val MILLIS_PER_DAY = 86_400_000L
         private const val RECENT_ACTIVITY_LIMIT = 10
 
@@ -228,7 +231,8 @@ class LibraryRepository(
 
     suspend fun setLoanPeriodDays(days: Int) {
         db.withTransaction {
-            db.settingsDao().put(SettingEntity(SettingKeys.LOAN_PERIOD_DAYS, days.toString()))
+            val clamped = days.coerceIn(1, MAX_LOAN_PERIOD_DAYS)
+            db.settingsDao().put(SettingEntity(SettingKeys.LOAN_PERIOD_DAYS, clamped.toString()))
             enqueueSync("setting", SettingKeys.LOAN_PERIOD_DAYS)
         }
     }
@@ -263,9 +267,11 @@ class LibraryRepository(
                 return@withTransaction CheckoutResult.LimitReached
             }
             val t = now()
-            val effectivePeriod = periodDays?.takeIf { it > 0 }
-                ?: db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
-                ?: DEFAULT_LOAN_PERIOD_DAYS
+            val effectivePeriod = (
+                periodDays?.takeIf { it > 0 }
+                    ?: db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
+                    ?: DEFAULT_LOAN_PERIOD_DAYS
+                ).coerceIn(1, MAX_LOAN_PERIOD_DAYS)
             val loan = LoanEntity(
                 id = newId(),
                 copyId = copy.id,
@@ -483,7 +489,8 @@ class LibraryRepository(
 
     suspend fun setMaxBooksPerMember(value: Int) {
         db.withTransaction {
-            db.settingsDao().put(SettingEntity(SettingKeys.MAX_BOOKS_PER_MEMBER, value.toString()))
+            val clamped = value.coerceIn(0, MAX_BOOKS_PER_MEMBER_CEILING)
+            db.settingsDao().put(SettingEntity(SettingKeys.MAX_BOOKS_PER_MEMBER, clamped.toString()))
             enqueueSync("setting", SettingKeys.MAX_BOOKS_PER_MEMBER)
         }
     }
@@ -493,7 +500,8 @@ class LibraryRepository(
 
     suspend fun setDueSoonDays(value: Int) {
         db.withTransaction {
-            db.settingsDao().put(SettingEntity(SettingKeys.DUE_SOON_DAYS, value.toString()))
+            val clamped = value.coerceIn(1, MAX_DUE_SOON_DAYS)
+            db.settingsDao().put(SettingEntity(SettingKeys.DUE_SOON_DAYS, clamped.toString()))
             enqueueSync("setting", SettingKeys.DUE_SOON_DAYS)
         }
     }

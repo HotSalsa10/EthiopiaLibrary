@@ -120,6 +120,24 @@ class LimitsHistoryTest {
     }
 
     @Test
+    fun `due soon window is clamped to a sane range`() = runBlocking {
+        repo.setDueSoonDays(9999)
+        assertEquals(60, repo.dueSoonDays())
+
+        repo.setDueSoonDays(0)
+        assertEquals(1, repo.dueSoonDays())
+    }
+
+    @Test
+    fun `max books per member is clamped to a sane range`() = runBlocking {
+        repo.setMaxBooksPerMember(9999)
+        assertEquals(50, repo.maxBooksPerMember())
+
+        repo.setMaxBooksPerMember(-3)
+        assertEquals(0, repo.maxBooksPerMember())
+    }
+
+    @Test
     fun `due soon lists active loans within window and excludes overdue`() = runBlocking {
         val codes = seedCopies(2)
         val m = member()

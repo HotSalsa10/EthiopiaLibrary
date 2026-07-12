@@ -157,6 +157,25 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `loan period setting is clamped to a sane range`() = runBlocking {
+        repo.setLoanPeriodDays(9999)
+        assertEquals(365, repo.loanPeriodDays())
+
+        repo.setLoanPeriodDays(0)
+        assertEquals(1, repo.loanPeriodDays())
+    }
+
+    @Test
+    fun `a fat-fingered per-checkout period is clamped instead of accepted as-is`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 9999) as CheckoutResult.Success).loan
+
+        assertEquals(clock.instant().plus(365, ChronoUnit.DAYS).toEpochMilli(), loan.dueAt)
+    }
+
+    @Test
     fun `checkout of unknown copy code reports CopyNotFound`() = runBlocking {
         val member = addMember()
         val result = repo.checkout("B-9999", member.memberCode)
