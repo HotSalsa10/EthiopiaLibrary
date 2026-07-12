@@ -65,7 +65,7 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     fun confirmReturn() {
         val loan = _state.value.loan ?: return
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             when (val result = repo.returnBook(loan.copyCode)) {
                 is ReturnResult.Success ->
                     _state.update {
@@ -84,7 +84,7 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** Records a 1–5 rating for the just-returned loan, then dismisses the prompt. */
     fun rateMember(stars: Int) {
         val loan = _state.value.returned ?: return
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.rateLoan(loan.id, stars)
             _state.update { it.copy(awaitingRating = false) }
         }

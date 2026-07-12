@@ -47,6 +47,7 @@ import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.SettingsViewModel
+import com.ethiopialibrary.app.ui.safeLaunch
 import kotlinx.coroutines.launch
 
 /**
@@ -233,7 +234,7 @@ private fun SettingsContent(
             onDismiss = { showSetPin = false },
             onSave = { pin ->
                 showSetPin = false
-                scope.launch {
+                scope.safeLaunch {
                     repo.setStaffPin(pin)
                     Toast.makeText(context, R.string.pin_saved, Toast.LENGTH_SHORT).show()
                     onPinChanged()

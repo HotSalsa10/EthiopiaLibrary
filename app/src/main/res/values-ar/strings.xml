@@ -87,6 +87,7 @@
     <string name="error_member_not_active">العضو موقوف</string>
     <string name="error_no_active_loan">هذه النسخة غير معارة</string>
     <string name="error_limit_reached">وصل العضو إلى الحد الأقصى للإعارة</string>
+    <string name="error_write_failed">حدث خطأ ما. لم يتم تغيير أي شيء.</string>
 
     <string name="nav_statistics">الإحصائيات</string>
     <string name="stat_titles">العناوين</string>

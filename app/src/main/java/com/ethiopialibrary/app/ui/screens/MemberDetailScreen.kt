@@ -64,7 +64,7 @@ import com.ethiopialibrary.app.ui.RenewConfirmDialog
 import com.ethiopialibrary.app.ui.SectionHeader
 import com.ethiopialibrary.app.ui.StarRatingDisplay
 import com.ethiopialibrary.app.ui.TwoPaneRow
-import kotlinx.coroutines.launch
+import com.ethiopialibrary.app.ui.safeLaunch
 import java.util.Locale
 
 @Composable
@@ -91,7 +91,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
             newDueAt = preview,
             locale = LocalConfiguration.current.locales[0],
             onConfirm = {
-                scope.launch {
+                scope.safeLaunch {
                     repo.renewLoan(target.loan.id)
                     Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
                 }
@@ -108,7 +108,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
     var showCard by remember { mutableStateOf(false) }
     val onSetStatus: (MemberStatus) -> Unit = { status ->
         member?.let { m ->
-            scope.launch {
+            scope.safeLaunch {
                 repo.setMemberStatus(m.id, status)
                 refresh++
             }
@@ -180,7 +180,7 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
             onDismiss = { showEdit = false },
             onSave = { updated ->
                 showEdit = false
-                scope.launch {
+                scope.safeLaunch {
                     repo.updateMember(updated)
                     refresh++
                 }

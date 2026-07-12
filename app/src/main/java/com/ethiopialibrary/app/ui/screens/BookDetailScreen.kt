@@ -52,7 +52,7 @@ import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.PageColumn
-import kotlinx.coroutines.launch
+import com.ethiopialibrary.app.ui.safeLaunch
 
 @Composable
 fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit) {
@@ -80,7 +80,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
         Spacer(Modifier.height(16.dp))
         copies.forEach { row ->
             CopyCard(row) { status ->
-                scope.launch { repo.setCopyStatus(row.copy.id, status) }
+                scope.safeLaunch { repo.setCopyStatus(row.copy.id, status) }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -96,7 +96,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             onDismiss = { showEdit = false },
             onSave = { updated ->
                 showEdit = false
-                scope.launch {
+                scope.safeLaunch {
                     repo.updateBook(updated)
                     refresh++
                 }
@@ -109,7 +109,7 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             onDismiss = { showAddCopy = false },
             onSave = { volume ->
                 showAddCopy = false
-                scope.launch { repo.addCopy(bookId, volumeNumber = volume) }
+                scope.safeLaunch { repo.addCopy(bookId, volumeNumber = volume) }
             },
         )
     }

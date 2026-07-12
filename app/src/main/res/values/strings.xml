@@ -95,6 +95,7 @@
     <string name="error_member_not_active">አባሉ ታግዷል</string>
     <string name="error_no_active_loan">ይህ ቅጂ አልተዋሰም</string>
     <string name="error_limit_reached">አባሉ የመዋስ ጣሪያ ላይ ደርሷል</string>
+    <string name="error_write_failed">የሆነ ችግር ተፈጥሯል። ምንም አልተለወጠም።</string>
 
     <!-- Statistics, due-soon, history, limits -->
     <string name="nav_statistics">ስታቲስቲክስ</string>

@@ -4,13 +4,17 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import com.ethiopialibrary.app.ui.LibraryNavHost
+import com.ethiopialibrary.app.ui.UiErrorBus
 import com.ethiopialibrary.app.ui.theme.EthiopiaLibraryTheme
 
 class MainActivity : AppCompatActivity() {
@@ -30,6 +34,12 @@ class MainActivity : AppCompatActivity() {
         val repository = (application as LibraryApp).repository
         setContent {
             EthiopiaLibraryTheme {
+                val context = LocalContext.current
+                LaunchedEffect(Unit) {
+                    UiErrorBus.errors.collect { messageRes ->
+                        Toast.makeText(context, messageRes, Toast.LENGTH_LONG).show()
+                    }
+                }
                 LibraryNavHost(repository)
             }
         }

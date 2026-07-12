@@ -87,9 +87,9 @@ import com.ethiopialibrary.app.ui.StatusBadge
 import com.ethiopialibrary.app.ui.StatusEdgeCard
 import com.ethiopialibrary.app.ui.TwoPaneRow
 import com.ethiopialibrary.app.ui.pressScale
+import com.ethiopialibrary.app.ui.safeLaunch
 import com.ethiopialibrary.app.ui.theme.LibraryAccents
 import com.ethiopialibrary.app.ui.theme.LibraryStatus
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -124,7 +124,7 @@ fun DashboardScreen(
             newDueAt = preview,
             locale = locale,
             onConfirm = {
-                scope.launch {
+                scope.safeLaunch {
                     repo.renewLoan(target.loan.id)
                     Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
                 }

@@ -57,7 +57,7 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
         isbn: String?,
         copies: Int,
     ) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.addBookWithCopies(
                 title = title,
                 author = author,
@@ -70,7 +70,7 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     fun addCategory(name: String, code: String) {
-        viewModelScope.launch { repo.addCategory(name, code) }
+        viewModelScope.safeLaunch { repo.addCategory(name, code) }
     }
 }
 
@@ -89,7 +89,7 @@ class MembersViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     fun addMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.registerMember(
                 fullName = fullName,
                 phone = phone?.takeIf { it.isNotBlank() },
@@ -130,7 +130,7 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
      * the same loan, already undone, or the loan's state no longer matches) - the
      * caller shows a toast instead of pretending the undo silently succeeded. */
     fun undoActivity(activityId: String, onResult: (Boolean) -> Unit = {}) {
-        viewModelScope.launch { onResult(repo.undoActivity(activityId)) }
+        viewModelScope.safeLaunch { onResult(repo.undoActivity(activityId)) }
     }
 
     /** Changes waiting to reach the cloud mirror. */
@@ -150,7 +150,7 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun dismissBackupNudge() {
-        viewModelScope.launch { repo.dismissBackupNudgeForToday() }
+        viewModelScope.safeLaunch { repo.dismissBackupNudgeForToday() }
     }
 }
 
@@ -178,28 +178,28 @@ class SettingsViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     fun setLoanPeriodDays(days: Int) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.setLoanPeriodDays(days)
             _loanPeriodDays.value = days
         }
     }
 
     fun setMaxBooks(value: Int) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.setMaxBooksPerMember(value)
             _maxBooks.value = value
         }
     }
 
     fun setDueSoonDays(value: Int) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.setDueSoonDays(value)
             _dueSoonDays.value = value
         }
     }
 
     fun setCalendarMode(mode: CalendarMode) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.setCalendarMode(mode)
             _calendarMode.value = mode
         }
@@ -237,14 +237,14 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
     suspend fun renewPreviewDueAt(): Long = repo.renewalPreviewDueAt()
 
     fun renew(loanId: String, onDone: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.renewLoan(loanId)
             onDone()
         }
     }
 
     fun returnBook(copyCode: String, onDone: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             repo.returnBook(copyCode)
             onDone()
         }

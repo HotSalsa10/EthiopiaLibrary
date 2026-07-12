@@ -136,7 +136,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
      * freshly created member can't have overdue loans, so there's nothing to look up.
      */
     fun quickAddMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             val created = repo.registerMember(fullName, phone, nationalId, address)
             _state.update {
                 it.copy(
@@ -158,12 +158,12 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val snapshot = _state.value
         val copy = snapshot.copy ?: return
         val member = snapshot.member ?: return
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             val period = snapshot.loanPeriodDays
             val error = when (val result = repo.checkout(copy.copy.copyCode, member.memberCode, period)) {
                 is CheckoutResult.Success -> {
                     _state.update { it.copy(completedLoan = result.loan, error = null) }
-                    return@launch
+                    return@safeLaunch
                 }
                 CheckoutResult.CopyNotFound -> CheckoutUiError.COPY_NOT_FOUND
                 CheckoutResult.CopyNotAvailable -> CheckoutUiError.COPY_NOT_AVAILABLE
@@ -172,7 +172,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.LimitReached -> {
                     // Hard block becomes a staff-PIN-gated override instead of a dead end.
                     _state.update { it.copy(error = null, awaitingPinOverride = true, pinOverrideError = false) }
-                    return@launch
+                    return@safeLaunch
                 }
             }
             _state.update { it.copy(error = error) }
@@ -184,10 +184,10 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val snapshot = _state.value
         val copy = snapshot.copy ?: return
         val member = snapshot.member ?: return
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             if (!repo.verifyStaffPin(pin)) {
                 _state.update { it.copy(pinOverrideError = true) }
-                return@launch
+                return@safeLaunch
             }
             val period = snapshot.loanPeriodDays
             val result = repo.checkout(copy.copy.copyCode, member.memberCode, period, allowOverLimit = true)
@@ -200,7 +200,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                         pinOverrideError = false,
                     )
                 }
-                return@launch
+                return@safeLaunch
             }
             val error = when (result) {
                 CheckoutResult.CopyNotFound -> CheckoutUiError.COPY_NOT_FOUND
@@ -209,7 +209,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
                 CheckoutResult.MemberNotActive -> CheckoutUiError.MEMBER_NOT_ACTIVE
                 // Unreachable: allowOverLimit=true bypasses this in repo.checkout().
                 CheckoutResult.LimitReached -> CheckoutUiError.LIMIT_REACHED
-                is CheckoutResult.Success -> return@launch
+                is CheckoutResult.Success -> return@safeLaunch
             }
             _state.update { it.copy(awaitingPinOverride = false, error = error) }
         }
@@ -271,7 +271,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     /** Batch-mode counterpart of quickAddMember(): registers and adopts the basket member. */
     fun quickAddBatchMember(fullName: String, phone: String?, nationalId: String?, address: String?) {
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             val created = repo.registerMember(fullName, phone, nationalId, address)
             _batchState.update { it.copy(member = created, memberError = null) }
         }
@@ -310,7 +310,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         val snapshot = _batchState.value
         val member = snapshot.member ?: return
         if (snapshot.items.isEmpty()) return
-        viewModelScope.launch {
+        viewModelScope.safeLaunch {
             val results = snapshot.items.map { line ->
                 val result = repo.checkout(line.copy.copy.copyCode, member.memberCode)
                 BatchResultLine(
