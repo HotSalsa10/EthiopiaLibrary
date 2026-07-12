@@ -26,6 +26,7 @@
     <string name="add_book">መጽሐፍ ጨምር</string>
     <string name="add_category">ምድብ ጨምር</string>
     <string name="category_code">ኮድ (2 ፊደላት)</string>
+    <string name="error_category_code_exists">ይህ ኮድ ቀድሞውኑ ጥቅም ላይ ውሏል</string>
     <string name="filter_all">ሁሉም</string>
     <string name="field_title">ርዕስ</string>
     <string name="field_author">ደራሲ</string>

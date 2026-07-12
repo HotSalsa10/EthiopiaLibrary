@@ -97,6 +97,35 @@ class LibraryRepositoryTest {
         }
     }
 
+    // ---------- categories ----------
+
+    @Test
+    fun `addCategory creates a new category`() = runBlocking {
+        val result = repo.addCategory("Poetry", "PO")
+
+        assertTrue(result is AddCategoryResult.Success)
+        assertEquals("PO", (result as AddCategoryResult.Success).category.code)
+    }
+
+    @Test
+    fun `addCategory rejects a duplicate code instead of crashing`() = runBlocking {
+        repo.addCategory("Poetry", "PO")
+
+        val result = repo.addCategory("Poetry Two", "PO")
+
+        assertTrue(result is AddCategoryResult.DuplicateCode)
+        assertEquals(1, db.categoryDao().allOnce().count { it.code == "PO" })
+    }
+
+    @Test
+    fun `addCategory duplicate check is case-insensitive`() = runBlocking {
+        repo.addCategory("Poetry", "po")
+
+        val result = repo.addCategory("Poetry Two", "PO")
+
+        assertTrue(result is AddCategoryResult.DuplicateCode)
+    }
+
     // ---------- checkout ----------
 
     @Test

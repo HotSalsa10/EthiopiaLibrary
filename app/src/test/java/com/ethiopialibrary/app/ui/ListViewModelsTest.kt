@@ -9,6 +9,7 @@ import com.ethiopialibrary.app.data.TestClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -75,6 +76,34 @@ class ListViewModelsTest {
         val row = awaitValue(vm.books) { it.size == 1 }.single()
         assertEquals(3, row.totalCopies)
         assertEquals(3, row.availableCopies)
+    }
+
+    @Test
+    fun `addCategory reports success for a fresh code`() {
+        val vm = BooksViewModel(repo)
+        val result = MutableStateFlow<Boolean?>(null)
+
+        vm.addCategory("Poetry", "PO") { duplicate -> result.value = duplicate }
+
+        assertEquals(false, awaitValue(result) { it != null })
+    }
+
+    @Test
+    fun `addCategory reports a duplicate instead of crashing on a repeated code`() {
+        val vm = BooksViewModel(repo)
+        val first = MutableStateFlow<Boolean?>(null)
+        vm.addCategory("Poetry", "PO") { first.value = it }
+        awaitValue(first) { it != null }
+        // Room's Flow invalidation lags slightly behind the write completing,
+        // so wait for the category to actually reach the StateFlow before
+        // asserting the second (duplicate) attempt didn't add a second row.
+        awaitValue(vm.categories) { cats -> cats.any { it.code == "PO" } }
+
+        val second = MutableStateFlow<Boolean?>(null)
+        vm.addCategory("Poetry Two", "PO") { second.value = it }
+
+        assertEquals(true, awaitValue(second) { it != null })
+        assertEquals(1, awaitValue(vm.categories) { true }.count { it.code == "PO" })
     }
 
     @Test

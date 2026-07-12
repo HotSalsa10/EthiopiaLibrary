@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiopialibrary.app.data.ActivityWithDetails
+import com.ethiopialibrary.app.data.AddCategoryResult
 import com.ethiopialibrary.app.data.BookWithCounts
 import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.DashboardStats
@@ -69,8 +70,12 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
         }
     }
 
-    fun addCategory(name: String, code: String) {
-        viewModelScope.safeLaunch { repo.addCategory(name, code) }
+    /** [onResult] gets true when [code] is already taken, so the dialog can show an
+     * inline error and stay open instead of crashing on the unique-index violation. */
+    fun addCategory(name: String, code: String, onResult: (duplicate: Boolean) -> Unit = {}) {
+        viewModelScope.safeLaunch {
+            onResult(repo.addCategory(name, code) is AddCategoryResult.DuplicateCode)
+        }
     }
 }
 

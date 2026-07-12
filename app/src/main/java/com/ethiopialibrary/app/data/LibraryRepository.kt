@@ -34,6 +34,11 @@ sealed interface RenewResult {
     data object NotActive : RenewResult
 }
 
+sealed interface AddCategoryResult {
+    data class Success(val category: CategoryEntity) : AddCategoryResult
+    data object DuplicateCode : AddCategoryResult
+}
+
 /**
  * All mutations run inside a single Room transaction that also writes the
  * sync outbox entry, so a power cut can never leave data and sync queue
@@ -138,11 +143,15 @@ class LibraryRepository(
     suspend fun categoryByCode(code: String): CategoryEntity? = db.categoryDao().byCode(code.trim())
 
     /** Adds a category; [code] must be unique (its books are prefixed with it). */
-    suspend fun addCategory(name: String, code: String): CategoryEntity = db.withTransaction {
+    suspend fun addCategory(name: String, code: String): AddCategoryResult = db.withTransaction {
+        val normalizedCode = code.trim().uppercase()
+        if (db.categoryDao().byCode(normalizedCode) != null) {
+            return@withTransaction AddCategoryResult.DuplicateCode
+        }
         val t = now()
         val category = CategoryEntity(
             id = newId(),
-            code = code.trim().uppercase(),
+            code = normalizedCode,
             name = name.trim(),
             sortOrder = (db.categoryDao().maxSortOrder() ?: 0) + 1,
             createdAt = t,
@@ -150,7 +159,7 @@ class LibraryRepository(
         )
         db.categoryDao().insert(category)
         enqueueSync("category", category.id)
-        category
+        AddCategoryResult.Success(category)
     }
 
     suspend fun registerMember(

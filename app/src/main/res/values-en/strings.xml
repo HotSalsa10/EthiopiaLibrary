@@ -22,6 +22,7 @@
     <string name="add_book">Add book</string>
     <string name="add_category">Add category</string>
     <string name="category_code">Code (2 letters)</string>
+    <string name="error_category_code_exists">This code is already in use</string>
     <string name="filter_all">All</string>
     <string name="field_title">Title</string>
     <string name="field_author">Author</string>

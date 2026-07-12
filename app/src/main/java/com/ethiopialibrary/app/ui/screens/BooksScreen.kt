@@ -158,10 +158,11 @@ private fun CategoryPicker(
     categories: List<CategoryEntity>,
     selectedCode: String,
     onSelect: (String) -> Unit,
-    onAddCategory: (String, String) -> Unit,
+    onAddCategory: (String, String, (duplicate: Boolean) -> Unit) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
+    var codeDuplicateError by remember { mutableStateOf(false) }
     val selected = categories.firstOrNull { it.code == selectedCode }
     Box {
         OutlinedButton(onClick = { menuOpen = true }, modifier = Modifier.fillMaxWidth()) {
@@ -186,18 +187,25 @@ private fun CategoryPicker(
     }
     if (showAddCategory) {
         AddCategoryDialog(
-            onDismiss = { showAddCategory = false },
+            isDuplicate = codeDuplicateError,
+            onDismiss = { showAddCategory = false; codeDuplicateError = false },
             onSave = { name, code ->
-                onAddCategory(name, code)
-                onSelect(code.trim().uppercase())
-                showAddCategory = false
+                codeDuplicateError = false
+                onAddCategory(name, code) { duplicate ->
+                    if (duplicate) {
+                        codeDuplicateError = true
+                    } else {
+                        onSelect(code.trim().uppercase())
+                        showAddCategory = false
+                    }
+                }
             },
         )
     }
 }
 
 @Composable
-private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+private fun AddCategoryDialog(isDuplicate: Boolean, onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     val nameFocus = remember { FocusRequester() }
@@ -220,6 +228,12 @@ private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) ->
                     { code = it.filter(Char::isLetter).take(2).uppercase() },
                     label = { Text(stringResource(R.string.category_code)) },
                     singleLine = true,
+                    isError = isDuplicate,
+                    supportingText = if (isDuplicate) {
+                        { Text(stringResource(R.string.error_category_code_exists)) }
+                    } else {
+                        null
+                    },
                     modifier = Modifier.focusRequester(codeFocus),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 )
@@ -239,7 +253,7 @@ private fun AddCategoryDialog(onDismiss: () -> Unit, onSave: (String, String) ->
 @Composable
 private fun AddBookDialog(
     categories: List<CategoryEntity>,
-    onAddCategory: (String, String) -> Unit,
+    onAddCategory: (String, String, (duplicate: Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, String?, Int) -> Unit,
 ) {

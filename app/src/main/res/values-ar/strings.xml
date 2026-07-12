@@ -22,6 +22,7 @@
     <string name="add_book">إضافة كتاب</string>
     <string name="add_category">إضافة تصنيف</string>
     <string name="category_code">الرمز (حرفان)</string>
+    <string name="error_category_code_exists">هذا الرمز مستخدم بالفعل</string>
     <string name="filter_all">الكل</string>
     <string name="field_title">العنوان</string>
     <string name="field_author">المؤلف</string>
