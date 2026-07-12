@@ -109,6 +109,31 @@ class MaintenanceTest {
     }
 
     @Test
+    fun `daily maintenance reports zero bad codes for a healthy database`() {
+        val result = manager().runDailyMaintenance()
+        assertEquals(0, result.badCodeCount)
+    }
+
+    @Test
+    fun `daily maintenance detects locale-corrupted member and copy codes`() {
+        // Simulates codes rendered under a non-Latin-digit default locale before
+        // the Locale.ROOT fix - detected here rather than silently left in place,
+        // since rewriting codes printed on physical labels would be worse.
+        runBlocking {
+            val repo = LibraryRepository(db, clock)
+            val member = repo.registerMember(fullName = "Corrupted")
+            db.memberDao().update(member.copy(memberCode = "M-٠٠٠١"))
+            val book = repo.addBook(title = "Fiqh", author = "Author", categoryCode = "C", language = "am")
+            val copy = repo.addCopy(book.id)
+            db.bookCopyDao().update(copy.copy(copyCode = "C-00١-1-00"))
+        }
+
+        val result = manager().runDailyMaintenance()
+
+        assertEquals(2, result.badCodeCount)
+    }
+
+    @Test
     fun `daily maintenance reports the number of overdue loans`() {
         runBlocking {
             val repo = LibraryRepository(db, clock)

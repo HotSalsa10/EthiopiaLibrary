@@ -1,5 +1,7 @@
 package com.ethiopialibrary.app.data
 
+import java.util.Locale
+
 /**
  * The accession code printed on each physical copy:
  * `category · book# · copy# · volume` → e.g. `TF-001-1-00`.
@@ -9,5 +11,7 @@ package com.ethiopialibrary.app.data
  */
 object BookCode {
     fun render(categoryCode: String, bookNumber: Int, copyNumber: Int, volumeNumber: Int): String =
-        "%s-%03d-%d-%02d".format(categoryCode, bookNumber, copyNumber, volumeNumber)
+        // Locale.ROOT: this code is scanned, printed, and re-parsed as a number -
+        // it must never render with non-ASCII digits under the Arabic UI locale.
+        "%s-%03d-%d-%02d".format(Locale.ROOT, categoryCode, bookNumber, copyNumber, volumeNumber)
 }

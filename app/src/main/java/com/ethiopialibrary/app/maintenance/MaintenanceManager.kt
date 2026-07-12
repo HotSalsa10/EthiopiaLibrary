@@ -14,7 +14,17 @@ data class MaintenanceResult(
     val snapshot: File,
     val prunedCount: Int,
     val overdueCount: Int,
+    val badCodeCount: Int,
 )
+
+/**
+ * True when [code] contains a Unicode digit that isn't plain ASCII 0-9 -
+ * the signature of a member/copy code rendered under a non-Latin-digit
+ * default locale (e.g. Arabic) before formatting was pinned to Locale.ROOT.
+ * Detected rather than auto-repaired: rewriting a code already printed on a
+ * physical label would be worse than flagging it.
+ */
+private fun hasNonAsciiDigit(code: String): Boolean = code.any { it.isDigit() && it !in '0'..'9' }
 
 /**
  * Daily on-device safety net, independent of cloud sync: verifies database
@@ -45,13 +55,19 @@ class MaintenanceManager(
 
         // Suspend Room query runs on Room's own executor, so blocking here is
         // safe even when maintenance is invoked off a coroutine.
-        val overdueCount = runBlocking { db.loanDao().countOverdue(clock.instant().toEpochMilli()) }
+        val (overdueCount, badCodeCount) = runBlocking {
+            val overdue = db.loanDao().countOverdue(clock.instant().toEpochMilli())
+            val badMemberCodes = db.memberDao().allMemberCodes().count(::hasNonAsciiDigit)
+            val badCopyCodes = db.bookCopyDao().allCopyCodes().count(::hasNonAsciiDigit)
+            overdue to (badMemberCodes + badCopyCodes)
+        }
 
         return MaintenanceResult(
             databaseHealthy = healthy,
             snapshot = snapshot,
             prunedCount = stale.size,
             overdueCount = overdueCount,
+            badCodeCount = badCodeCount,
         )
     }
 }

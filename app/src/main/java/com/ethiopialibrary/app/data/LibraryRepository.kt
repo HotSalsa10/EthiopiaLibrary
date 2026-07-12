@@ -11,6 +11,7 @@ import java.io.File
 import java.time.Clock
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 sealed interface CheckoutResult {
@@ -162,7 +163,10 @@ class LibraryRepository(
             val t = now()
             val member = MemberEntity(
                 id = newId(),
-                memberCode = "M-%04d".format(nextSequence(SettingKeys.NEXT_MEMBER_SEQ)),
+                // Locale.ROOT: this code is printed, scanned, and re-parsed as a
+                // number by restore's sequence recompute - it must never render
+                // with non-ASCII digits under the Arabic UI locale.
+                memberCode = "M-%04d".format(Locale.ROOT, nextSequence(SettingKeys.NEXT_MEMBER_SEQ)),
                 fullName = fullName,
                 phone = phone,
                 nationalId = nationalId,
@@ -546,7 +550,7 @@ class LibraryRepository(
     private fun hashPin(pin: String): String =
         java.security.MessageDigest.getInstance("SHA-256")
             .digest("ethiopialibrary:$pin".toByteArray())
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { "%02x".format(Locale.ROOT, it) }
 
     suspend fun bookById(id: String): BookEntity? = db.bookDao().byId(id)
 

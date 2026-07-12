@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 class LibraryRepositoryTest {
@@ -80,6 +81,20 @@ class LibraryRepositoryTest {
     fun `members receive sequential member codes`() {
         assertEquals("M-0001", addMember().memberCode)
         assertEquals("M-0002", addMember("Second Member").memberCode)
+    }
+
+    @Test
+    fun `member codes stay ascii digits under the arabic default locale`() {
+        // A member code is printed on a card, scanned back, and re-parsed as a
+        // number by restore's sequence recompute - it must not shift with the
+        // UI language or a later restore can mint a duplicate code.
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("ar"))
+            assertEquals("M-0001", addMember().memberCode)
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 
     // ---------- checkout ----------
@@ -637,6 +652,20 @@ class LibraryRepositoryTest {
         assertTrue(repo.verifyStaffPin("1234"))
         assertFalse(repo.verifyStaffPin("9999"))
         assertFalse(repo.verifyStaffPin(""))
+    }
+
+    @Test
+    fun `staff pin hash is stable across default locale changes`() = runBlocking {
+        // The hash is hex ("%02x" per byte) - it must verify the same PIN
+        // whether it was set or is being checked under a different locale.
+        repo.setStaffPin("1234")
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("ar"))
+            assertTrue(repo.verifyStaffPin("1234"))
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 
     @Test
