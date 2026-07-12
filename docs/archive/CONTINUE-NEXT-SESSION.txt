@@ -1,0 +1,75 @@
+========================================================================
+ EthiopiaLibrary — HOW TO CONTINUE NEXT SESSION
+ (written 2026-07-12, end of the "final hardening pass" session)
+========================================================================
+
+WHAT LOADS AUTOMATICALLY
+------------------------------------------------------------------------
+At the start of any new Claude Code session in this project, your memory
+notes surface on their own — including "ethiopialibrary-hardening-pass.md",
+which has the full wave-by-wave status of THIS effort (what's done, what's
+next, key facts). You don't have to reconstruct anything from scratch.
+
+
+THE ONE THING TO DO: paste this as your first message
+------------------------------------------------------------------------
+Continue the EthiopiaLibrary final hardening pass. Read the plan file
+C:\Users\smsh3\.claude\plans\this-is-a-final-cached-raccoon.md and the
+memory note ethiopialibrary-hardening-pass.md, then resume at Wave 3
+item 1 (Firebase Crashlytics). Keep the same discipline as Waves 1-2:
+TDD (write the failing test first), one commit per numbered plan item,
+run the full test suite + assembleDebug before every commit.
+
+
+STATUS SNAPSHOT (2026-07-12)
+------------------------------------------------------------------------
+Branch: ui-ux-redesign (still unmerged/untagged/unpushed — untouched by
+this session, that's expected, it happens in Wave 6).
+
+DONE and committed this session (15 commits, Waves 1-2 of the plan):
+  - Wave 1 (backup/restore integrity), all 7 items: Locale.ROOT fix,
+    backup manifest + honest restore outcome, restore-overwrite guard,
+    PIN hash sync, sign-out/password-recovery UX, sync-queue pruning,
+    debounced backup.
+  - Wave 2 (correctness), all 8 items: undo state re-verification,
+    safeLaunch crash-prevention pattern (~19 call sites), duplicate
+    category guard, double-tap in-flight guards, honest renew/return
+    results, the tick()-based fix for the frozen dashboard/overdue clock
+    (the single highest-severity bug found), renew-never-shortens,
+    settings ceilings + UTC+3 stats fix.
+  - 236 unit tests passing, assembleDebug clean, nothing device-verified
+    yet (that's Wave 6).
+
+REMAINING (Waves 3-6 — full design already written in the plan file):
+  - Wave 3: Firebase Crashlytics, meta/heartbeat doc, remote config via
+    a Firestore remote/directives doc (announcements + kill switches
+    ONLY — user explicitly rejected letting it override operator
+    settings), clock-sanity gate blocking checkout/renew on a wrong
+    device clock.
+  - Wave 4: in-app self-update from a public GitHub Releases repo +
+    manifest + PackageInstaller + cert-pin verification (user explicitly
+    chose this over Google Play / Firebase App Distribution — see the
+    plan's "why-not" comparison). ~4 new files, a release script, a new
+    REQUEST_INSTALL_PACKAGES permission.
+  - Wave 5: docs refresh (RECOVERY.md additions + new MAINTAINER.md +
+    archive stale dev docs) + version bump to 2.0.0(14).
+  - Wave 6: ship sequence — full on-device pass (all 3 locales), a
+    self-update dress rehearsal, merge to master + tag + push, go-live
+    cleanup (wipe test Firestore + tablet DB), a restore drill, and
+    **backing up the release keystore off-machine** (it currently exists
+    in exactly one place — the dev machine — and losing it means no
+    future update can ever install over this one). Wave 6 needs the user
+    in the loop for the physical/Console/manual steps — don't assume
+    those are done, ask/flag them explicitly.
+
+
+WHERE EVERYTHING LIVES
+------------------------------------------------------------------------
+- Plan (full audit + wave-by-wave design):
+  C:\Users\smsh3\.claude\plans\this-is-a-final-cached-raccoon.md
+- Progress notes: auto-loaded from
+  C:\Users\smsh3\.claude\projects\C--Users-smsh3-Desktop-EthiopiaLibrary\memory\
+  (ethiopialibrary-hardening-pass.md is the one for THIS effort)
+- Code history: every Wave 1-2 step is its own commit on ui-ux-redesign
+  with a descriptive message — "git log --oneline" reads like a changelog.
+========================================================================

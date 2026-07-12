@@ -24,3 +24,6 @@ Real data lives on the production tablet and `fallbackToDestructiveMigration` ha
 1. a `Migration` in `app/src/main/java/com/ethiopialibrary/app/data/Migrations.kt` whose SQL mirrors the newly exported `app/schemas/<n>.json`, and
 2. a `MigrationTest` case proving old-version data survives (`helper.createDatabase(old)` → insert rows → `runMigrationsAndValidate(new)`).
 Never re-add a destructive fallback. Exported schemas are committed; the schemas dir doubles as debug assets so Robolectric's MigrationTestHelper can read them.
+
+## Operational Docs (since v2.0.0, 2026-07)
+The app now ships self-update (GitHub Releases), Crashlytics, and Firestore-based remote config/heartbeat — see `docs/MAINTAINER.md` for the dev runbook (release process, keystore, password reset, remote directives, heartbeat/Crashlytics monitoring, Firestore wipe procedure, migration floor) and `docs/RECOVERY.md` for the trilingual print-and-post operator guide. Historical planning notes (early briefs, session handoffs) are archived under `docs/archive/` and are not current.
