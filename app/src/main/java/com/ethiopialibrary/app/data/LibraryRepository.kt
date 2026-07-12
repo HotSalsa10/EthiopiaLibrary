@@ -2,6 +2,8 @@ package com.ethiopialibrary.app.data
 
 import androidx.room.withTransaction
 import com.ethiopialibrary.app.dates.CalendarMode
+import com.ethiopialibrary.app.sync.RemoteDirectives
+import com.ethiopialibrary.app.sync.remoteDirectivesFromSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -65,6 +67,17 @@ class LibraryRepository(
 
         /** Exported share-sheet backups kept on device before rotation. */
         private const val EXPORT_KEEP_COUNT = 3
+
+        private val REMOTE_SETTING_KEYS = listOf(
+            SettingKeys.REMOTE_ANNOUNCEMENT_AM,
+            SettingKeys.REMOTE_ANNOUNCEMENT_AR,
+            SettingKeys.REMOTE_ANNOUNCEMENT_EN,
+            SettingKeys.REMOTE_ANNOUNCEMENT_ID,
+            SettingKeys.REMOTE_UPDATE_MANIFEST_URL,
+            SettingKeys.REMOTE_UPDATE_CHECK_ENABLED,
+            SettingKeys.REMOTE_DEBOUNCED_BACKUP_ENABLED,
+            SettingKeys.REMOTE_MIN_SUPPORTED_VERSION_CODE,
+        )
     }
 
     private fun now(): Long = clock.instant().toEpochMilli()
@@ -461,6 +474,19 @@ class LibraryRepository(
         db.settingsDao().put(
             SettingEntity(SettingKeys.BACKUP_NUDGE_DISMISSED_DAY, epochDay(now()).toString()),
         )
+    }
+
+    /** Config-from-cloud cache, refreshed by [com.ethiopialibrary.app.sync.SyncEngine] after every successful drain. */
+    fun remoteDirectives(): Flow<RemoteDirectives> = combine(
+        REMOTE_SETTING_KEYS.map { db.settingsDao().watch(it) },
+    ) { values -> remoteDirectivesFromSettings(REMOTE_SETTING_KEYS.zip(values.toList()).toMap()) }
+
+    fun dismissedAnnouncementId(): Flow<String?> =
+        db.settingsDao().watch(SettingKeys.REMOTE_ANNOUNCEMENT_DISMISSED_ID)
+
+    /** Local-only; the dismissal itself is never synced to the cloud. */
+    suspend fun dismissAnnouncement(id: String) {
+        db.settingsDao().put(SettingEntity(SettingKeys.REMOTE_ANNOUNCEMENT_DISMISSED_ID, id))
     }
 
     /**

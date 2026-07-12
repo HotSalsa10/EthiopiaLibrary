@@ -14,6 +14,7 @@ import com.ethiopialibrary.app.data.MemberWithLoanCount
 import com.ethiopialibrary.app.data.RenewResult
 import com.ethiopialibrary.app.data.ReturnResult
 import com.ethiopialibrary.app.dates.CalendarMode
+import com.ethiopialibrary.app.sync.RemoteDirectives
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -156,6 +157,17 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     fun dismissBackupNudge() {
         viewModelScope.safeLaunch { repo.dismissBackupNudgeForToday() }
+    }
+
+    /** Config-from-cloud cache; refreshed after every successful backup drain. */
+    val remoteDirectives: StateFlow<RemoteDirectives> = repo.remoteDirectives()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, RemoteDirectives())
+
+    val dismissedAnnouncementId: StateFlow<String?> = repo.dismissedAnnouncementId()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun dismissAnnouncement(id: String) {
+        viewModelScope.safeLaunch { repo.dismissAnnouncement(id) }
     }
 }
 

@@ -33,6 +33,10 @@ class SyncEngine(
 
         /** Collection/doc holding the remote liveness signal (see [drainOutbox]). */
         internal const val HEARTBEAT_DOC_ID = "heartbeat"
+
+        /** Collection/doc the developer edits from the Console (see [refreshRemoteDirectives]). */
+        internal const val REMOTE_COLLECTION = "remote"
+        internal const val DIRECTIVES_DOC_ID = "directives"
     }
 
     /**
@@ -78,7 +82,40 @@ class SyncEngine(
         }
         db.settingsDao().put(SettingEntity(SettingKeys.LAST_SYNC_AT, now().toString()))
         recordResult(RESULT_OK)
+        refreshRemoteDirectives()
         return SyncResult.Success(uploaded)
+    }
+
+    /**
+     * Best-effort: a bad Console edit or an offline fetch must never turn an
+     * otherwise-successful backup into a reported failure. A failed fetch
+     * leaves whatever was cached from the last successful refresh in place;
+     * a successful fetch always fully overwrites the cache (a field missing
+     * or wrong-typed in THIS doc resolves to the compiled default, not a
+     * stale value from a previous fetch - see [parseRemoteDirectives]).
+     */
+    private suspend fun refreshRemoteDirectives() {
+        try {
+            val doc = cloud.fetchAll(REMOTE_COLLECTION).toMap()[DIRECTIVES_DOC_ID]
+            cacheRemoteDirectives(parseRemoteDirectives(doc))
+        } catch (e: Exception) {
+            android.util.Log.w("LibrarySync", "remote directives refresh failed: ${e.message}")
+        }
+    }
+
+    private suspend fun cacheRemoteDirectives(d: RemoteDirectives) {
+        val settings = db.settingsDao()
+        suspend fun set(key: String, value: String?) {
+            if (value == null) settings.delete(key) else settings.put(SettingEntity(key, value))
+        }
+        set(SettingKeys.REMOTE_ANNOUNCEMENT_AM, d.announcementAm)
+        set(SettingKeys.REMOTE_ANNOUNCEMENT_AR, d.announcementAr)
+        set(SettingKeys.REMOTE_ANNOUNCEMENT_EN, d.announcementEn)
+        set(SettingKeys.REMOTE_ANNOUNCEMENT_ID, d.announcementId)
+        set(SettingKeys.REMOTE_UPDATE_MANIFEST_URL, d.updateManifestUrl)
+        set(SettingKeys.REMOTE_UPDATE_CHECK_ENABLED, d.updateCheckEnabled.toString())
+        set(SettingKeys.REMOTE_DEBOUNCED_BACKUP_ENABLED, d.debouncedBackupEnabled.toString())
+        set(SettingKeys.REMOTE_MIN_SUPPORTED_VERSION_CODE, d.minSupportedVersionCode?.toString())
     }
 
     private suspend fun writeManifestAndHeartbeat() {

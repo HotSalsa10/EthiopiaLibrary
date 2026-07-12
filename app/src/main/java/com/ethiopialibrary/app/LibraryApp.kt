@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.Clock
@@ -47,11 +48,17 @@ class LibraryApp : Application() {
         // 24h periodic worker down to ~10 minutes whenever online, without
         // polling - WorkManager's own KEEP policy coalesces the bursts of
         // triggers a normal desk session produces into one scheduled upload.
+        // The Console's debouncedBackupEnabled kill switch only gates this
+        // throttled path, never the 24h periodic safety-net worker.
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             repository.pendingSyncCount()
                 .filter { it > 0 }
                 .distinctUntilChanged()
-                .collect { SyncWorker.debouncedBackup(this@LibraryApp) }
+                .collect {
+                    if (repository.remoteDirectives().first().debouncedBackupEnabled) {
+                        SyncWorker.debouncedBackup(this@LibraryApp)
+                    }
+                }
         }
 
         MaintenanceLocator.managerFactory = { context ->

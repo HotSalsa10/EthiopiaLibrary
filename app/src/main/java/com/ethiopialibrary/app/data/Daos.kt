@@ -563,4 +563,7 @@ interface SettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(setting: SettingEntity)
+
+    @Query("DELETE FROM settings WHERE `key` = :key")
+    suspend fun delete(key: String)
 }

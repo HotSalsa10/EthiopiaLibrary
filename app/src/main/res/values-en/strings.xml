@@ -171,6 +171,8 @@
     <string name="restore_anyway">Restore anyway</string>
     <string name="backup_nudge_text">Internet is available — back up now?</string>
     <string name="backup_nudge_later">Later</string>
+    <string name="announcement_dismiss">Dismiss</string>
+    <string name="update_required_banner">A newer version is available. Contact the maintainer to update this tablet.</string>
     <string name="export_backup_file">Export backup file</string>
     <string name="currently_out">Currently out</string>
     <string name="no_books_out">No books are out right now</string>

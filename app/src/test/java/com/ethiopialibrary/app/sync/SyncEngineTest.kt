@@ -205,6 +205,78 @@ class SyncEngineTest {
         assertEquals(1L, heartbeat["badCodeCount"])
     }
 
+    // ---------- remote directives (config-from-cloud) ----------
+
+    @Test
+    fun `drain fetches and caches remote directives after a successful drain`() = runBlocking {
+        cloud.collections["remote"] = mutableMapOf(
+            "directives" to mapOf<String, Any?>(
+                "announcement_am" to "ማስታወቂያ",
+                "announcementId" to "ann-1",
+                "updateCheckEnabled" to false,
+                "minSupportedVersionCode" to 20L,
+            ),
+        )
+        seedLibrary()
+
+        engine.drainOutbox()
+
+        val cached = repo.remoteDirectives().first()
+        assertEquals("ማስታወቂያ", cached.announcementAm)
+        assertEquals("ann-1", cached.announcementId)
+        assertFalse(cached.updateCheckEnabled)
+        assertEquals(20, cached.minSupportedVersionCode)
+    }
+
+    @Test
+    fun `a malformed remote directives doc falls back to compiled defaults instead of failing the drain`() =
+        runBlocking {
+            cloud.collections["remote"] = mutableMapOf(
+                "directives" to mapOf<String, Any?>("updateCheckEnabled" to "not-a-boolean"),
+            )
+            seedLibrary()
+
+            val result = engine.drainOutbox()
+
+            assertTrue(result is SyncResult.Success)
+            assertTrue(repo.remoteDirectives().first().updateCheckEnabled) // compiled default
+        }
+
+    @Test
+    fun `no remote directives doc at all leaves the drain successful with compiled defaults`() = runBlocking {
+        seedLibrary()
+
+        val result = engine.drainOutbox()
+
+        assertTrue(result is SyncResult.Success)
+        assertNull(repo.remoteDirectives().first().announcementId)
+    }
+
+    @Test
+    fun `a remote directives fetch failure does not fail an otherwise-successful drain`() = runBlocking {
+        seedLibrary()
+        cloud.failFetch = { collection -> collection == "remote" }
+
+        val result = engine.drainOutbox()
+
+        assertTrue(result is SyncResult.Success)
+    }
+
+    @Test
+    fun `a remote directives fetch failure leaves the prior cache in place`() = runBlocking {
+        cloud.collections["remote"] = mutableMapOf(
+            "directives" to mapOf<String, Any?>("announcementId" to "ann-1"),
+        )
+        seedLibrary()
+        engine.drainOutbox()
+        assertEquals("ann-1", repo.remoteDirectives().first().announcementId)
+
+        cloud.failFetch = { collection -> collection == "remote" }
+        engine.drainOutbox()
+
+        assertEquals("ann-1", repo.remoteDirectives().first().announcementId) // untouched, not reset to default
+    }
+
     @Test
     fun `a failed chunk aborts the drain before any manifest is written`() = runBlocking {
         seedLibrary()

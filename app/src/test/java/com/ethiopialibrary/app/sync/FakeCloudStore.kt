@@ -5,6 +5,7 @@ class FakeCloudStore : CloudStore {
 
     val collections = mutableMapOf<String, MutableMap<String, Map<String, Any?>>>()
     var failOn: ((collection: String, docId: String) -> Boolean)? = null
+    var failFetch: ((collection: String) -> Boolean)? = null
 
     /** Size of every committed batch, in commit order. */
     val batchSizes = mutableListOf<Int>()
@@ -21,6 +22,10 @@ class FakeCloudStore : CloudStore {
         batchSizes += items.size
     }
 
-    override suspend fun fetchAll(collection: String): List<Pair<String, Map<String, Any?>>> =
-        collections[collection].orEmpty().map { it.key to it.value }
+    override suspend fun fetchAll(collection: String): List<Pair<String, Map<String, Any?>>> {
+        if (failFetch?.invoke(collection) == true) {
+            throw RuntimeException("simulated fetch failure")
+        }
+        return collections[collection].orEmpty().map { it.key to it.value }
+    }
 }

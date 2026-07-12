@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudUpload
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -65,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ethiopialibrary.app.BuildConfig
 import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.ActivityType
 import com.ethiopialibrary.app.data.ActivityWithDetails
@@ -74,7 +77,9 @@ import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.RenewResult
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.sync.SyncWorker
+import com.ethiopialibrary.app.sync.announcementText
 import com.ethiopialibrary.app.sync.connectivityFlow
+import com.ethiopialibrary.app.sync.updateRequired
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppSearchField
 import com.ethiopialibrary.app.ui.BigButton
@@ -150,6 +155,20 @@ fun DashboardScreen(
     }
     val onLater: () -> Unit = { vm.dismissBackupNudge() }
 
+    // Config-from-cloud: a Console-authored announcement (dismissible, keyed
+    // by its id so a new announcement isn't hidden by an old dismissal) and a
+    // persistent, non-blocking "please update" banner when this build is
+    // older than the Console's configured minimum.
+    val remoteDirectives by vm.remoteDirectives.collectAsStateWithLifecycle()
+    val dismissedAnnouncementId by vm.dismissedAnnouncementId.collectAsStateWithLifecycle()
+    val announcementId = remoteDirectives.announcementId
+    val announcement = if (announcementId != null && announcementId != dismissedAnnouncementId) {
+        announcementText(remoteDirectives, locale.language)?.let { text -> announcementId to text }
+    } else {
+        null
+    }
+    val updateBannerNeeded = updateRequired(remoteDirectives, BuildConfig.VERSION_CODE)
+
     // BoxWithConstraints is the density-independent way to tell a wider-than-tall
     // tablet orientation from a taller-than-wide one, without a WindowSizeClass
     // dependency: landscape gets a two-pane layout, portrait a single column.
@@ -165,6 +184,12 @@ fun DashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                        if (updateBannerNeeded) {
+                            UpdateRequiredBanner()
+                        }
+                        announcement?.let { (id, text) ->
+                            AnnouncementCard(text = text, onDismiss = { vm.dismissAnnouncement(id) })
+                        }
                         if (nudgeWanted && online) {
                             BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
                         }
@@ -194,6 +219,12 @@ fun DashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     BrandHeader(lastBackupAt, pendingSync, backupStaleSince, locale)
+                    if (updateBannerNeeded) {
+                        UpdateRequiredBanner()
+                    }
+                    announcement?.let { (id, text) ->
+                        AnnouncementCard(text = text, onDismiss = { vm.dismissAnnouncement(id) })
+                    }
                     if (nudgeWanted && online) {
                         BackupNudgeCard(onBackupNow = onBackupNow, onLater = onLater)
                     }
@@ -493,6 +524,53 @@ private fun BackupNudgeCard(onBackupNow: () -> Unit, onLater: () -> Unit) {
             TextButton(onClick = onLater) { Text(stringResource(R.string.backup_nudge_later)) }
             Spacer(Modifier.width(8.dp))
             TextButton(onClick = onBackupNow) { Text(stringResource(R.string.backup_now)) }
+        }
+    }
+}
+
+/** Persistent, non-blocking: the running build is older than the Console's configured minimum. */
+@Composable
+private fun UpdateRequiredBanner() {
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.SystemUpdate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.update_required_banner),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** A Console-authored announcement; dismissing it is keyed by the announcement's own id. */
+@Composable
+private fun AnnouncementCard(text: String, onDismiss: () -> Unit) {
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Campaign,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.announcement_dismiss)) }
         }
     }
 }

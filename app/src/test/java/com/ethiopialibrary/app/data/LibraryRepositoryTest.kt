@@ -11,6 +11,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -934,5 +935,27 @@ class LibraryRepositoryTest {
 
         clock.advanceDays(1) // a new day with changes still waiting
         assertTrue(repo.backupNudgeWanted().first())
+    }
+
+    // ---------- remote directives (config-from-cloud) ----------
+
+    @Test
+    fun `remote directives are compiled defaults before anything is ever cached`() = runBlocking {
+        val d = repo.remoteDirectives().first()
+
+        assertNull(d.announcementId)
+        assertTrue(d.updateCheckEnabled)
+        assertTrue(d.debouncedBackupEnabled)
+        assertNull(d.minSupportedVersionCode)
+        assertNull(repo.dismissedAnnouncementId().first())
+    }
+
+    @Test
+    fun `dismissing an announcement is local-only and keyed by its id`() = runBlocking {
+        repo.dismissAnnouncement("ann-1")
+        assertEquals("ann-1", repo.dismissedAnnouncementId().first())
+
+        // A new announcement id is not considered dismissed just because a previous one was.
+        assertNotEquals("ann-2", repo.dismissedAnnouncementId().first())
     }
 }
