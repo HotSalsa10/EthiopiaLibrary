@@ -1,8 +1,10 @@
 package com.ethiopialibrary.app.sync
 
 import android.content.Context
+import android.os.Build
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.ethiopialibrary.app.BuildConfig
 import com.ethiopialibrary.app.data.CheckoutResult
 import com.ethiopialibrary.app.data.LibraryDatabase
 import com.ethiopialibrary.app.data.LibraryRepository
@@ -130,8 +132,8 @@ class SyncEngineTest {
 
         engine.drainOutbox()
 
-        // The data batch, then the 1-doc manifest written last.
-        assertEquals(listOf(4, 1), cloud.batchSizes)
+        // The data batch, then the manifest+heartbeat docs written together last.
+        assertEquals(listOf(4, 2), cloud.batchSizes)
     }
 
     @Test
@@ -150,7 +152,7 @@ class SyncEngineTest {
 
         cloud.failOn = null
         assertEquals(2, (chunkedEngine.drainOutbox() as SyncResult.Success).uploaded)
-        assertEquals(listOf(2, 2, 1), cloud.batchSizes) // second data chunk, then the manifest
+        assertEquals(listOf(2, 2, 2), cloud.batchSizes) // second data chunk, then manifest+heartbeat
     }
 
     // ---------- backup manifest ----------
@@ -169,6 +171,38 @@ class SyncEngineTest {
         assertEquals(1L, manifest["members"])
         assertEquals(1L, manifest["loans"])
         assertNotNull(manifest["completedAt"])
+    }
+
+    @Test
+    fun `drain writes a heartbeat doc alongside the manifest`() = runBlocking {
+        seedLibrary() // 1 book, 1 copy, 1 member, 1 loan; 0 categories
+
+        val result = engine.drainOutbox()
+
+        assertTrue(result is SyncResult.Success)
+        val heartbeat = cloud.collections.getValue("meta").getValue("heartbeat")
+        assertEquals(BuildConfig.VERSION_CODE.toLong(), heartbeat["versionCode"])
+        assertEquals(BuildConfig.VERSION_NAME, heartbeat["versionName"])
+        assertEquals(Build.VERSION.SDK_INT.toLong(), heartbeat["sdkInt"])
+        assertEquals(0L, heartbeat["categories"])
+        assertEquals(1L, heartbeat["books"])
+        assertEquals(1L, heartbeat["book_copies"])
+        assertEquals(1L, heartbeat["members"])
+        assertEquals(1L, heartbeat["loans"])
+        assertEquals(0L, heartbeat["badCodeCount"])
+        assertEquals(clock.instant().toEpochMilli(), heartbeat["deviceClockMillis"])
+    }
+
+    @Test
+    fun `heartbeat counts locale-corrupted codes as bad codes`() = runBlocking {
+        seedLibrary()
+        val member = repo.registerMember(fullName = "Corrupted")
+        db.memberDao().update(member.copy(memberCode = "M-١٢٣٤"))
+
+        engine.drainOutbox()
+
+        val heartbeat = cloud.collections.getValue("meta").getValue("heartbeat")
+        assertEquals(1L, heartbeat["badCodeCount"])
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.maintenance
 import com.ethiopialibrary.app.data.IntegrityChecker
 import com.ethiopialibrary.app.data.LibraryDatabase
 import com.ethiopialibrary.app.data.SnapshotManager
+import com.ethiopialibrary.app.data.countBadCodes
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.time.Clock
@@ -20,15 +21,6 @@ data class MaintenanceResult(
 
 /** Already-uploaded outbox rows older than this are dead weight; nothing reads them again. */
 private const val SYNC_ROW_RETENTION_DAYS = 30L
-
-/**
- * True when [code] contains a Unicode digit that isn't plain ASCII 0-9 -
- * the signature of a member/copy code rendered under a non-Latin-digit
- * default locale (e.g. Arabic) before formatting was pinned to Locale.ROOT.
- * Detected rather than auto-repaired: rewriting a code already printed on a
- * physical label would be worse than flagging it.
- */
-private fun hasNonAsciiDigit(code: String): Boolean = code.any { it.isDigit() && it !in '0'..'9' }
 
 /**
  * Daily on-device safety net, independent of cloud sync: verifies database
@@ -62,11 +54,10 @@ class MaintenanceManager(
         val (overdueCount, badCodeCount, prunedSyncRows) = runBlocking {
             val now = clock.instant().toEpochMilli()
             val overdue = db.loanDao().countOverdue(now)
-            val badMemberCodes = db.memberDao().allMemberCodes().count(::hasNonAsciiDigit)
-            val badCopyCodes = db.bookCopyDao().allCopyCodes().count(::hasNonAsciiDigit)
+            val badCodes = db.countBadCodes()
             val cutoff = now - SYNC_ROW_RETENTION_DAYS * 24 * 60 * 60 * 1000
             val prunedSync = db.syncQueueDao().deleteSyncedBefore(cutoff)
-            Triple(overdue, badMemberCodes + badCopyCodes, prunedSync)
+            Triple(overdue, badCodes, prunedSync)
         }
 
         return MaintenanceResult(

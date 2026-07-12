@@ -1,10 +1,13 @@
 package com.ethiopialibrary.app.sync
 
+import android.os.Build
 import androidx.room.withTransaction
+import com.ethiopialibrary.app.BuildConfig
 import com.ethiopialibrary.app.data.LibraryDatabase
 import com.ethiopialibrary.app.data.SettingEntity
 import com.ethiopialibrary.app.data.SettingKeys
 import com.ethiopialibrary.app.data.SyncQueueEntity
+import com.ethiopialibrary.app.data.countBadCodes
 import java.time.Clock
 
 /**
@@ -27,15 +30,23 @@ class SyncEngine(
         /** Collection/doc holding the backup-completeness manifest (see [drainOutbox]). */
         internal const val META_COLLECTION = "meta"
         internal const val MANIFEST_DOC_ID = "manifest"
+
+        /** Collection/doc holding the remote liveness signal (see [drainOutbox]). */
+        internal const val HEARTBEAT_DOC_ID = "heartbeat"
     }
 
     /**
      * Uploads pending outbox entries in write order as atomic batches
      * (fewer round-trips on flaky internet, all-or-nothing per chunk), then
-     * writes a manifest doc (row counts per table) LAST so its presence in
-     * the cloud certifies a complete drain - a restore compares against it
-     * to detect a torn backup instead of silently reporting success.
-     * Stops at the first failed chunk or a failed manifest write
+     * writes the manifest doc (row counts per table, backup completeness) and
+     * the heartbeat doc (app version/SDK/row counts/bad-code count/device
+     * clock - "is this tablet alive and backing up") together LAST, so their
+     * presence in the cloud certifies a complete drain. A restore compares
+     * against the manifest to detect a torn backup instead of silently
+     * reporting success; the heartbeat's device clock vs. Firestore's server
+     * timestamp is how a remote clock-drift problem becomes visible without
+     * physical access to the tablet.
+     * Stops at the first failed chunk or a failed manifest/heartbeat write
      * (WorkManager retries later with backoff); committed chunks stay
      * marked and never re-upload.
      */
@@ -60,7 +71,7 @@ class SyncEngine(
             uploaded += chunk.size
         }
         try {
-            writeManifest()
+            writeManifestAndHeartbeat()
         } catch (e: Exception) {
             recordResult("error:${e.javaClass.simpleName}")
             return SyncResult.Failure(uploaded, e.message)
@@ -70,16 +81,28 @@ class SyncEngine(
         return SyncResult.Success(uploaded)
     }
 
-    private suspend fun writeManifest() {
-        val manifest = mapOf<String, Any?>(
+    private suspend fun writeManifestAndHeartbeat() {
+        val rowCounts = mapOf<String, Any?>(
             "categories" to db.categoryDao().count().toLong(),
             "books" to db.bookDao().totalRowCount().toLong(),
             "book_copies" to db.bookCopyDao().totalRowCount().toLong(),
             "members" to db.memberDao().totalRowCount().toLong(),
             "loans" to db.loanDao().totalRowCount().toLong(),
-            "completedAt" to now(),
         )
-        cloud.upsertBatch(listOf(CloudUpsert(META_COLLECTION, MANIFEST_DOC_ID, manifest)))
+        val manifest = rowCounts + mapOf<String, Any?>("completedAt" to now())
+        val heartbeat = rowCounts + mapOf<String, Any?>(
+            "versionCode" to BuildConfig.VERSION_CODE.toLong(),
+            "versionName" to BuildConfig.VERSION_NAME,
+            "sdkInt" to Build.VERSION.SDK_INT.toLong(),
+            "badCodeCount" to db.countBadCodes().toLong(),
+            "deviceClockMillis" to now(),
+        )
+        cloud.upsertBatch(
+            listOf(
+                CloudUpsert(META_COLLECTION, MANIFEST_DOC_ID, manifest),
+                CloudUpsert(META_COLLECTION, HEARTBEAT_DOC_ID, heartbeat),
+            ),
+        )
     }
 
     /** Current entity state at upload time: replaying old outbox rows is harmless. */
