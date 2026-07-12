@@ -20,6 +20,13 @@ data class UpdateManifest(
     val notesEn: String?,
 )
 
+/** A downloaded-and-verified APK sitting in cache, ready for the installer to install (Wave 4 item 22). */
+data class UpdateReadyInfo(
+    val versionCode: Int,
+    val versionName: String,
+    val apkPath: String,
+)
+
 sealed interface ManifestParseResult {
     data class Valid(val manifest: UpdateManifest) : ManifestParseResult
     data object Malformed : ManifestParseResult

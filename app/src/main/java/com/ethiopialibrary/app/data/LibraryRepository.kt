@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.ethiopialibrary.app.dates.CalendarMode
 import com.ethiopialibrary.app.sync.RemoteDirectives
 import com.ethiopialibrary.app.sync.remoteDirectivesFromSettings
+import com.ethiopialibrary.app.update.UpdateReadyInfo
 import com.ethiopialibrary.app.util.clockLooksWrong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -505,6 +506,31 @@ class LibraryRepository(
     /** Local-only; the dismissal itself is never synced to the cloud. */
     suspend fun dismissAnnouncement(id: String) {
         db.settingsDao().put(SettingEntity(SettingKeys.REMOTE_ANNOUNCEMENT_DISMISSED_ID, id))
+    }
+
+    /** versionCode of a downloaded-and-verified APK sitting in cache, or null if none is ready. */
+    suspend fun updateReadyVersionCode(): Int? =
+        db.settingsDao().get(SettingKeys.UPDATE_READY_VERSION_CODE)?.toIntOrNull()
+
+    /** Live for the Settings "App update" section - reactively clears itself once nothing is ready. */
+    fun updateReadyInfo(): Flow<UpdateReadyInfo?> = combine(
+        db.settingsDao().watch(SettingKeys.UPDATE_READY_VERSION_CODE),
+        db.settingsDao().watch(SettingKeys.UPDATE_READY_VERSION_NAME),
+        db.settingsDao().watch(SettingKeys.UPDATE_READY_APK_PATH),
+    ) { versionCode, versionName, apkPath ->
+        val code = versionCode?.toIntOrNull()
+        if (code == null || versionName == null || apkPath == null) {
+            null
+        } else {
+            UpdateReadyInfo(code, versionName, apkPath)
+        }
+    }
+
+    /** Recorded only once a downloaded APK has passed both the sha256 and pinned-cert checks. */
+    suspend fun markUpdateReady(versionCode: Int, versionName: String, apkPath: String) {
+        db.settingsDao().put(SettingEntity(SettingKeys.UPDATE_READY_VERSION_CODE, versionCode.toString()))
+        db.settingsDao().put(SettingEntity(SettingKeys.UPDATE_READY_VERSION_NAME, versionName))
+        db.settingsDao().put(SettingEntity(SettingKeys.UPDATE_READY_APK_PATH, apkPath))
     }
 
     /**

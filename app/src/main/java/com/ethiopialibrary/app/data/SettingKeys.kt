@@ -26,4 +26,10 @@ object SettingKeys {
     const val REMOTE_UPDATE_CHECK_ENABLED = "remote_update_check_enabled"
     const val REMOTE_DEBOUNCED_BACKUP_ENABLED = "remote_debounced_backup_enabled"
     const val REMOTE_MIN_SUPPORTED_VERSION_CODE = "remote_min_supported_version_code"
+
+    // Self-update (see update/UpdateWorker.kt) - set only once a downloaded
+    // APK has passed both the sha256 and pinned-signing-cert checks.
+    const val UPDATE_READY_VERSION_CODE = "update_ready_version_code"
+    const val UPDATE_READY_VERSION_NAME = "update_ready_version_name"
+    const val UPDATE_READY_APK_PATH = "update_ready_apk_path"
 }

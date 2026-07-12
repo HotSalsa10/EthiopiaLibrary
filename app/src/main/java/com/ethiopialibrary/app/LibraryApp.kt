@@ -10,6 +10,8 @@ import com.ethiopialibrary.app.sync.FirestoreCloudStore
 import com.ethiopialibrary.app.sync.SyncEngine
 import com.ethiopialibrary.app.sync.SyncLocator
 import com.ethiopialibrary.app.sync.SyncWorker
+import com.ethiopialibrary.app.update.UpdateLocator
+import com.ethiopialibrary.app.update.UpdateWorker
 import com.ethiopialibrary.app.util.CrashReporter
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -69,5 +71,8 @@ class LibraryApp : Application() {
             )
         }
         MaintenanceWorker.schedule(this)
+
+        UpdateLocator.repositoryFactory = { repository }
+        UpdateWorker.schedule(this)
     }
 }
