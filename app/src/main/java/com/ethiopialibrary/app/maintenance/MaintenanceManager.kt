@@ -15,7 +15,11 @@ data class MaintenanceResult(
     val prunedCount: Int,
     val overdueCount: Int,
     val badCodeCount: Int,
+    val prunedSyncRows: Int,
 )
+
+/** Already-uploaded outbox rows older than this are dead weight; nothing reads them again. */
+private const val SYNC_ROW_RETENTION_DAYS = 30L
 
 /**
  * True when [code] contains a Unicode digit that isn't plain ASCII 0-9 -
@@ -55,11 +59,14 @@ class MaintenanceManager(
 
         // Suspend Room query runs on Room's own executor, so blocking here is
         // safe even when maintenance is invoked off a coroutine.
-        val (overdueCount, badCodeCount) = runBlocking {
-            val overdue = db.loanDao().countOverdue(clock.instant().toEpochMilli())
+        val (overdueCount, badCodeCount, prunedSyncRows) = runBlocking {
+            val now = clock.instant().toEpochMilli()
+            val overdue = db.loanDao().countOverdue(now)
             val badMemberCodes = db.memberDao().allMemberCodes().count(::hasNonAsciiDigit)
             val badCopyCodes = db.bookCopyDao().allCopyCodes().count(::hasNonAsciiDigit)
-            overdue to (badMemberCodes + badCopyCodes)
+            val cutoff = now - SYNC_ROW_RETENTION_DAYS * 24 * 60 * 60 * 1000
+            val prunedSync = db.syncQueueDao().deleteSyncedBefore(cutoff)
+            Triple(overdue, badMemberCodes + badCopyCodes, prunedSync)
         }
 
         return MaintenanceResult(
@@ -68,6 +75,7 @@ class MaintenanceManager(
             prunedCount = stale.size,
             overdueCount = overdueCount,
             badCodeCount = badCodeCount,
+            prunedSyncRows = prunedSyncRows,
         )
     }
 }

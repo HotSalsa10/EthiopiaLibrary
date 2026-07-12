@@ -10,6 +10,7 @@ import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.ethiopialibrary.app.data.LibraryDatabase
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.data.SyncQueueEntity
 import com.ethiopialibrary.app.data.TestClock
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -22,6 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.time.temporal.ChronoUnit
 
 /** Daily local snapshots: last line of defense, independent of cloud sync. */
 @RunWith(RobolectricTestRunner::class)
@@ -131,6 +133,33 @@ class MaintenanceTest {
         val result = manager().runDailyMaintenance()
 
         assertEquals(2, result.badCodeCount)
+    }
+
+    @Test
+    fun `daily maintenance prunes synced outbox rows older than 30 days`() {
+        val old = clock.instant().minus(31, ChronoUnit.DAYS).toEpochMilli()
+        val recent = clock.instant().minus(5, ChronoUnit.DAYS).toEpochMilli()
+        runBlocking {
+            db.syncQueueDao().insert(
+                SyncQueueEntity(entityType = "book", entityId = "old-synced", operation = "UPSERT", createdAt = old, syncedAt = old),
+            )
+            db.syncQueueDao().insert(
+                SyncQueueEntity(entityType = "book", entityId = "recent-synced", operation = "UPSERT", createdAt = recent, syncedAt = recent),
+            )
+            db.syncQueueDao().insert(
+                SyncQueueEntity(entityType = "book", entityId = "still-pending", operation = "UPSERT", createdAt = recent, syncedAt = null),
+            )
+        }
+
+        val result = manager().runDailyMaintenance()
+
+        assertEquals(1, result.prunedSyncRows)
+        runBlocking {
+            // setUp()'s own addBook() left one pending row too - recent-synced,
+            // still-pending, and that one remain; old-synced was pruned.
+            assertEquals(3, db.syncQueueDao().totalCount())
+            assertEquals(2, db.syncQueueDao().pending().size)
+        }
     }
 
     @Test

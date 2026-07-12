@@ -502,6 +502,13 @@ interface SyncQueueDao {
 
     @Query("UPDATE sync_queue SET attemptCount = attemptCount + 1 WHERE localId = :id")
     suspend fun recordAttempt(id: Long)
+
+    @Query("SELECT COUNT(*) FROM sync_queue")
+    suspend fun totalCount(): Int
+
+    /** Already-uploaded rows are dead weight once old enough; nothing reads them again. */
+    @Query("DELETE FROM sync_queue WHERE syncedAt IS NOT NULL AND syncedAt < :cutoff")
+    suspend fun deleteSyncedBefore(cutoff: Long): Int
 }
 
 @Dao
