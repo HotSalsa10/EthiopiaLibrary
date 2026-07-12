@@ -139,6 +139,10 @@
     <string name="password">Password</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
+    <string name="sign_out_confirm_title">Sign out?</string>
+    <string name="sign_out_confirm_body">Signing out stops cloud backup. You will need the library email and password to sign in again.</string>
+    <string name="sign_out_confirm_keep">Keep signed in</string>
+    <string name="password_lost_hint">Password lost? Contact the maintainer - it can be reset remotely.</string>
     <string name="backup_now">Back up now</string>
     <string name="restore_from_cloud">Restore from cloud</string>
     <string name="restore_confirm">This will restore the cloud data onto this tablet. Continue?</string>

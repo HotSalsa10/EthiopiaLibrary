@@ -92,11 +92,17 @@ fun CloudBackupSection(repo: LibraryRepository) {
                         }
                 }
             }
+            Text(
+                stringResource(R.string.password_lost_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     } else {
         val scope = rememberCoroutineScope()
         var showRestoreConfirm by remember { mutableStateOf(false) }
         var showPendingWarning by remember { mutableStateOf(false) }
+        var showSignOutConfirm by remember { mutableStateOf(false) }
         val lastResult by repo.lastSyncResult().collectAsStateWithLifecycle(null)
         val pendingCount by repo.pendingSyncCount().collectAsStateWithLifecycle(0)
         val backingUp by remember { SyncWorker.isBackupRunning(context) }
@@ -119,9 +125,27 @@ fun CloudBackupSection(repo: LibraryRepository) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TextButton(onClick = { auth.signOut() }) {
+            TextButton(onClick = { showSignOutConfirm = true }) {
                 Text(stringResource(R.string.sign_out))
             }
+        }
+        if (showSignOutConfirm) {
+            AlertDialog(
+                onDismissRequest = { showSignOutConfirm = false },
+                title = { Text(stringResource(R.string.sign_out_confirm_title)) },
+                text = { Text(stringResource(R.string.sign_out_confirm_body)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showSignOutConfirm = false
+                        auth.signOut()
+                    }) { Text(stringResource(R.string.sign_out)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSignOutConfirm = false }) {
+                        Text(stringResource(R.string.sign_out_confirm_keep))
+                    }
+                },
+            )
         }
         if (showPendingWarning) {
             AlertDialog(

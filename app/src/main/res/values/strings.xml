@@ -152,6 +152,10 @@
     <string name="password">የይለፍ ቃል</string>
     <string name="sign_in">ግባ</string>
     <string name="sign_out">ውጣ</string>
+    <string name="sign_out_confirm_title">ይውጡ?</string>
+    <string name="sign_out_confirm_body">መውጣት የደመና ምትኬን ያቆማል። እንደገና ለመግባት የቤተ-መጻሕፍቱን ኢሜይል እና የይለፍ ቃል ያስፈልግዎታል።</string>
+    <string name="sign_out_confirm_keep">ግቡ ሆኖ ይቆዩ</string>
+    <string name="password_lost_hint">የይለፍ ቃል ጠፍቷል? ጠባቂውን ያነጋግሩ — ከርቀት ሊታደስ ይችላል።</string>
     <string name="backup_now">አሁን ምትኬ ያዝ</string>
     <string name="restore_from_cloud">ከደመና መልስ</string>
     <string name="restore_confirm">ይህ ከደመናው ያለውን መረጃ ወደዚህ ጡባዊ ይመልሳል። ይቀጥሉ?</string>

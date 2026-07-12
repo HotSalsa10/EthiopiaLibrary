@@ -139,6 +139,10 @@
     <string name="password">كلمة المرور</string>
     <string name="sign_in">تسجيل الدخول</string>
     <string name="sign_out">تسجيل الخروج</string>
+    <string name="sign_out_confirm_title">تسجيل الخروج؟</string>
+    <string name="sign_out_confirm_body">سيؤدي تسجيل الخروج إلى إيقاف النسخ الاحتياطي السحابي. ستحتاج إلى البريد الإلكتروني وكلمة المرور الخاصة بالمكتبة لتسجيل الدخول مرة أخرى.</string>
+    <string name="sign_out_confirm_keep">البقاء مسجلاً للدخول</string>
+    <string name="password_lost_hint">هل فقدت كلمة المرور؟ اتصل بالمسؤول عن الصيانة - يمكن إعادة تعيينها عن بُعد.</string>
     <string name="backup_now">انسخ احتياطياً الآن</string>
     <string name="restore_from_cloud">استعادة من السحابة</string>
     <string name="restore_confirm">سيؤدي هذا إلى استعادة بيانات السحابة إلى هذا الجهاز. هل تريد المتابعة؟</string>
