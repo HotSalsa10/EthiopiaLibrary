@@ -95,8 +95,9 @@ fun CurrentlyOutScreen(
             newDueAt = preview,
             locale = locale,
             onConfirm = {
-                vm.renew(target.loan.id) {
-                    Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                vm.renew(target.loan.id) { success ->
+                    val message = if (success) R.string.renew_done else R.string.error_renew_not_active
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
             },
@@ -109,8 +110,9 @@ fun CurrentlyOutScreen(
             bookTitle = target.bookTitle,
             memberName = target.memberName,
             onConfirm = {
-                vm.returnBook(target.copyCode) {
-                    Toast.makeText(context, R.string.return_success, Toast.LENGTH_SHORT).show()
+                vm.returnBook(target.copyCode) { success ->
+                    val message = if (success) R.string.return_success else R.string.error_no_active_loan
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
                 returnTarget = null
             },

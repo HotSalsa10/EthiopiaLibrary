@@ -11,6 +11,8 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LibraryStatistics
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.data.MemberWithLoanCount
+import com.ethiopialibrary.app.data.RenewResult
+import com.ethiopialibrary.app.data.ReturnResult
 import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -241,17 +243,19 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
     /** Due date a renewal would set, for the confirm dialog's preview. */
     suspend fun renewPreviewDueAt(): Long = repo.renewalPreviewDueAt()
 
-    fun renew(loanId: String, onDone: () -> Unit) {
+    /** [onDone] gets false when the loan was no longer active (already returned,
+     * undone, or deleted) - the caller must not report a false success. */
+    fun renew(loanId: String, onDone: (Boolean) -> Unit) {
         viewModelScope.safeLaunch {
-            repo.renewLoan(loanId)
-            onDone()
+            onDone(repo.renewLoan(loanId) is RenewResult.Success)
         }
     }
 
-    fun returnBook(copyCode: String, onDone: () -> Unit) {
+    /** [onDone] gets false when there was no active loan on this copy - the
+     * caller must not report a false success. */
+    fun returnBook(copyCode: String, onDone: (Boolean) -> Unit) {
         viewModelScope.safeLaunch {
-            repo.returnBook(copyCode)
-            onDone()
+            onDone(repo.returnBook(copyCode) is ReturnResult.Success)
         }
     }
 }

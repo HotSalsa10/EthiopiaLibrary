@@ -221,4 +221,60 @@ class ListViewModelsTest {
         awaitValue(vm.loanPeriodDays) { it == 30 }
         runBlocking { assertEquals(30, repo.loanPeriodDays()) }
     }
+
+    // ---------- CurrentlyOutViewModel renew/return results (fix for C5) ----------
+
+    private fun checkoutOneCopy(): Pair<String, String> = runBlocking {
+        repo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val copyCode = repo.copyLabelRows().single().code
+        val member = repo.registerMember(fullName = "Abebe")
+        val loan = (repo.checkout(copyCode, member.memberCode) as com.ethiopialibrary.app.data.CheckoutResult.Success).loan
+        copyCode to loan.id
+    }
+
+    @Test
+    fun `renew reports success for an active loan`() {
+        val (_, loanId) = checkoutOneCopy()
+        val vm = CurrentlyOutViewModel(repo)
+        val result = MutableStateFlow<Boolean?>(null)
+
+        vm.renew(loanId) { result.value = it }
+
+        assertEquals(true, awaitValue(result) { it != null })
+    }
+
+    @Test
+    fun `renew reports failure instead of a false success for a loan that is no longer active`() {
+        val (copyCode, loanId) = checkoutOneCopy()
+        runBlocking { repo.returnBook(copyCode) }
+        val vm = CurrentlyOutViewModel(repo)
+        val result = MutableStateFlow<Boolean?>(null)
+
+        vm.renew(loanId) { result.value = it }
+
+        assertEquals(false, awaitValue(result) { it != null })
+    }
+
+    @Test
+    fun `returnBook reports success for an active loan`() {
+        val (copyCode, _) = checkoutOneCopy()
+        val vm = CurrentlyOutViewModel(repo)
+        val result = MutableStateFlow<Boolean?>(null)
+
+        vm.returnBook(copyCode) { result.value = it }
+
+        assertEquals(true, awaitValue(result) { it != null })
+    }
+
+    @Test
+    fun `returnBook reports failure instead of a false success when there is no active loan`() {
+        val (copyCode, _) = checkoutOneCopy()
+        runBlocking { repo.returnBook(copyCode) } // already returned once
+        val vm = CurrentlyOutViewModel(repo)
+        val result = MutableStateFlow<Boolean?>(null)
+
+        vm.returnBook(copyCode) { result.value = it }
+
+        assertEquals(false, awaitValue(result) { it != null })
+    }
 }

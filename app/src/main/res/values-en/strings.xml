@@ -89,6 +89,7 @@
     <string name="error_no_active_loan">This copy is not on loan</string>
     <string name="error_limit_reached">Member has reached the borrowing limit</string>
     <string name="error_write_failed">Something went wrong. Nothing was changed.</string>
+    <string name="error_renew_not_active">This loan can no longer be renewed - it was already renewed or returned</string>
 
     <string name="nav_statistics">Statistics</string>
     <string name="stat_titles">Titles</string>

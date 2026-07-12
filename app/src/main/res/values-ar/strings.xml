@@ -89,6 +89,7 @@
     <string name="error_no_active_loan">هذه النسخة غير معارة</string>
     <string name="error_limit_reached">وصل العضو إلى الحد الأقصى للإعارة</string>
     <string name="error_write_failed">حدث خطأ ما. لم يتم تغيير أي شيء.</string>
+    <string name="error_renew_not_active">لا يمكن تجديد هذه الإعارة بعد الآن - تم تجديدها أو إرجاعها بالفعل</string>
 
     <string name="nav_statistics">الإحصائيات</string>
     <string name="stat_titles">العناوين</string>

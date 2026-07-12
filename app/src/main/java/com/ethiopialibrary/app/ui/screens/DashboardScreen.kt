@@ -71,6 +71,7 @@ import com.ethiopialibrary.app.data.ActivityWithDetails
 import com.ethiopialibrary.app.data.DashboardStats
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
+import com.ethiopialibrary.app.data.RenewResult
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.sync.SyncWorker
 import com.ethiopialibrary.app.sync.connectivityFlow
@@ -125,8 +126,9 @@ fun DashboardScreen(
             locale = locale,
             onConfirm = {
                 scope.safeLaunch {
-                    repo.renewLoan(target.loan.id)
-                    Toast.makeText(context, R.string.renew_done, Toast.LENGTH_SHORT).show()
+                    val success = repo.renewLoan(target.loan.id) is RenewResult.Success
+                    val message = if (success) R.string.renew_done else R.string.error_renew_not_active
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
             },

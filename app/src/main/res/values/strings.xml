@@ -95,6 +95,7 @@
     <string name="error_member_not_found">አባሉ አልተገኘም</string>
     <string name="error_member_not_active">አባሉ ታግዷል</string>
     <string name="error_no_active_loan">ይህ ቅጂ አልተዋሰም</string>
+    <string name="error_renew_not_active">ይህ ብድር ታድሶ ወይም ተመልሶ ስለሆነ ማደስ አልተቻለም</string>
     <string name="error_limit_reached">አባሉ የመዋስ ጣሪያ ላይ ደርሷል</string>
     <string name="error_write_failed">የሆነ ችግር ተፈጥሯል። ምንም አልተለወጠም።</string>
 
