@@ -20,9 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -126,11 +124,11 @@ class DashboardViewModel(private val repo: LibraryRepository) : ViewModel() {
     }
 
     /** Loans falling due within the configured window (not yet overdue). */
-    val dueSoon: StateFlow<List<LoanWithDetails>> = flow { emitAll(repo.dueSoonLoans()) }
+    val dueSoon: StateFlow<List<LoanWithDetails>> = repo.dueSoonLoans()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Today's desk activity feed, newest first. */
-    val recentActivity: StateFlow<List<ActivityWithDetails>> = flow { emitAll(repo.recentActivity()) }
+    val recentActivity: StateFlow<List<ActivityWithDetails>> = repo.recentActivity()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** [onResult] gets false when the entry is stale (shadowed by a later action on

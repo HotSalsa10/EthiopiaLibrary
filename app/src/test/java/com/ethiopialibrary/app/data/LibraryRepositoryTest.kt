@@ -3,8 +3,11 @@ package com.ethiopialibrary.app.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -309,6 +312,71 @@ class LibraryRepositoryTest {
         repo.renewLoan(loan.id)
 
         assertEquals(0, repo.overdueLoans().size)
+    }
+
+    // ---------- live time: overdue/due-soon update without re-subscribing ----------
+    // Regression: dashboardStats()/overdueLoansDetailed()/dueSoonLoans() used to bind
+    // now() once into the Flow's SQL, so a loan that becomes overdue purely by the
+    // clock passing (no DB write) was invisible on an always-on tablet until the
+    // ViewModel/app restarted. Each test below keeps ONE long-lived collector open
+    // (like the dashboard's own subscription) and proves it updates on its own once
+    // the clock moves - a fresh re-query wouldn't exercise the regression at all.
+    // A short real tickMillis keeps this fast without needing virtual-time
+    // coordination with Room's own background executor threads.
+
+    @Test
+    fun `dashboard overdue count updates as time passes without a new subscription`() = runBlocking {
+        val fastRepo = LibraryRepository(db, clock, tickMillis = 20L)
+        fastRepo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val copyCode = fastRepo.copyLabelRows().single().code
+        val member = fastRepo.registerMember(fullName = "Abebe")
+        fastRepo.checkout(copyCode, member.memberCode) // due in 14 days
+
+        val overdueCounts = MutableStateFlow(-1)
+        val job = launch { fastRepo.dashboardStats().collect { overdueCounts.value = it.overdueCount } }
+        withTimeout(2_000) { overdueCounts.first { it == 0 } }
+
+        clock.advanceDays(20) // now overdue - no DB write happens on its own
+
+        withTimeout(2_000) { overdueCounts.first { it == 1 } }
+        job.cancel()
+    }
+
+    @Test
+    fun `overdue list updates as time passes without a new subscription`() = runBlocking {
+        val fastRepo = LibraryRepository(db, clock, tickMillis = 20L)
+        fastRepo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val copyCode = fastRepo.copyLabelRows().single().code
+        val member = fastRepo.registerMember(fullName = "Abebe")
+        fastRepo.checkout(copyCode, member.memberCode)
+
+        val sizes = MutableStateFlow(-1)
+        val job = launch { fastRepo.overdueLoansDetailed().collect { sizes.value = it.size } }
+        withTimeout(2_000) { sizes.first { it == 0 } }
+
+        clock.advanceDays(20)
+
+        withTimeout(2_000) { sizes.first { it == 1 } }
+        job.cancel()
+    }
+
+    @Test
+    fun `due-soon list drops a loan as it crosses into overdue without a new subscription`() = runBlocking {
+        val fastRepo = LibraryRepository(db, clock, tickMillis = 20L)
+        fastRepo.addBookWithCopies(title = "Oromay", author = "A", categoryCode = "C", language = "am", copies = 1)
+        val copyCode = fastRepo.copyLabelRows().single().code
+        val member = fastRepo.registerMember(fullName = "Abebe")
+        fastRepo.checkout(copyCode, member.memberCode) // due in 14 days, default due-soon window 3 days
+        clock.advanceDays(12) // 2 days from due - within the due-soon window
+
+        val sizes = MutableStateFlow(-1)
+        val job = launch { fastRepo.dueSoonLoans().collect { sizes.value = it.size } }
+        withTimeout(2_000) { sizes.first { it == 1 } }
+
+        clock.advanceDays(3) // now overdue, no longer "due soon"
+
+        withTimeout(2_000) { sizes.first { it == 0 } }
+        job.cancel()
     }
 
     // ---------- activity log + undo (Wave 5 item 6) ----------

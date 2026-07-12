@@ -3,8 +3,12 @@ package com.ethiopialibrary.app.data
 import androidx.room.withTransaction
 import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -44,9 +48,12 @@ sealed interface AddCategoryResult {
  * sync outbox entry, so a power cut can never leave data and sync queue
  * disagreeing.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LibraryRepository(
     private val db: LibraryDatabase,
     private val clock: Clock,
+    /** How often time-sensitive Flows (overdue/due-soon) re-bind "now" - overridable in tests. */
+    private val tickMillis: Long = 60_000L,
 ) {
     companion object {
         const val DEFAULT_LOAN_PERIOD_DAYS = 14
@@ -62,6 +69,20 @@ class LibraryRepository(
     /** Midnight in the clock's own zone - the boundary for "today" in the activity feed. */
     private fun startOfToday(): Long =
         clock.instant().atZone(clock.zone).toLocalDate().atStartOfDay(clock.zone).toInstant().toEpochMilli()
+
+    /**
+     * Re-emits the current time every [tickMillis], so Flows built from it (overdue
+     * counts/lists, due-soon, today's activity feed) stay accurate on a tablet that's
+     * left running for days - a loan becoming overdue is a pure clock event, not a DB
+     * write, so nothing would otherwise invalidate a Flow whose SQL already has an
+     * old "now" bound into it.
+     */
+    private fun tick(): Flow<Long> = flow {
+        while (true) {
+            emit(now())
+            delay(tickMillis)
+        }
+    }
 
     private fun newId(): String = UUID.randomUUID().toString()
 
@@ -334,7 +355,7 @@ class LibraryRepository(
 
     /** Overdue loans for the dashboard; [query] filters by book/member/code (blank = all). */
     fun overdueLoansDetailed(query: String = ""): Flow<List<LoanWithDetails>> =
-        db.loanDao().overdueDetailedFiltered(now(), query.trim())
+        tick().flatMapLatest { nowMs -> db.loanDao().overdueDetailedFiltered(nowMs, query.trim()) }
 
     fun activeLoansForMember(memberId: String): Flow<List<LoanWithDetails>> =
         db.loanDao().activeForMemberDetailed(memberId)
@@ -343,18 +364,20 @@ class LibraryRepository(
     fun currentlyOutLoans(query: String = ""): Flow<List<LoanWithDetails>> =
         db.loanDao().allActiveDetailed(query.trim())
 
-    fun dashboardStats(): Flow<DashboardStats> = combine(
-        db.bookDao().count(),
-        db.memberDao().count(),
-        db.loanDao().activeCount(),
-        db.loanDao().overdueCount(now()),
-    ) { books, members, active, overdue ->
-        DashboardStats(
-            totalBooks = books,
-            totalMembers = members,
-            activeLoans = active,
-            overdueCount = overdue,
-        )
+    fun dashboardStats(): Flow<DashboardStats> = tick().flatMapLatest { nowMs ->
+        combine(
+            db.bookDao().count(),
+            db.memberDao().count(),
+            db.loanDao().activeCount(),
+            db.loanDao().overdueCount(nowMs),
+        ) { books, members, active, overdue ->
+            DashboardStats(
+                totalBooks = books,
+                totalMembers = members,
+                activeLoans = active,
+                overdueCount = overdue,
+            )
+        }
     }
 
     suspend fun copyWithBook(copyCode: String): CopyWithBook? =
@@ -482,15 +505,15 @@ class LibraryRepository(
         value?.let { runCatching { CalendarMode.valueOf(it) }.getOrNull() } ?: CalendarMode.DUAL
 
     /** Active loans falling due within the configured window (not yet overdue). */
-    suspend fun dueSoonLoans(): Flow<List<LoanWithDetails>> {
-        val start = now()
+    fun dueSoonLoans(): Flow<List<LoanWithDetails>> = tick().flatMapLatest { start ->
         val until = start + dueSoonDays() * MILLIS_PER_DAY
-        return db.loanDao().dueSoonDetailed(start, until)
+        db.loanDao().dueSoonDetailed(start, until)
     }
 
     /** Dashboard feed: today's desk activity, newest first, capped to the last few. */
-    suspend fun recentActivity(): Flow<List<ActivityWithDetails>> =
+    fun recentActivity(): Flow<List<ActivityWithDetails>> = tick().flatMapLatest {
         db.activityLogDao().recentDetailed(startOfToday(), RECENT_ACTIVITY_LIMIT)
+    }
 
     /**
      * Reverts a CHECKOUT/RETURN/RENEW entry (checkout -> soft-delete the loan; return ->
