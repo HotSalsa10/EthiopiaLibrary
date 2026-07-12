@@ -96,7 +96,9 @@ fun CloudBackupSection(repo: LibraryRepository) {
     } else {
         val scope = rememberCoroutineScope()
         var showRestoreConfirm by remember { mutableStateOf(false) }
+        var showPendingWarning by remember { mutableStateOf(false) }
         val lastResult by repo.lastSyncResult().collectAsStateWithLifecycle(null)
+        val pendingCount by repo.pendingSyncCount().collectAsStateWithLifecycle(0)
         val backingUp by remember { SyncWorker.isBackupRunning(context) }
             .collectAsStateWithLifecycle(false)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,7 +109,10 @@ fun CloudBackupSection(repo: LibraryRepository) {
                 Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
             }
             BigOutlinedButton(stringResource(R.string.restore_from_cloud)) {
-                showRestoreConfirm = true
+                // Restoring is an unconditional upsert - any local edit not yet
+                // backed up would be silently overwritten by the older cloud
+                // value, so warn before that can happen instead of after.
+                if (pendingCount > 0) showPendingWarning = true else showRestoreConfirm = true
             }
             Text(
                 stringResource(R.string.auto_backup_note),
@@ -117,6 +122,31 @@ fun CloudBackupSection(repo: LibraryRepository) {
             TextButton(onClick = { auth.signOut() }) {
                 Text(stringResource(R.string.sign_out))
             }
+        }
+        if (showPendingWarning) {
+            AlertDialog(
+                onDismissRequest = { showPendingWarning = false },
+                title = { Text(stringResource(R.string.restore_from_cloud)) },
+                text = { Text(stringResource(R.string.restore_pending_warning, pendingCount)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showPendingWarning = false
+                        showRestoreConfirm = true
+                    }) { Text(stringResource(R.string.restore_anyway)) }
+                },
+                dismissButton = {
+                    Column {
+                        TextButton(onClick = {
+                            showPendingWarning = false
+                            SyncWorker.backupNow(context)
+                            Toast.makeText(context, R.string.backup_started, Toast.LENGTH_SHORT).show()
+                        }) { Text(stringResource(R.string.backup_now)) }
+                        TextButton(onClick = { showPendingWarning = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                },
+            )
         }
         if (showRestoreConfirm) {
             AlertDialog(

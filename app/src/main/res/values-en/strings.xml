@@ -159,6 +159,8 @@
     <string name="restore_cloud_empty">No backup found in the cloud.</string>
     <string name="restore_may_be_incomplete">The restored data may be incomplete - the backup that produced it may have been interrupted. Please contact the maintainer.</string>
     <string name="restore_done_with_warnings">Restore complete, but %1$d record(s) were skipped.</string>
+    <string name="restore_pending_warning">%1$d change(s) have not been backed up yet. Restoring will overwrite them.</string>
+    <string name="restore_anyway">Restore anyway</string>
     <string name="backup_nudge_text">Internet is available — back up now?</string>
     <string name="backup_nudge_later">Later</string>
     <string name="export_backup_file">Export backup file</string>
