@@ -44,7 +44,20 @@ Write-Host "Releasing versionCode=$versionCode versionName=$versionName"
 $latestJsonUrl = "https://github.com/$repo/releases/latest/download/latest.json"
 $previousVersionCode = $null
 try {
-    $previous = Invoke-RestMethod -Uri $latestJsonUrl -TimeoutSec 15
+    # GitHub serves release assets (incl. latest.json) with
+    # Content-Type: application/octet-stream, not application/json - so
+    # Invoke-RestMethod never auto-deserializes it and just returns the raw
+    # response as a System.String, decoded with a guessed (wrong) encoding
+    # since there's no text content-type to hint at UTF-8. `.versionCode` on
+    # a bare/mis-decoded string silently evaluates to $null (no error), and
+    # [int]$null is 0, not a parse failure - so the "newer than last
+    # published" guard below always compared against 0 and never actually
+    # blocked anything. WebClient with an explicit UTF-8 Encoding decodes
+    # correctly (and strips a real BOM) regardless of content-type.
+    $webClient = New-Object System.Net.WebClient
+    $webClient.Encoding = [System.Text.Encoding]::UTF8
+    $previousRaw = $webClient.DownloadString($latestJsonUrl)
+    $previous = $previousRaw.TrimStart([char]0xFEFF) | ConvertFrom-Json
     $previousVersionCode = [int]$previous.versionCode
     Write-Host "Previously published versionCode: $previousVersionCode"
 } catch {
@@ -83,7 +96,13 @@ $manifest = [ordered]@{
     notes_en    = $NotesEn
 }
 $manifestPath = Join-Path $repoRoot "latest.json"
-$manifest | ConvertTo-Json | Set-Content -Path $manifestPath -Encoding utf8
+# `Set-Content -Encoding utf8` always prepends a UTF-8 BOM in Windows
+# PowerShell 5.1 (no utf8NoBOM option here) - a leading BOM breaks strict
+# JSON parsers, including this same script's own ConvertFrom-Json when it
+# later reads a previously-published manifest back. Write via .NET directly
+# to keep the artifact plain UTF-8, no BOM.
+$manifestJson = $manifest | ConvertTo-Json
+[System.IO.File]::WriteAllText($manifestPath, $manifestJson, (New-Object System.Text.UTF8Encoding($false)))
 
 # --- publish: tag, APK, and manifest together, so `releases/latest` always points at a consistent pair ---
 Write-Host "Creating GitHub release $tag..."
