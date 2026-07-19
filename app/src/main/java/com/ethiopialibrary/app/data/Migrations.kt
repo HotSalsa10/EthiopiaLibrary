@@ -36,5 +36,19 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_3_4, MIGRATION_4_5)
+    /** v6: books gain volumeCount (volumes per copy), backfilled from existing copies. */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `books` ADD COLUMN `volumeCount` INTEGER NOT NULL DEFAULT 1")
+            // Backfill: a book whose copies use volume numbers 1..N is an N-volume
+            // work; volumeNumber 0 (single-volume convention) and no copies mean 1.
+            db.execSQL(
+                "UPDATE `books` SET `volumeCount` = COALESCE(" +
+                    "(SELECT MAX(c.`volumeNumber`) FROM `book_copies` c " +
+                    "WHERE c.`bookId` = `books`.`id` AND c.`volumeNumber` > 0), 1)",
+            )
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }

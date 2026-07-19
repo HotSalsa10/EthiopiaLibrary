@@ -1,5 +1,6 @@
 package com.ethiopialibrary.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -51,6 +52,13 @@ data class BookEntity(
     val language: String,
     val isbn: String? = null,
     val notes: String? = null,
+    /**
+     * Number of physical volumes that make up ONE copy of this title
+     * (عدد المجلدات في النسخة الواحدة). 1 = single-volume work, whose copies
+     * keep the volumeNumber = 0 convention.
+     */
+    @ColumnInfo(defaultValue = "1")
+    val volumeCount: Int = 1,
     val createdAt: Long,
     val updatedAt: Long,
     val isDeleted: Boolean = false,

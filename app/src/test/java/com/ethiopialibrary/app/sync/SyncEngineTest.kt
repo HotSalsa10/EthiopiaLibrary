@@ -73,6 +73,7 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.Success)
         assertEquals(4, (result as SyncResult.Success).uploaded) // book, copy, member, loan
         assertEquals("Oromay", cloud.collections.getValue("books").getValue(bookId)["title"])
+        assertTrue(cloud.collections.getValue("books").getValue(bookId).containsKey("volumeCount"))
         assertEquals("Abebe Kebede", cloud.collections.getValue("members").getValue(memberId)["fullName"])
         assertEquals(1, cloud.collections.getValue("book_copies").size)
         assertEquals(1, cloud.collections.getValue("loans").size)
@@ -361,6 +362,27 @@ class SyncEngineTest {
             val outcome = SyncEngine(db2, cloud, clock).restore()
             assertTrue(outcome.manifestMissing)
             assertFalse(outcome.incomplete) // no manifest to compare against - can't claim incomplete
+        } finally {
+            db2.close()
+        }
+    }
+
+    @Test
+    fun `restore defaults volumeCount for pre-v6 book documents`() = runBlocking {
+        // Simulates a cloud document written before v6: no volumeCount key at all.
+        cloud.collections["books"] = mutableMapOf(
+            "b1" to mapOf(
+                "title" to "Old Book", "author" to "A", "categoryCode" to "C", "bookNumber" to 1L,
+                "language" to "am", "isbn" to null, "notes" to null,
+                "createdAt" to 1L, "updatedAt" to 1L, "isDeleted" to false,
+            ),
+        )
+
+        val db2 = freshDb()
+        try {
+            SyncEngine(db2, cloud, clock).restore()
+
+            assertEquals(1, db2.bookDao().byId("b1")!!.volumeCount)
         } finally {
             db2.close()
         }
