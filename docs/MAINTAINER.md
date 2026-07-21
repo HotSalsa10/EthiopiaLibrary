@@ -152,9 +152,9 @@ from the operator's real local data - verify row counts in the next
 
 ## Migration floor
 
-`LibraryDatabase` is at schema version 5; `Migrations.kt` only implements
-`3→4` and `4→5`. This is deliberate, not a gap: no real deployed tablet
-ever ran schema v1 or v2 (those existed only during pre-release
+`LibraryDatabase` is at schema version 6; `Migrations.kt` implements
+`3→4`, `4→5`, and `5→6`. This is deliberate, not a gap: no real deployed
+tablet ever ran schema v1 or v2 (those existed only during pre-release
 development), so v3 is the actual floor any real backup/restore or
 in-place upgrade will ever need to start from. If you ever need to bump the
 schema again, the policy in the root `CLAUDE.md` applies: every version

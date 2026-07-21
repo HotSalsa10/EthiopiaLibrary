@@ -228,7 +228,7 @@ private fun AddBookDialog(
                 )
                 OutlinedTextField(
                     copies,
-                    { copies = it.filter(Char::isDigit) },
+                    { copies = it.filter(Char::isDigit).take(3) },
                     label = { Text(stringResource(R.string.field_copies)) },
                     singleLine = true,
                     modifier = Modifier.focusRequester(copiesFocus),
