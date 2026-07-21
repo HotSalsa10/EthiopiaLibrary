@@ -86,6 +86,7 @@
 
     <string name="error_copy_not_found">Copy not found</string>
     <string name="error_book_not_found">Book not found</string>
+    <string name="error_category_not_found">Category not found</string>
     <string name="error_copy_not_available">Copy is not available</string>
     <string name="error_member_not_found">Member not found</string>
     <string name="error_member_not_active">Member is suspended</string>

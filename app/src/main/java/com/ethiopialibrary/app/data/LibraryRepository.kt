@@ -246,17 +246,35 @@ class LibraryRepository(
      * isDeleted), so no existing row can hold any of the new codes, and the new
      * codes are mutually distinct because (copyNumber, volumeNumber) is unique
      * within a book.
+     *
+     * [fieldEdits] optionally carries other field edits (title/author/language/isbn/...)
+     * made in the same user action; when provided, they are merged into this SAME
+     * transaction so the whole edit (fields + category move) commits or fails
+     * atomically - there is never a window where one lands without the other.
      */
-    suspend fun changeBookCategory(bookId: String, newCategoryCode: String): ChangeCategoryResult =
+    suspend fun changeBookCategory(
+        bookId: String,
+        newCategoryCode: String,
+        fieldEdits: BookEntity? = null,
+    ): ChangeCategoryResult =
         db.withTransaction {
             val book = db.bookDao().byId(bookId)
             if (book == null || book.isDeleted) return@withTransaction ChangeCategoryResult.BookNotFound
             val code = newCategoryCode.trim().uppercase()
-            if (code == book.categoryCode) return@withTransaction ChangeCategoryResult.SameCategory
+            if (code == book.categoryCode) {
+                if (fieldEdits != null) {
+                    db.bookDao().update(
+                        fieldEdits.copy(categoryCode = book.categoryCode, bookNumber = book.bookNumber, updatedAt = now()),
+                    )
+                    enqueueSync("book", book.id)
+                }
+                return@withTransaction ChangeCategoryResult.SameCategory
+            }
             db.categoryDao().byCode(code) ?: return@withTransaction ChangeCategoryResult.CategoryNotFound
             val t = now()
             val newNumber = (db.bookDao().maxBookNumber(code) ?: 0) + 1
-            val moved = book.copy(categoryCode = code, bookNumber = newNumber, updatedAt = t)
+            val base = fieldEdits ?: book
+            val moved = base.copy(categoryCode = code, bookNumber = newNumber, updatedAt = t)
             db.bookDao().update(moved)
             enqueueSync("book", book.id)
             val copies = db.bookCopyDao().allForBookIncludingDeleted(bookId)

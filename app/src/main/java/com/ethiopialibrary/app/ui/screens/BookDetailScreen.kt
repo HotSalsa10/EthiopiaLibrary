@@ -50,6 +50,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.AddCategoryResult
 import com.ethiopialibrary.app.data.BookEntity
 import com.ethiopialibrary.app.data.CategoryEntity
+import com.ethiopialibrary.app.data.ChangeCategoryResult
 import com.ethiopialibrary.app.data.CopyRow
 import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.DeleteBookResult
@@ -143,11 +144,24 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
                 TextButton(
                     onClick = {
                         scope.safeLaunch {
-                            repo.updateBook(updatedBook)
-                            repo.changeBookCategory(bookId, newCode)
-                            refresh++
+                            val result = repo.changeBookCategory(bookId, newCode, fieldEdits = updatedBook)
                             pendingCategoryChange = null
-                            showReprintOffer = true
+                            when (result) {
+                                is ChangeCategoryResult.Success -> {
+                                    refresh++
+                                    showReprintOffer = true
+                                }
+                                ChangeCategoryResult.BookNotFound -> {
+                                    Toast.makeText(context, context.getString(R.string.error_book_not_found), Toast.LENGTH_SHORT).show()
+                                }
+                                ChangeCategoryResult.CategoryNotFound -> {
+                                    Toast.makeText(context, context.getString(R.string.error_category_not_found), Toast.LENGTH_SHORT).show()
+                                }
+                                ChangeCategoryResult.SameCategory -> {
+                                    // Not reachable via this dialog (only shown when newCode differs from the
+                                    // book's current category), but handled for exhaustiveness: no-op, no toast.
+                                }
+                            }
                         }
                     },
                 ) { Text(stringResource(R.string.save)) }

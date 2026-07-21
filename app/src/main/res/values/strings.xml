@@ -97,6 +97,8 @@
     <string name="error_copy_not_found">ቅጂው አልተገኘም</string>
     <!-- TODO: native review -->
     <string name="error_book_not_found">መጽሐፉ አልተገኘም</string>
+    <!-- TODO: native review -->
+    <string name="error_category_not_found">ምድቡ አልተገኘም</string>
     <string name="error_copy_not_available">ቅጂው አሁን አይገኝም</string>
     <string name="error_member_not_found">አባሉ አልተገኘም</string>
     <string name="error_member_not_active">አባሉ ታግዷል</string>

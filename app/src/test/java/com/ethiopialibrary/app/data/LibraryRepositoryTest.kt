@@ -1244,4 +1244,19 @@ class LibraryRepositoryTest {
         assertTrue(pending.any { it.entityType == "book_copy" && it.entityId == copy1.id })
         assertTrue(pending.any { it.entityType == "book_copy" && it.entityId == copy2.id })
     }
+
+    @Test
+    fun `changeBookCategory with fieldEdits applies both the category change and the field edits atomically`() = runBlocking {
+        val book = repo.addBook(title = "A", author = "x", categoryCode = "TF", language = "am")
+        repo.addCategory("Aqeedah", "AQ")
+
+        val result = repo.changeBookCategory(book.id, "AQ", fieldEdits = book.copy(title = "New Title", author = "New Author"))
+
+        assertTrue(result is ChangeCategoryResult.Success)
+        val persisted = db.bookDao().byId(book.id)!!
+        assertEquals("New Title", persisted.title)
+        assertEquals("New Author", persisted.author)
+        assertEquals("AQ", persisted.categoryCode)
+        assertEquals(1, persisted.bookNumber)
+    }
 }
