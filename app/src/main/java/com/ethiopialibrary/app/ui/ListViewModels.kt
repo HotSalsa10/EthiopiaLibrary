@@ -249,22 +249,29 @@ class CurrentlyOutViewModel(private val repo: LibraryRepository) : ViewModel() {
     private val _dueSoonDays = MutableStateFlow<Int?>(null)
     val dueSoonDays: StateFlow<Int?> = _dueSoonDays.asStateFlow()
 
+    /** Configured loan period, used to prefill the renew dialog's editable days field. */
+    private val _loanPeriodDays = MutableStateFlow<Int?>(null)
+    val loanPeriodDays: StateFlow<Int?> = _loanPeriodDays.asStateFlow()
+
     init {
-        viewModelScope.launch { _dueSoonDays.value = repo.dueSoonDays() }
+        viewModelScope.launch {
+            _dueSoonDays.value = repo.dueSoonDays()
+            _loanPeriodDays.value = repo.loanPeriodDays()
+        }
     }
 
     fun setQuery(value: String) {
         _query.value = value
     }
 
-    /** Due date a renewal would set, for the confirm dialog's preview. */
-    suspend fun renewPreviewDueAt(loanId: String): Long = repo.renewalPreviewDueAt(loanId)
+    /** Due date renewing with [periodDays] would set, for the confirm dialog's preview. */
+    suspend fun renewPreviewDueAt(loanId: String, periodDays: Int): Long = repo.renewalPreviewDueAt(loanId, periodDays)
 
     /** [onDone] gets the outcome so the caller can show the specific reason a
      * renewal failed (already returned/undone/deleted, or the clock gate). */
-    fun renew(loanId: String, onDone: (RenewResult) -> Unit) {
+    fun renew(loanId: String, periodDays: Int, onDone: (RenewResult) -> Unit) {
         viewModelScope.safeLaunch {
-            onDone(repo.renewLoan(loanId))
+            onDone(repo.renewLoan(loanId, periodDays))
         }
     }
 

@@ -85,15 +85,16 @@ fun MemberDetailScreen(repo: LibraryRepository, memberId: String, onBack: () -> 
     var renewTarget by remember { mutableStateOf<LoanWithDetails?>(null) }
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt(target.loan.id) }
+        val defaultDays by produceState(LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS) { value = repo.loanPeriodDays() }
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,
-            newDueAt = preview,
+            initialDays = defaultDays,
+            previewDueAt = { d -> repo.renewalPreviewDueAt(target.loan.id, d) },
             locale = LocalConfiguration.current.locales[0],
-            onConfirm = {
+            onConfirm = { d ->
                 scope.safeLaunch {
-                    val result = repo.renewLoan(target.loan.id)
+                    val result = repo.renewLoan(target.loan.id, d)
                     Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null

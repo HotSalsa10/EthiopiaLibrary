@@ -453,7 +453,7 @@ class LibraryRepository(
      * shortens it: a loan checked out with a longer-than-default period keeps
      * its later due date if the global setting would compute a nearer one.
      */
-    suspend fun renewLoan(loanId: String): RenewResult =
+    suspend fun renewLoan(loanId: String, periodDays: Int? = null): RenewResult =
         db.withTransaction {
             if (isClockWrong()) return@withTransaction RenewResult.ClockWrong
             val loan = db.loanDao().byId(loanId)
@@ -461,9 +461,12 @@ class LibraryRepository(
                 return@withTransaction RenewResult.NotActive
             }
             val t = now()
-            val periodDays = db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
-                ?: DEFAULT_LOAN_PERIOD_DAYS
-            val renewed = loan.copy(dueAt = maxOf(loan.dueAt, t + periodDays * MILLIS_PER_DAY), updatedAt = t)
+            val effectivePeriod = (
+                periodDays?.takeIf { it > 0 }
+                    ?: db.settingsDao().get(SettingKeys.LOAN_PERIOD_DAYS)?.toIntOrNull()
+                    ?: DEFAULT_LOAN_PERIOD_DAYS
+                ).coerceIn(1, MAX_LOAN_PERIOD_DAYS)
+            val renewed = loan.copy(dueAt = maxOf(loan.dueAt, t + effectivePeriod * MILLIS_PER_DAY), updatedAt = t)
             db.loanDao().update(renewed)
             enqueueSync("loan", renewed.id)
             db.activityLogDao().insert(
@@ -560,8 +563,9 @@ class LibraryRepository(
      * The due date renewing [loanId] would actually set, for a confirm preview -
      * mirrors renewLoan()'s never-shorten rule so the preview never lies.
      */
-    suspend fun renewalPreviewDueAt(loanId: String): Long {
-        val computed = now() + loanPeriodDays() * MILLIS_PER_DAY
+    suspend fun renewalPreviewDueAt(loanId: String, periodDays: Int? = null): Long {
+        val effective = (periodDays?.takeIf { it > 0 } ?: loanPeriodDays()).coerceIn(1, MAX_LOAN_PERIOD_DAYS)
+        val computed = now() + effective * MILLIS_PER_DAY
         val currentDueAt = db.loanDao().byId(loanId)?.dueAt
         return if (currentDueAt != null) maxOf(currentDueAt, computed) else computed
     }

@@ -127,15 +127,16 @@ fun DashboardScreen(
     }
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = repo.renewalPreviewDueAt(target.loan.id) }
+        val defaultDays by produceState(LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS) { value = repo.loanPeriodDays() }
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,
-            newDueAt = preview,
+            initialDays = defaultDays,
+            previewDueAt = { d -> repo.renewalPreviewDueAt(target.loan.id, d) },
             locale = locale,
-            onConfirm = {
+            onConfirm = { d ->
                 scope.safeLaunch {
-                    val result = repo.renewLoan(target.loan.id)
+                    val result = repo.renewLoan(target.loan.id, d)
                     Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null

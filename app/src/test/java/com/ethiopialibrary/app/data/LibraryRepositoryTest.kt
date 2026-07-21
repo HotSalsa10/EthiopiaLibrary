@@ -421,6 +421,73 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `renewLoan with a custom period extends from today by that many days`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        clock.advanceDays(10)
+        val result = repo.renewLoan(loan.id, 30)
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals(
+            clock.instant().plus(30, ChronoUnit.DAYS).toEpochMilli(),
+            (result as RenewResult.Success).loan.dueAt,
+        )
+    }
+
+    @Test
+    fun `renewLoan custom period never shortens the due date`() = runBlocking {
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode, periodDays = 60) as CheckoutResult.Success).loan
+        val originalDueAt = loan.dueAt
+
+        val result = repo.renewLoan(loan.id, 7) // 7 < 60, must not shorten
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals(originalDueAt, (result as RenewResult.Success).loan.dueAt)
+    }
+
+    @Test
+    fun `renewalPreviewDueAt honors the custom period and never-shorten`() = runBlocking {
+        val (_, copies) = addBookWithCopies(2)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        clock.advanceDays(5)
+        val preview = repo.renewalPreviewDueAt(loan.id, 30)
+        val result = repo.renewLoan(loan.id, 30)
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals((result as RenewResult.Success).loan.dueAt, preview)
+
+        // A short period previewed against a loan already due far in the future
+        // must not preview an earlier date than the loan currently has.
+        val farLoan = (repo.checkout(copies[1].copyCode, member.memberCode, periodDays = 60) as CheckoutResult.Success).loan
+        val shortPreview = repo.renewalPreviewDueAt(farLoan.id, 1)
+        assertEquals(farLoan.dueAt, shortPreview)
+    }
+
+    @Test
+    fun `renewLoan with null period still uses the configured setting`() = runBlocking {
+        repo.setLoanPeriodDays(21)
+        val (_, copies) = addBookWithCopies(1)
+        val member = addMember()
+        val loan = (repo.checkout(copies[0].copyCode, member.memberCode) as CheckoutResult.Success).loan
+
+        clock.advanceDays(10) // if the null path fell back to the 14-day default instead of the
+        // 21-day setting, the renewed due date would land 7 days earlier than asserted below.
+        val result = repo.renewLoan(loan.id)
+
+        assertTrue(result is RenewResult.Success)
+        assertEquals(
+            clock.instant().plus(21, ChronoUnit.DAYS).toEpochMilli(),
+            (result as RenewResult.Success).loan.dueAt,
+        )
+    }
+
+    @Test
     fun `renewing clears overdue status`() = runBlocking {
         val (_, copies) = addBookWithCopies(1)
         val member = addMember()

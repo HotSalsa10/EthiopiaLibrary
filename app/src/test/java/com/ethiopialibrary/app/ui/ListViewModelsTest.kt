@@ -238,7 +238,7 @@ class ListViewModelsTest {
         val vm = CurrentlyOutViewModel(repo)
         val result = MutableStateFlow<com.ethiopialibrary.app.data.RenewResult?>(null)
 
-        vm.renew(loanId) { result.value = it }
+        vm.renew(loanId, 14) { result.value = it }
 
         assertTrue(awaitValue(result) { it != null } is com.ethiopialibrary.app.data.RenewResult.Success)
     }
@@ -250,7 +250,7 @@ class ListViewModelsTest {
         val vm = CurrentlyOutViewModel(repo)
         val result = MutableStateFlow<com.ethiopialibrary.app.data.RenewResult?>(null)
 
-        vm.renew(loanId) { result.value = it }
+        vm.renew(loanId, 14) { result.value = it }
 
         assertTrue(awaitValue(result) { it != null } is com.ethiopialibrary.app.data.RenewResult.NotActive)
     }

@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanWithDetails
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AppSearchField
@@ -89,14 +89,15 @@ fun CurrentlyOutScreen(
     val now = System.currentTimeMillis()
 
     renewTarget?.let { target ->
-        val preview by produceState<Long?>(null, target) { value = vm.renewPreviewDueAt(target.loan.id) }
+        val defaultDays by vm.loanPeriodDays.collectAsStateWithLifecycle()
         RenewConfirmDialog(
             bookTitle = target.bookTitle,
             memberName = target.memberName,
-            newDueAt = preview,
+            initialDays = defaultDays ?: LibraryRepository.DEFAULT_LOAN_PERIOD_DAYS,
+            previewDueAt = { d -> vm.renewPreviewDueAt(target.loan.id, d) },
             locale = locale,
-            onConfirm = {
-                vm.renew(target.loan.id) { result ->
+            onConfirm = { d ->
+                vm.renew(target.loan.id, d) { result ->
                     Toast.makeText(context, renewResultMessageRes(result), Toast.LENGTH_SHORT).show()
                 }
                 renewTarget = null
