@@ -143,7 +143,10 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
                                     onBack()
                                 }
                                 is DeleteBookResult.BlockedByActiveLoans -> deleteBlockedCount = r.activeLoans
-                                else -> onBack()
+                                DeleteBookResult.NotFound -> {
+                                    Toast.makeText(context, context.getString(R.string.error_book_not_found), Toast.LENGTH_SHORT).show()
+                                    onBack()
+                                }
                             }
                         }
                     },

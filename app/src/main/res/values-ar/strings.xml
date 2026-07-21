@@ -87,6 +87,8 @@
     <string name="skip">تخطٍّ</string>
 
     <string name="error_copy_not_found">النسخة غير موجودة</string>
+    <!-- TODO: native review -->
+    <string name="error_book_not_found">الكتاب غير موجود</string>
     <string name="error_copy_not_available">النسخة غير متاحة حالياً</string>
     <string name="error_member_not_found">العضو غير موجود</string>
     <string name="error_member_not_active">العضو موقوف</string>
