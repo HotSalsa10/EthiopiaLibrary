@@ -9,6 +9,7 @@ import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.data.LoanEntity
 import com.ethiopialibrary.app.data.MemberEntity
 import com.ethiopialibrary.app.data.MemberStatus
+import com.ethiopialibrary.app.data.MemberWithLoanCount
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -87,6 +88,18 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     fun setCopyQuery(value: String) {
         _copyQuery.value = value
+    }
+
+    // Member-finder search (second step): type a name or code, pick the member.
+    private val _memberQuery = MutableStateFlow("")
+    val memberQuery: StateFlow<String> = _memberQuery.asStateFlow()
+
+    val memberResults: StateFlow<List<MemberWithLoanCount>> = _memberQuery
+        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else repo.membersWithLoanCounts(q) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun setMemberQuery(value: String) {
+        _memberQuery.value = value
     }
 
     /** Staff override of the loan length for the current checkout. */
@@ -246,6 +259,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
         // Keep the loaded loan-period default so staff don't re-discover it.
         _state.update { UiState(loanPeriodDays = it.loanPeriodDays) }
         _copyQuery.value = ""
+        _memberQuery.value = ""
     }
 
     /**
@@ -263,6 +277,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
             )
         }
         _copyQuery.value = ""
+        _memberQuery.value = ""
     }
 
     // ---------- batch checkout: member-first basket (Wave 5 item 4) ----------
@@ -341,5 +356,6 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     fun resetBatch() {
         _batchState.value = BatchUiState()
+        _memberQuery.value = ""
     }
 }

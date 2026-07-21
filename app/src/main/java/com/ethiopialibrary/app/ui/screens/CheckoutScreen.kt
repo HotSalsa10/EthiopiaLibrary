@@ -42,6 +42,7 @@ import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.CopyWithBook
 import com.ethiopialibrary.app.data.LoanEntity
 import com.ethiopialibrary.app.data.MemberEntity
+import com.ethiopialibrary.app.data.MemberWithLoanCount
 import com.ethiopialibrary.app.dates.DualCalendarFormatter
 import com.ethiopialibrary.app.ui.AddMemberDialog
 import com.ethiopialibrary.app.ui.AppCard
@@ -63,6 +64,8 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val copyQuery by vm.copyQuery.collectAsStateWithLifecycle()
     val copyResults by vm.copyResults.collectAsStateWithLifecycle()
+    val memberQuery by vm.memberQuery.collectAsStateWithLifecycle()
+    val memberResults by vm.memberResults.collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     var showBatch by remember { mutableStateOf(false) }
     var showAddMember by remember { mutableStateOf(false) }
@@ -147,6 +150,8 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                                             vm = vm,
                                             copyQuery = copyQuery,
                                             copyResults = copyResults,
+                                            memberQuery = memberQuery,
+                                            memberResults = memberResults,
                                             onShowBatch = { showBatch = true },
                                             onShowAddMember = { showAddMember = true },
                                         )
@@ -174,6 +179,8 @@ fun CheckoutScreen(vm: CheckoutViewModel, onBack: () -> Unit) {
                                     vm = vm,
                                     copyQuery = copyQuery,
                                     copyResults = copyResults,
+                                    memberQuery = memberQuery,
+                                    memberResults = memberResults,
                                     onShowBatch = { showBatch = true },
                                     onShowAddMember = { showAddMember = true },
                                 )
@@ -276,6 +283,8 @@ private fun CheckoutActiveStepContent(
     vm: CheckoutViewModel,
     copyQuery: String,
     copyResults: List<CopyWithBook>,
+    memberQuery: String,
+    memberResults: List<MemberWithLoanCount>,
     onShowBatch: () -> Unit,
     onShowAddMember: () -> Unit,
 ) {
@@ -294,11 +303,13 @@ private fun CheckoutActiveStepContent(
         }
 
         state.member == null -> {
-            CodeEntry(stringResource(R.string.enter_member_code), vm::submitMemberCode)
-            if (state.error == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
-                Spacer(Modifier.height(8.dp))
-                BigOutlinedButton(stringResource(R.string.add_member)) { onShowAddMember() }
-            }
+            MemberPickerStep(
+                query = memberQuery,
+                results = memberResults,
+                onQueryChange = vm::setMemberQuery,
+                onPick = vm::submitMemberCode,
+                onAddMember = onShowAddMember,
+            )
         }
 
         state.memberOverdueCount > 0 && !state.overdueWarningAcknowledged -> {
@@ -337,6 +348,8 @@ private fun CheckoutReceiptContent(copy: CopyWithBook?, member: MemberEntity?) {
 @Composable
 private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
     val state by vm.batchState.collectAsStateWithLifecycle()
+    val memberQuery by vm.memberQuery.collectAsStateWithLifecycle()
+    val memberResults by vm.memberResults.collectAsStateWithLifecycle()
     val results = state.results
     // CodeEntry doesn't clear its own text after submit (fine for the one-shot steps
     // elsewhere, which unmount on success) - here it's reused for every scan, so force a
@@ -376,6 +389,8 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                                         vm = vm,
                                         attempt = attempt,
                                         onAttemptChange = { attempt = it },
+                                        memberQuery = memberQuery,
+                                        memberResults = memberResults,
                                         onShowAddMember = { showAddMember = true },
                                     )
                                 }
@@ -404,6 +419,8 @@ private fun BatchCheckoutSection(vm: CheckoutViewModel, onExit: () -> Unit) {
                                 vm = vm,
                                 attempt = attempt,
                                 onAttemptChange = { attempt = it },
+                                memberQuery = memberQuery,
+                                memberResults = memberResults,
                                 onShowAddMember = { showAddMember = true },
                             )
                             Spacer(Modifier.height(16.dp))
@@ -490,21 +507,25 @@ private fun BatchResultsContent(
     BigOutlinedButton(stringResource(R.string.batch_done)) { vm.resetBatch(); onExit() }
 }
 
-/** Whichever batch step is active: member CodeEntry, or the per-item CodeEntry (item 9). */
+/** Whichever batch step is active: member picker, or the per-item CodeEntry (item 9). */
 @Composable
 private fun BatchActiveStepContent(
     state: CheckoutViewModel.BatchUiState,
     vm: CheckoutViewModel,
     attempt: Int,
     onAttemptChange: (Int) -> Unit,
+    memberQuery: String,
+    memberResults: List<MemberWithLoanCount>,
     onShowAddMember: () -> Unit,
 ) {
     if (state.member == null) {
-        CodeEntry(stringResource(R.string.enter_member_code), vm::submitBatchMemberCode)
-        if (state.memberError == CheckoutViewModel.CheckoutUiError.MEMBER_NOT_FOUND) {
-            Spacer(Modifier.height(8.dp))
-            BigOutlinedButton(stringResource(R.string.add_member)) { onShowAddMember() }
-        }
+        MemberPickerStep(
+            query = memberQuery,
+            results = memberResults,
+            onQueryChange = vm::setMemberQuery,
+            onPick = vm::submitBatchMemberCode,
+            onAddMember = onShowAddMember,
+        )
     } else {
         key(attempt) {
             CodeEntry(stringResource(R.string.enter_copy_code)) { code ->

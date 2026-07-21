@@ -100,6 +100,48 @@ class CheckoutViewModelTest {
     }
 
     @Test
+    fun `member search lists matches and picking one adopts the member`() {
+        runBlocking {
+            repo.registerMember(fullName = "Abebe Kebede")
+            repo.registerMember(fullName = "Sara Ali")
+        }
+        val vm = CheckoutViewModel(repo)
+
+        vm.setMemberQuery("Abe")
+        val results = awaitValue(vm.memberResults) { it.size == 1 }
+        val picked = results.single().member
+
+        vm.submitMemberCode(picked.memberCode)
+        val state = awaitValue(vm.state) { it.member != null }
+        assertEquals(picked, state.member)
+    }
+
+    @Test
+    fun `blank member query returns no results`() {
+        runBlocking { repo.registerMember(fullName = "Abebe Kebede") }
+        val vm = CheckoutViewModel(repo)
+
+        vm.setMemberQuery("x")
+        awaitValue(vm.memberResults) { true } // let the search settle before clearing it
+        vm.setMemberQuery("")
+
+        assertTrue(vm.memberResults.value.isEmpty())
+    }
+
+    @Test
+    fun `reset and startAnotherForSameMember clear the member search query`() {
+        val vm = CheckoutViewModel(repo)
+
+        vm.setMemberQuery("x")
+        vm.reset()
+        assertEquals("", vm.memberQuery.value)
+
+        vm.setMemberQuery("x")
+        vm.startAnotherForSameMember()
+        assertEquals("", vm.memberQuery.value)
+    }
+
+    @Test
     fun `confirm surfaces the clock-wrong error and creates no loan`() {
         val (copyCode, memberCode) = addCopyAndMember()
         val wrongClockRepo = LibraryRepository(db, clock, buildTimeMillis = clock.instant().toEpochMilli() + 1)
