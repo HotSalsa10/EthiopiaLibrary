@@ -31,6 +31,8 @@
     <string name="field_isbn">ISBN (optional)</string>
     <string name="isbn_label">ISBN: %1$s</string>
     <string name="field_copies">Number of copies</string>
+    <string name="field_volumes">Volumes per copy</string>
+    <string name="volumes_per_copy">%1$d volumes per copy</string>
     <string name="available_of_total">%1$d of %2$d available</string>
     <string name="export_labels">Export QR labels (PDF)</string>
     <string name="add_copy">Add copy</string>

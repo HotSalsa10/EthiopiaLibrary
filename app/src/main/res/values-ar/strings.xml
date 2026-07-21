@@ -31,6 +31,10 @@
     <string name="field_isbn">‏ISBN (اختياري)</string>
     <string name="isbn_label">‏ISBN: %1$s</string>
     <string name="field_copies">عدد النسخ</string>
+    <!-- TODO: native review -->
+    <string name="field_volumes">عدد المجلدات في النسخة الواحدة</string>
+    <!-- TODO: native review -->
+    <string name="volumes_per_copy">%1$d مجلدات في النسخة الواحدة</string>
     <string name="available_of_total">‏%1$d من %2$d متاح</string>
     <string name="export_labels">تصدير ملصقات QR ‏(PDF)</string>
     <string name="add_copy">إضافة نسخة</string>

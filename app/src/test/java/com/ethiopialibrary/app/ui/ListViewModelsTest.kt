@@ -71,7 +71,7 @@ class ListViewModelsTest {
     fun `addBook creates book with requested number of copies`() {
         val vm = BooksViewModel(repo)
 
-        vm.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am", isbn = null, copies = 3)
+        vm.addBook(title = "Oromay", author = "Bealu Girma", categoryCode = "Fiction", language = "am", isbn = null, copies = 3, volumes = 1)
 
         val row = awaitValue(vm.books) { it.size == 1 }.single()
         assertEquals(3, row.totalCopies)

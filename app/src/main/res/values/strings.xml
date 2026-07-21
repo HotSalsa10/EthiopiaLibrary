@@ -35,6 +35,10 @@
     <string name="field_isbn">ISBN (አማራጭ)</string>
     <string name="isbn_label">ISBN: %1$s</string>
     <string name="field_copies">የቅጂዎች ብዛት</string>
+    <!-- TODO: native review -->
+    <string name="field_volumes">ጥራዞች በአንድ ቅጂ</string>
+    <!-- TODO: native review -->
+    <string name="volumes_per_copy">%1$d ጥራዞች በአንድ ቅጂ</string>
     <string name="available_of_total">%1$d ከ %2$d ይገኛል</string>
     <string name="export_labels">የQR መለያዎችን አውጣ (PDF)</string>
     <string name="add_copy">ቅጂ ጨምር</string>

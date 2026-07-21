@@ -126,6 +126,7 @@ class LibraryRepository(
         language: String,
         isbn: String? = null,
         notes: String? = null,
+        volumeCount: Int = 1,
     ): BookEntity = db.withTransaction {
         val t = now()
         // Book number is the next free one within this category.
@@ -139,6 +140,7 @@ class LibraryRepository(
             language = language,
             isbn = isbn,
             notes = notes,
+            volumeCount = volumeCount.coerceAtLeast(1),
             createdAt = t,
             updatedAt = t,
         )
@@ -147,7 +149,11 @@ class LibraryRepository(
         book
     }
 
-    /** Cataloging is atomic: a power cut can never leave a book with missing copies. */
+    /**
+     * Cataloging is atomic: a power cut can never leave a book with missing copies.
+     * Each physical volume of each physical copy gets its own [addCopy] row, so
+     * [copies] copies x [volumes] volumes-per-copy creates copies x volumes rows.
+     */
     suspend fun addBookWithCopies(
         title: String,
         author: String,
@@ -156,9 +162,17 @@ class LibraryRepository(
         isbn: String? = null,
         notes: String? = null,
         copies: Int,
+        volumes: Int = 1,
     ): BookEntity = db.withTransaction {
-        val book = addBook(title, author, categoryCode, language, isbn, notes)
-        repeat(copies.coerceAtLeast(1)) { addCopy(book.id) }
+        val v = volumes.coerceAtLeast(1)
+        val book = addBook(title, author, categoryCode, language, isbn, notes, volumeCount = v)
+        if (v == 1) {
+            repeat(copies.coerceAtLeast(1)) { addCopy(book.id) } // volumeNumber = 0 convention
+        } else {
+            repeat(copies.coerceAtLeast(1)) {
+                (1..v).forEach { vol -> addCopy(book.id, volumeNumber = vol) }
+            }
+        }
         book
     }
 

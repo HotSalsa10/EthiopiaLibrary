@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
@@ -144,8 +145,8 @@ fun BooksScreen(
             categories = categories,
             onAddCategory = vm::addCategory,
             onDismiss = { showAdd = false },
-            onSave = { title, author, categoryCode, language, isbn, copies ->
-                vm.addBook(title, author, categoryCode, language, isbn, copies)
+            onSave = { title, author, categoryCode, language, isbn, copies, volumes ->
+                vm.addBook(title, author, categoryCode, language, isbn, copies, volumes)
                 showAdd = false
             },
         )
@@ -255,18 +256,20 @@ private fun AddBookDialog(
     categories: List<CategoryEntity>,
     onAddCategory: (String, String, (duplicate: Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String, String?, Int) -> Unit,
+    onSave: (String, String, String, String, String?, Int, Int) -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var categoryCode by remember { mutableStateOf("") }
     var isbn by remember { mutableStateOf("") }
     var copies by remember { mutableStateOf("1") }
+    var volumes by remember { mutableStateOf("1") }
     var language by remember { mutableStateOf("am") }
     val titleFocus = remember { FocusRequester() }
     val authorFocus = remember { FocusRequester() }
     val isbnFocus = remember { FocusRequester() }
     val copiesFocus = remember { FocusRequester() }
+    val volumesFocus = remember { FocusRequester() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -315,7 +318,16 @@ private fun AddBookDialog(
                     label = { Text(stringResource(R.string.field_copies)) },
                     singleLine = true,
                     modifier = Modifier.focusRequester(copiesFocus),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { volumesFocus.requestFocus() }),
+                )
+                OutlinedTextField(
+                    volumes,
+                    { volumes = it.filter(Char::isDigit).take(2) },
+                    label = { Text(stringResource(R.string.field_volumes)) },
+                    singleLine = true,
+                    modifier = Modifier.focusRequester(volumesFocus),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Number),
                 )
             }
         },
@@ -330,6 +342,7 @@ private fun AddBookDialog(
                         language,
                         isbn.trim().ifBlank { null },
                         copies.toIntOrNull() ?: 1,
+                        volumes.toIntOrNull() ?: 1,
                     )
                 },
             ) { Text(stringResource(R.string.save)) }

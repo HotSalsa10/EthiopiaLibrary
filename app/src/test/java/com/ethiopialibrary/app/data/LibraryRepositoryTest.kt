@@ -101,6 +101,61 @@ class LibraryRepositoryTest {
         }
     }
 
+    // ---------- volumes per copy (Run 2) ----------
+
+    @Test
+    fun `addBookWithCopies with volumes creates copies times volumes rows`() = runBlocking {
+        val book = repo.addBookWithCopies(
+            title = "Tafsir Ibn Kathir",
+            author = "Ibn Kathir",
+            categoryCode = "CAT",
+            language = "am",
+            copies = 2,
+            volumes = 3,
+        )
+
+        val copies = repo.copiesForBook(book.id).first()
+
+        assertEquals(3, book.volumeCount)
+        assertEquals(6, copies.size)
+        assertEquals(
+            setOf(
+                "CAT-001-1-01", "CAT-001-2-01",
+                "CAT-001-1-02", "CAT-001-2-02",
+                "CAT-001-1-03", "CAT-001-2-03",
+            ),
+            copies.map { it.copy.copyCode }.toSet(),
+        )
+    }
+
+    @Test
+    fun `addBookWithCopies with one volume keeps the volumeNumber zero convention`() = runBlocking {
+        val book = repo.addBookWithCopies(
+            title = "Fiqh Primer",
+            author = "Author",
+            categoryCode = "CAT",
+            language = "am",
+            copies = 2,
+        )
+
+        val copies = repo.copiesForBook(book.id).first()
+
+        assertEquals(1, book.volumeCount)
+        assertTrue(copies.all { it.copy.copyCode.endsWith("-00") })
+    }
+
+    @Test
+    fun `volume zero and volume one copies never share a code`() = runBlocking {
+        val book = repo.addBook(title = "T", author = "A", categoryCode = "CAT", language = "am")
+
+        val volZero = repo.addCopy(book.id)
+        val volOne = repo.addCopy(book.id, volumeNumber = 1)
+
+        assertEquals("CAT-001-1-00", volZero.copyCode)
+        assertEquals("CAT-001-1-01", volOne.copyCode)
+        assertNotEquals(volZero.copyCode, volOne.copyCode)
+    }
+
     // ---------- categories ----------
 
     @Test

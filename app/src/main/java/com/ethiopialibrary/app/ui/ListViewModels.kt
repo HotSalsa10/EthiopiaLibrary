@@ -59,6 +59,7 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
         language: String,
         isbn: String?,
         copies: Int,
+        volumes: Int,
     ) {
         viewModelScope.safeLaunch {
             repo.addBookWithCopies(
@@ -68,6 +69,7 @@ class BooksViewModel(private val repo: LibraryRepository) : ViewModel() {
                 language = language,
                 isbn = isbn?.takeIf { it.isNotBlank() },
                 copies = copies,
+                volumes = volumes,
             )
         }
     }
