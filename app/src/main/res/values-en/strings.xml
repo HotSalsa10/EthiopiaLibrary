@@ -227,4 +227,10 @@
     <string name="overdue_warning_continue">Continue anyway</string>
     <string name="override_limit_prompt">Enter the staff PIN to check out over the limit.</string>
     <string name="override_limit_confirm">Check out anyway</string>
+
+    <!-- Delete book (Run 3) -->
+    <string name="delete_book">Delete book</string>
+    <string name="delete_book_confirm">Delete this book and its %1$d copies? It will disappear from the catalog. Past loan history is kept.</string>
+    <string name="delete_book_blocked">Cannot delete: %1$d copies are currently on loan. Return them first.</string>
+    <string name="book_deleted">Book deleted</string>
 </resources>

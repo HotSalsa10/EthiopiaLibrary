@@ -49,6 +49,12 @@ sealed interface AddCategoryResult {
     data object DuplicateCode : AddCategoryResult
 }
 
+sealed interface DeleteBookResult {
+    data class Success(val copiesDeleted: Int) : DeleteBookResult
+    data class BlockedByActiveLoans(val activeLoans: Int) : DeleteBookResult
+    data object NotFound : DeleteBookResult
+}
+
 /**
  * All mutations run inside a single Room transaction that also writes the
  * sync outbox entry, so a power cut can never leave data and sync queue
@@ -202,6 +208,27 @@ class LibraryRepository(
         db.bookCopyDao().insert(copy)
         enqueueSync("book_copy", copy.id)
         copy
+    }
+
+    /**
+     * Soft-deletes a book and all its live copies. Refused while any copy is on
+     * loan. Loan history intentionally survives: the *Detailed history queries
+     * join books/copies without an isDeleted filter.
+     */
+    suspend fun deleteBook(bookId: String): DeleteBookResult = db.withTransaction {
+        val book = db.bookDao().byId(bookId)
+        if (book == null || book.isDeleted) return@withTransaction DeleteBookResult.NotFound
+        val active = db.loanDao().countActiveForBook(bookId)
+        if (active > 0) return@withTransaction DeleteBookResult.BlockedByActiveLoans(active)
+        val t = now()
+        val copies = db.bookCopyDao().forBookOnce(bookId)
+        copies.forEach { c ->
+            db.bookCopyDao().update(c.copy(isDeleted = true, updatedAt = t))
+            enqueueSync("book_copy", c.id)
+        }
+        db.bookDao().update(book.copy(isDeleted = true, updatedAt = t))
+        enqueueSync("book", book.id)
+        DeleteBookResult.Success(copies.size)
     }
 
     // ---------- categories ----------

@@ -252,4 +252,14 @@
     <string name="lang_amharic" translatable="false">አማርኛ</string>
     <string name="lang_arabic" translatable="false">العربية</string>
     <string name="lang_english" translatable="false">English</string>
+
+    <!-- Delete book (Run 3) -->
+    <!-- TODO: native review -->
+    <string name="delete_book">መጽሐፍ ሰርዝ</string>
+    <!-- TODO: native review -->
+    <string name="delete_book_confirm">ይህን መጽሐፍ እና %1$d ቅጂዎቹን መሰረዝ ይፈልጋሉ? ከዝርዝሩ ይጠፋል፤ የውሰት ታሪክ ይቀመጣል።</string>
+    <!-- TODO: native review -->
+    <string name="delete_book_blocked">መሰረዝ አልተቻለም፦ %1$d ቅጂዎች አሁን ተውሰዋል። መጀመሪያ ይመለሱ።</string>
+    <!-- TODO: native review -->
+    <string name="book_deleted">መጽሐፉ ተሰርዟል</string>
 </resources>

@@ -229,4 +229,14 @@
     <string name="overdue_warning_continue">المتابعة على أي حال</string>
     <string name="override_limit_prompt">أدخل رمز PIN الخاص بالموظف للإعارة رغم تجاوز الحد.</string>
     <string name="override_limit_confirm">إعارة على أي حال</string>
+
+    <!-- Delete book (Run 3) -->
+    <!-- TODO: native review -->
+    <string name="delete_book">حذف الكتاب</string>
+    <!-- TODO: native review -->
+    <string name="delete_book_confirm">هل تريد حذف هذا الكتاب و%1$d من نسخه؟ سيختفي من الفهرس مع بقاء سجل الإعارة.</string>
+    <!-- TODO: native review -->
+    <string name="delete_book_blocked">تعذّر الحذف: %1$d من النسخ مُعارة حاليًا. أعدها أولًا.</string>
+    <!-- TODO: native review -->
+    <string name="book_deleted">تم حذف الكتاب</string>
 </resources>

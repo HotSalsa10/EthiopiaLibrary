@@ -1,5 +1,6 @@
 package com.ethiopialibrary.app.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -47,6 +50,7 @@ import com.ethiopialibrary.app.R
 import com.ethiopialibrary.app.data.BookEntity
 import com.ethiopialibrary.app.data.CopyRow
 import com.ethiopialibrary.app.data.CopyStatus
+import com.ethiopialibrary.app.data.DeleteBookResult
 import com.ethiopialibrary.app.data.LibraryRepository
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
@@ -57,6 +61,7 @@ import com.ethiopialibrary.app.ui.safeLaunch
 @Composable
 fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     val book by produceState<BookEntity?>(null, bookId, refresh) { value = repo.bookById(bookId) }
     val copies by repo.copiesForBook(bookId).collectAsStateWithLifecycle(emptyList())
@@ -64,11 +69,16 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     val locale = LocalConfiguration.current.locales[0]
     var showEdit by remember { mutableStateOf(false) }
     var showAddCopy by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deleteBlockedCount by remember { mutableStateOf<Int?>(null) }
 
     PageColumn {
         AppTopBar(book?.title.orEmpty(), onBack) {
             IconButton(onClick = { showEdit = true }) {
                 Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_book))
+            }
+            IconButton(onClick = { showDeleteConfirm = true }) {
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete_book))
             }
         }
         book?.let { b ->
@@ -113,6 +123,45 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
             onSave = { volume ->
                 showAddCopy = false
                 scope.safeLaunch { repo.addCopy(bookId, volumeNumber = volume) }
+            },
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.delete_book)) },
+            text = { Text(stringResource(R.string.delete_book_confirm, copies.size)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.safeLaunch {
+                            showDeleteConfirm = false
+                            when (val r = repo.deleteBook(bookId)) {
+                                is DeleteBookResult.Success -> {
+                                    Toast.makeText(context, context.getString(R.string.book_deleted), Toast.LENGTH_SHORT).show()
+                                    onBack()
+                                }
+                                is DeleteBookResult.BlockedByActiveLoans -> deleteBlockedCount = r.activeLoans
+                                else -> onBack()
+                            }
+                        }
+                    },
+                ) { Text(stringResource(R.string.delete_book), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+
+    deleteBlockedCount?.let { count ->
+        AlertDialog(
+            onDismissRequest = { deleteBlockedCount = null },
+            title = { Text(stringResource(R.string.delete_book)) },
+            text = { Text(stringResource(R.string.delete_book_blocked, count)) },
+            confirmButton = {
+                TextButton(onClick = { deleteBlockedCount = null }) { Text(stringResource(R.string.ok)) }
             },
         )
     }

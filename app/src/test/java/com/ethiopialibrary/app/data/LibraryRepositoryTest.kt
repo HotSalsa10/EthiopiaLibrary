@@ -1072,4 +1072,74 @@ class LibraryRepositoryTest {
         // A new announcement id is not considered dismissed just because a previous one was.
         assertNotEquals("ann-2", repo.dismissedAnnouncementId().first())
     }
+
+    // ---------- delete book (Run 3) ----------
+
+    @Test
+    fun `deleteBook soft deletes the book and all its copies`() = runBlocking {
+        val (book, copies) = addBookWithCopies(2)
+
+        val result = repo.deleteBook(book.id)
+
+        assertTrue(result is DeleteBookResult.Success)
+        assertEquals(copies.size, (result as DeleteBookResult.Success).copiesDeleted)
+        assertTrue(db.bookDao().byId(book.id)!!.isDeleted)
+        assertTrue(repo.copiesForBook(book.id).first().isEmpty())
+        assertTrue(repo.booksWithCounts("").first().none { it.book.id == book.id })
+    }
+
+    @Test
+    fun `deleteBook is blocked while a copy is on loan`() = runBlocking {
+        val (book, copies) = addBookWithCopies(2)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+
+        val result = repo.deleteBook(book.id)
+
+        assertTrue(result is DeleteBookResult.BlockedByActiveLoans)
+        assertEquals(1, (result as DeleteBookResult.BlockedByActiveLoans).activeLoans)
+        assertFalse(db.bookDao().byId(book.id)!!.isDeleted)
+        copies.forEach { c -> assertFalse(db.bookCopyDao().byId(c.id)!!.isDeleted) }
+    }
+
+    @Test
+    fun `loan history stays visible after the book is deleted`() = runBlocking {
+        val (book, copies) = addBookWithCopies(1)
+        val member = addMember()
+        repo.checkout(copies[0].copyCode, member.memberCode)
+        repo.returnBook(copies[0].copyCode)
+
+        repo.deleteBook(book.id)
+
+        val bookHist = repo.bookHistory(book.id).first()
+        val memberHist = repo.memberHistory(member.id).first()
+        assertTrue(bookHist.any { it.copyCode == copies[0].copyCode })
+        assertTrue(memberHist.any { it.copyCode == copies[0].copyCode })
+    }
+
+    @Test
+    fun `a deleted book's number and copy codes are never reused`() = runBlocking {
+        val book = repo.addBook(title = "A", author = "x", categoryCode = "CAT", language = "am")
+        repo.addCopy(book.id) // CAT-001-1-00
+        repo.deleteBook(book.id)
+
+        val newBook = repo.addBook(title = "B", author = "y", categoryCode = "CAT", language = "am")
+
+        assertEquals(2, newBook.bookNumber)
+        val newCopy = repo.addCopy(newBook.id) // must not collide with the deleted CAT-001-1-00 copy
+        assertEquals("CAT-002-1-00", newCopy.copyCode)
+    }
+
+    @Test
+    fun `deleteBook enqueues sync for the book and every copy`() = runBlocking {
+        val (book, copies) = addBookWithCopies(2)
+
+        repo.deleteBook(book.id)
+
+        val pending = repo.pendingSyncEntries()
+        assertTrue(pending.any { it.entityType == "book" && it.entityId == book.id })
+        copies.forEach { c ->
+            assertTrue(pending.any { it.entityType == "book_copy" && it.entityId == c.id })
+        }
+    }
 }

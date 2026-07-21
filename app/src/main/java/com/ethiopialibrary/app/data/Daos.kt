@@ -52,8 +52,13 @@ interface BookDao {
     @Upsert
     suspend fun upsertAll(items: List<BookEntity>)
 
-    /** Highest book number used in a category, so the next is +1. Null when empty. */
-    @Query("SELECT MAX(bookNumber) FROM books WHERE categoryCode = :categoryCode AND isDeleted = 0")
+    /**
+     * Highest book number used in a category, so the next is +1. Null when empty.
+     * Deliberately includes soft-deleted books: their number must never be
+     * reused, or a new book minted with it would produce copy codes that
+     * collide with the deleted book's copies on the unique copyCode index.
+     */
+    @Query("SELECT MAX(bookNumber) FROM books WHERE categoryCode = :categoryCode")
     suspend fun maxBookNumber(categoryCode: String): Int?
 
     @Query(
@@ -119,8 +124,13 @@ interface BookCopyDao {
     @Query("SELECT * FROM book_copies WHERE copyCode = :code AND isDeleted = 0")
     suspend fun byCode(code: String): BookCopyEntity?
 
-    /** Highest copy number for a book's volume, so the next copy is +1. Null when none. */
-    @Query("SELECT MAX(copyNumber) FROM book_copies WHERE bookId = :bookId AND volumeNumber = :volumeNumber AND isDeleted = 0")
+    /**
+     * Highest copy number for a book's volume, so the next copy is +1. Null when none.
+     * Deliberately includes soft-deleted copies: their number must never be
+     * reused, or a new copy minted with it would collide with the deleted
+     * copy's code on the unique copyCode index.
+     */
+    @Query("SELECT MAX(copyNumber) FROM book_copies WHERE bookId = :bookId AND volumeNumber = :volumeNumber")
     suspend fun maxCopyNumber(bookId: String, volumeNumber: Int): Int?
 
     @Query(
@@ -226,6 +236,10 @@ interface BookCopyDao {
     /** Every row including soft-deleted ones - what the cloud mirror actually holds. */
     @Query("SELECT COUNT(*) FROM book_copies")
     suspend fun totalRowCount(): Int
+
+    /** One-shot list of a book's live copies (deleteBook walks these). */
+    @Query("SELECT * FROM book_copies WHERE bookId = :bookId AND isDeleted = 0")
+    suspend fun forBookOnce(bookId: String): List<BookCopyEntity>
 }
 
 @Dao
@@ -480,6 +494,13 @@ interface LoanDao {
         """,
     )
     fun bookHistoryDetailed(bookId: String): Flow<List<LoanWithDetails>>
+
+    /** Active loans across every copy of a book - the deleteBook gate. */
+    @Query(
+        "SELECT COUNT(*) FROM loans l JOIN book_copies c ON c.id = l.copyId " +
+            "WHERE c.bookId = :bookId AND l.returnedAt IS NULL AND l.isDeleted = 0",
+    )
+    suspend fun countActiveForBook(bookId: String): Int
 }
 
 @Dao
