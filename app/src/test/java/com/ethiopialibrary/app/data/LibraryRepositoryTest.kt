@@ -3,6 +3,7 @@ package com.ethiopialibrary.app.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.ethiopialibrary.app.dates.CalendarMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -1325,5 +1326,16 @@ class LibraryRepositoryTest {
         assertEquals("New Author", persisted.author)
         assertEquals("AQ", persisted.categoryCode)
         assertEquals(1, persisted.bookNumber)
+    }
+
+    // ---------- calendar mode (Run 7) ----------
+
+    @Test
+    fun `legacy stored ETHIOPIAN calendar mode parses as HIJRI`() = runBlocking {
+        db.settingsDao().put(SettingEntity(SettingKeys.CALENDAR_MODE, "ETHIOPIAN"))
+        assertEquals(CalendarMode.HIJRI, repo.calendarMode())
+
+        db.settingsDao().put(SettingEntity(SettingKeys.CALENDAR_MODE, "garbage"))
+        assertEquals(CalendarMode.DUAL, repo.calendarMode())
     }
 }

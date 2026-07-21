@@ -151,7 +151,8 @@
     <string name="settings_language">የመተግበሪያ ቋንቋ</string>
     <string name="settings_calendar">የቀን አቆጣጠር</string>
     <string name="calendar_dual">ሁለቱም</string>
-    <string name="calendar_ethiopian">ኢትዮጵያዊ</string>
+    <!-- TODO: native review -->
+    <string name="calendar_hijri">ሂጅሪ</string>
     <string name="calendar_gregorian">ግሪጎሪያን</string>
     <string name="settings_lending_rules">የመዋስ ደንቦች</string>
     <string name="settings_loan_period">የመዋስ ጊዜ (በቀናት)</string>

@@ -694,8 +694,12 @@ class LibraryRepository(
         }
     }
 
-    private fun parseCalendarMode(value: String?): CalendarMode =
-        value?.let { runCatching { CalendarMode.valueOf(it) }.getOrNull() } ?: CalendarMode.DUAL
+    private fun parseCalendarMode(value: String?): CalendarMode = when (value) {
+        null -> CalendarMode.DUAL
+        // Versions <= 2.0.2 stored "ETHIOPIAN"; the mode was replaced by HIJRI in 2.1.0.
+        "ETHIOPIAN" -> CalendarMode.HIJRI
+        else -> runCatching { CalendarMode.valueOf(value) }.getOrNull() ?: CalendarMode.DUAL
+    }
 
     /** Active loans falling due within the configured window (not yet overdue). */
     fun dueSoonLoans(): Flow<List<LoanWithDetails>> = tick().flatMapLatest { start ->

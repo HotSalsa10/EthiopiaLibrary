@@ -256,8 +256,8 @@ class DataQueriesTest {
     @Test
     fun `calendar mode round trips through settings and defaults to dual`() = runBlocking {
         assertEquals(CalendarMode.DUAL, repo.calendarMode())
-        repo.setCalendarMode(CalendarMode.ETHIOPIAN)
-        assertEquals(CalendarMode.ETHIOPIAN, repo.calendarMode())
+        repo.setCalendarMode(CalendarMode.HIJRI)
+        assertEquals(CalendarMode.HIJRI, repo.calendarMode())
     }
 
     @Test

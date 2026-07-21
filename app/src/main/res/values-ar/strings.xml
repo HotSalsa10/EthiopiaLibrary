@@ -139,7 +139,8 @@
     <string name="settings_language">لغة التطبيق</string>
     <string name="settings_calendar">عرض التاريخ</string>
     <string name="calendar_dual">كلاهما</string>
-    <string name="calendar_ethiopian">إثيوبي</string>
+    <!-- TODO: native review -->
+    <string name="calendar_hijri">هجري</string>
     <string name="calendar_gregorian">ميلادي</string>
     <string name="settings_lending_rules">قواعد الإعارة</string>
     <string name="settings_loan_period">مدة الإعارة (بالأيام)</string>

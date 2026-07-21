@@ -134,7 +134,7 @@
     <string name="settings_language">App language</string>
     <string name="settings_calendar">Date display</string>
     <string name="calendar_dual">Both</string>
-    <string name="calendar_ethiopian">Ethiopian</string>
+    <string name="calendar_hijri">Hijri</string>
     <string name="calendar_gregorian">Gregorian</string>
     <string name="settings_lending_rules">Lending rules</string>
     <string name="settings_loan_period">Loan period (days)</string>

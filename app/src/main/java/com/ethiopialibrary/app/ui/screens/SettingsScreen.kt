@@ -188,7 +188,7 @@ private fun SettingsContent(
             Spacer(Modifier.height(12.dp))
             val calendarOptions = listOf(
                 CalendarMode.DUAL to R.string.calendar_dual,
-                CalendarMode.ETHIOPIAN to R.string.calendar_ethiopian,
+                CalendarMode.HIJRI to R.string.calendar_hijri,
                 CalendarMode.GREGORIAN to R.string.calendar_gregorian,
             )
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
