@@ -264,4 +264,16 @@
     <string name="delete_book_blocked">መሰረዝ አልተቻለም፦ %1$d ቅጂዎች አሁን ተውሰዋል። መጀመሪያ ይመለሱ።</string>
     <!-- TODO: native review -->
     <string name="book_deleted">መጽሐፉ ተሰርዟል</string>
+
+    <!-- Change book category (Run 4) -->
+    <!-- TODO: native review -->
+    <string name="change_category_warning_title">ምድብ መቀየር?</string>
+    <!-- TODO: native review -->
+    <string name="change_category_warning_body">ሁሉም %1$d የቅጂ ኮዶች እንደገና ይፈጠራሉ። በመጻሕፍቱ ላይ የታተሙ መለያዎች አይሰሩም፤ እንደገና መታተም አለባቸው።</string>
+    <!-- TODO: native review -->
+    <string name="change_category_warning_inline">ምድብ መቀየር ሁሉንም የቅጂ ኮዶች እንደገና ይፈጥራል</string>
+    <!-- TODO: native review -->
+    <string name="reprint_labels_body">አዲስ ኮዶች ተሰጥተዋል። አዲሶቹን መለያዎች አሁን አትመው በአሮጌዎቹ ላይ ይለጥፉ።</string>
+    <!-- TODO: native review -->
+    <string name="print_new_labels">አዲስ መለያዎችን አትም (PDF)</string>
 </resources>

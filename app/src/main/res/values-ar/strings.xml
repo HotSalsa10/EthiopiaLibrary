@@ -241,4 +241,16 @@
     <string name="delete_book_blocked">تعذّر الحذف: %1$d من النسخ مُعارة حاليًا. أعدها أولًا.</string>
     <!-- TODO: native review -->
     <string name="book_deleted">تم حذف الكتاب</string>
+
+    <!-- Change book category (Run 4) -->
+    <!-- TODO: native review -->
+    <string name="change_category_warning_title">تغيير التصنيف؟</string>
+    <!-- TODO: native review -->
+    <string name="change_category_warning_body">سيُعاد إنشاء جميع رموز النسخ (%1$d). الملصقات المطبوعة سابقًا لن تعمل ويجب إعادة طباعتها.</string>
+    <!-- TODO: native review -->
+    <string name="change_category_warning_inline">تغيير التصنيف يعيد إنشاء جميع رموز النسخ</string>
+    <!-- TODO: native review -->
+    <string name="reprint_labels_body">تم إسناد رموز جديدة. اطبع الملصقات الجديدة الآن والصقها فوق القديمة.</string>
+    <!-- TODO: native review -->
+    <string name="print_new_labels">طباعة الملصقات الجديدة (PDF)</string>
 </resources>

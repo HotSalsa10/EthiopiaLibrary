@@ -240,6 +240,19 @@ interface BookCopyDao {
     /** One-shot list of a book's live copies (deleteBook walks these). */
     @Query("SELECT * FROM book_copies WHERE bookId = :bookId AND isDeleted = 0")
     suspend fun forBookOnce(bookId: String): List<BookCopyEntity>
+
+    /** Every copy row of a book including soft-deleted ones - code regeneration must rewrite those too. */
+    @Query("SELECT * FROM book_copies WHERE bookId = :bookId")
+    suspend fun allForBookIncludingDeleted(bookId: String): List<BookCopyEntity>
+
+    /** Label rows for one book's live, in-service copies (reprint after a category change). */
+    @Query(
+        "SELECT c.copyCode AS code, b.title AS title FROM book_copies c " +
+            "JOIN books b ON b.id = c.bookId " +
+            "WHERE c.bookId = :bookId AND c.isDeleted = 0 AND c.status = 'IN_SERVICE' " +
+            "ORDER BY c.copyCode",
+    )
+    suspend fun labelRowsForBook(bookId: String): List<LabelRow>
 }
 
 @Dao

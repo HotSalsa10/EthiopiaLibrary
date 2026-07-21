@@ -47,16 +47,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiopialibrary.app.R
+import com.ethiopialibrary.app.data.AddCategoryResult
 import com.ethiopialibrary.app.data.BookEntity
+import com.ethiopialibrary.app.data.CategoryEntity
 import com.ethiopialibrary.app.data.CopyRow
 import com.ethiopialibrary.app.data.CopyStatus
 import com.ethiopialibrary.app.data.DeleteBookResult
 import com.ethiopialibrary.app.data.LibraryRepository
+import com.ethiopialibrary.app.labels.exportAndShareLabels
 import com.ethiopialibrary.app.ui.AppCard
 import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.safeLaunch
+import kotlinx.coroutines.launch
 
 @Composable
 fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit) {
@@ -66,11 +70,16 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     val book by produceState<BookEntity?>(null, bookId, refresh) { value = repo.bookById(bookId) }
     val copies by repo.copiesForBook(bookId).collectAsStateWithLifecycle(emptyList())
     val history by repo.bookHistory(bookId).collectAsStateWithLifecycle(emptyList())
+    val categories by repo.categories().collectAsStateWithLifecycle(emptyList())
     val locale = LocalConfiguration.current.locales[0]
     var showEdit by remember { mutableStateOf(false) }
     var showAddCopy by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteBlockedCount by remember { mutableStateOf<Int?>(null) }
+    // The edited book + the new category code, held while the category-change
+    // warning dialog is up - the whole edit is one atomic user decision.
+    var pendingCategoryChange by remember { mutableStateOf<Pair<BookEntity, String>?>(null) }
+    var showReprintOffer by remember { mutableStateOf(false) }
 
     PageColumn {
         AppTopBar(book?.title.orEmpty(), onBack) {
@@ -106,13 +115,65 @@ fun BookDetailScreen(repo: LibraryRepository, bookId: String, onBack: () -> Unit
     if (showEdit && current != null) {
         EditBookDialog(
             book = current,
+            categories = categories,
+            onAddCategory = { name, code, onResult ->
+                scope.safeLaunch { onResult(repo.addCategory(name, code) is AddCategoryResult.DuplicateCode) }
+            },
             onDismiss = { showEdit = false },
-            onSave = { updated ->
+            onSave = { updatedBook, newCode ->
                 showEdit = false
-                scope.safeLaunch {
-                    repo.updateBook(updated)
-                    refresh++
+                if (newCode != null) {
+                    pendingCategoryChange = updatedBook to newCode
+                } else {
+                    scope.safeLaunch {
+                        repo.updateBook(updatedBook)
+                        refresh++
+                    }
                 }
+            },
+        )
+    }
+
+    pendingCategoryChange?.let { (updatedBook, newCode) ->
+        AlertDialog(
+            onDismissRequest = { pendingCategoryChange = null },
+            title = { Text(stringResource(R.string.change_category_warning_title)) },
+            text = { Text(stringResource(R.string.change_category_warning_body, copies.size)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.safeLaunch {
+                            repo.updateBook(updatedBook)
+                            repo.changeBookCategory(bookId, newCode)
+                            refresh++
+                            pendingCategoryChange = null
+                            showReprintOffer = true
+                        }
+                    },
+                ) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCategoryChange = null }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+
+    if (showReprintOffer) {
+        AlertDialog(
+            onDismissRequest = { showReprintOffer = false },
+            text = { Text(stringResource(R.string.reprint_labels_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            exportAndShareLabels(context, repo.labelRowsForBook(bookId), "book-labels.pdf")
+                            showReprintOffer = false
+                        }
+                    },
+                ) { Text(stringResource(R.string.print_new_labels)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReprintOffer = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -200,13 +261,16 @@ private fun AddCopyDialog(onDismiss: () -> Unit, onSave: (Int) -> Unit) {
 @Composable
 private fun EditBookDialog(
     book: BookEntity,
+    categories: List<CategoryEntity>,
+    onAddCategory: (String, String, (Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (BookEntity) -> Unit,
+    onSave: (BookEntity, String?) -> Unit,
 ) {
     var title by remember { mutableStateOf(book.title) }
     var author by remember { mutableStateOf(book.author) }
     var isbn by remember { mutableStateOf(book.isbn.orEmpty()) }
     var language by remember { mutableStateOf(book.language) }
+    var categoryCode by remember { mutableStateOf(book.categoryCode) }
     val titleFocus = remember { FocusRequester() }
     val authorFocus = remember { FocusRequester() }
 
@@ -241,6 +305,14 @@ private fun EditBookDialog(
                     FilterChip(language == "ar", { language = "ar" }, label = { Text(stringResource(R.string.lang_arabic)) })
                     FilterChip(language == "en", { language = "en" }, label = { Text(stringResource(R.string.lang_english)) })
                 }
+                CategoryPicker(categories, categoryCode, { categoryCode = it }, onAddCategory)
+                if (categoryCode != book.categoryCode) {
+                    Text(
+                        stringResource(R.string.change_category_warning_inline),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 OutlinedTextField(
                     isbn, { isbn = it },
                     label = { Text(stringResource(R.string.field_isbn)) },
@@ -260,6 +332,7 @@ private fun EditBookDialog(
                             language = language,
                             isbn = isbn.trim().ifBlank { null },
                         ),
+                        categoryCode.takeIf { it != book.categoryCode },
                     )
                 },
             ) { Text(stringResource(R.string.save)) }

@@ -55,6 +55,13 @@ sealed interface DeleteBookResult {
     data object NotFound : DeleteBookResult
 }
 
+sealed interface ChangeCategoryResult {
+    data class Success(val book: BookEntity, val regeneratedCopies: Int) : ChangeCategoryResult
+    data object BookNotFound : ChangeCategoryResult
+    data object CategoryNotFound : ChangeCategoryResult
+    data object SameCategory : ChangeCategoryResult
+}
+
 /**
  * All mutations run inside a single Room transaction that also writes the
  * sync outbox entry, so a power cut can never leave data and sync queue
@@ -230,6 +237,40 @@ class LibraryRepository(
         enqueueSync("book", book.id)
         DeleteBookResult.Success(copies.size)
     }
+
+    /**
+     * Moves a book to another category: next free bookNumber there, and ALL its
+     * copy codes (soft-deleted ones too) regenerated. Safe against the unique
+     * copyCode index without a two-phase rename: the new bookNumber is fresh in
+     * the target category even counting soft-deleted books (maxBookNumber ignores
+     * isDeleted), so no existing row can hold any of the new codes, and the new
+     * codes are mutually distinct because (copyNumber, volumeNumber) is unique
+     * within a book.
+     */
+    suspend fun changeBookCategory(bookId: String, newCategoryCode: String): ChangeCategoryResult =
+        db.withTransaction {
+            val book = db.bookDao().byId(bookId)
+            if (book == null || book.isDeleted) return@withTransaction ChangeCategoryResult.BookNotFound
+            val code = newCategoryCode.trim().uppercase()
+            if (code == book.categoryCode) return@withTransaction ChangeCategoryResult.SameCategory
+            db.categoryDao().byCode(code) ?: return@withTransaction ChangeCategoryResult.CategoryNotFound
+            val t = now()
+            val newNumber = (db.bookDao().maxBookNumber(code) ?: 0) + 1
+            val moved = book.copy(categoryCode = code, bookNumber = newNumber, updatedAt = t)
+            db.bookDao().update(moved)
+            enqueueSync("book", book.id)
+            val copies = db.bookCopyDao().allForBookIncludingDeleted(bookId)
+            copies.forEach { c ->
+                db.bookCopyDao().update(
+                    c.copy(copyCode = BookCode.render(code, newNumber, c.copyNumber, c.volumeNumber), updatedAt = t),
+                )
+                enqueueSync("book_copy", c.id)
+            }
+            ChangeCategoryResult.Success(moved, copies.size)
+        }
+
+    suspend fun labelRowsForBook(bookId: String): List<LabelRow> =
+        db.bookCopyDao().labelRowsForBook(bookId)
 
     // ---------- categories ----------
 

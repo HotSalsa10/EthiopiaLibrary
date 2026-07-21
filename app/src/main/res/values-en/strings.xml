@@ -234,4 +234,11 @@
     <string name="delete_book_confirm">Delete this book and its %1$d copies? It will disappear from the catalog. Past loan history is kept.</string>
     <string name="delete_book_blocked">Cannot delete: %1$d copies are currently on loan. Return them first.</string>
     <string name="book_deleted">Book deleted</string>
+
+    <!-- Change book category (Run 4) -->
+    <string name="change_category_warning_title">Change category?</string>
+    <string name="change_category_warning_body">All %1$d copy codes will be regenerated. Labels already printed on the books will stop working and must be reprinted.</string>
+    <string name="change_category_warning_inline">Changing the category regenerates all copy codes</string>
+    <string name="reprint_labels_body">New codes assigned. Print the new labels now and stick them over the old ones.</string>
+    <string name="print_new_labels">Print new labels (PDF)</string>
 </resources>
