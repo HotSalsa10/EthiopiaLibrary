@@ -433,7 +433,7 @@ class CheckoutReturnViewModelTest {
 
         val state = awaitValue(vm.batchState) { it.copyError != null }
         assertEquals(1, state.items.size)
-        assertEquals(CheckoutViewModel.CheckoutUiError.COPY_NOT_AVAILABLE, state.copyError)
+        assertEquals(CheckoutViewModel.CheckoutUiError.ALREADY_IN_BASKET, state.copyError)
     }
 
     @Test

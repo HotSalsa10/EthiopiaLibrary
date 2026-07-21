@@ -243,4 +243,19 @@
     <string name="change_category_warning_inline">Changing the category regenerates all copy codes</string>
     <string name="reprint_labels_body">New codes assigned. Print the new labels now and stick them over the old ones.</string>
     <string name="print_new_labels">Print new labels (PDF)</string>
+
+    <!-- Usability hardening pass (Run 8) -->
+    <string name="books_empty">No books yet</string>
+    <string name="books_empty_hint">Tap \'Add book\' to catalog the first one</string>
+    <string name="members_empty">No members yet</string>
+    <string name="members_empty_hint">Tap \'Add member\' to register the first one</string>
+    <string name="labels_none">Nothing to print yet</string>
+    <string name="error_min_one">Must be at least 1</string>
+    <string name="copy_status_confirm_title">Change copy status?</string>
+    <string name="copy_status_confirm">Mark %1$s as %2$s?</string>
+    <string name="suspend_member_confirm">Suspend %1$s? They will not be able to borrow books.</string>
+    <string name="settings_range_hint">Allowed: %1$d–%2$d</string>
+    <string name="saved">Saved</string>
+    <string name="checkout_copy_hint">Scan the book\'s QR label, or search by title, author, or code</string>
+    <string name="error_already_in_basket">This book is already in the basket</string>
 </resources>

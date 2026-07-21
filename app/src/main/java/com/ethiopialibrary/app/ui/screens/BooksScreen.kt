@@ -15,6 +15,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -48,6 +51,7 @@ import com.ethiopialibrary.app.ui.AppTopBar
 import com.ethiopialibrary.app.ui.BigButton
 import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.BooksViewModel
+import com.ethiopialibrary.app.ui.EmptyState
 import com.ethiopialibrary.app.ui.PageColumn
 import kotlinx.coroutines.launch
 
@@ -100,34 +104,48 @@ fun BooksScreen(
             BigButton(stringResource(R.string.add_book), Modifier.weight(1f)) { showAdd = true }
             BigOutlinedButton(stringResource(R.string.export_labels), Modifier.weight(1f)) {
                 scope.launch {
-                    exportAndShareLabels(context, repo.copyLabelRows(), "book-labels.pdf")
-                    Toast.makeText(context, R.string.labels_exported, Toast.LENGTH_SHORT).show()
+                    val rows = repo.copyLabelRows()
+                    if (rows.isEmpty()) {
+                        Toast.makeText(context, R.string.labels_none, Toast.LENGTH_SHORT).show()
+                    } else {
+                        exportAndShareLabels(context, rows, "book-labels.pdf")
+                        Toast.makeText(context, R.string.labels_exported, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
         Spacer(Modifier.height(12.dp))
         Box(Modifier.weight(1f)) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(books, key = { it.book.id }) { row ->
-                    AppCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { onOpenBook(row.book.id) },
-                    ) {
-                        Text(row.book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(row.book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            stringResource(
-                                R.string.available_of_total,
-                                row.availableCopies,
-                                row.totalCopies,
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (row.availableCopies > 0) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                        )
+            if (books.isEmpty()) {
+                EmptyState(
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    message = stringResource(if (query.isBlank() && categoryFilter.isEmpty()) R.string.books_empty else R.string.no_matches),
+                    hint = if (query.isBlank() && categoryFilter.isEmpty()) stringResource(R.string.books_empty_hint) else null,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(books, key = { it.book.id }) { row ->
+                        AppCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onOpenBook(row.book.id) },
+                        ) {
+                            Text(row.book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(row.book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(
+                                    R.string.available_of_total,
+                                    row.availableCopies,
+                                    row.totalCopies,
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (row.availableCopies > 0) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -214,6 +232,8 @@ private fun AddBookDialog(
                     label = { Text(stringResource(R.string.field_copies)) },
                     singleLine = true,
                     modifier = Modifier.focusRequester(copiesFocus),
+                    isError = (copies.toIntOrNull() ?: 0) < 1,
+                    supportingText = if ((copies.toIntOrNull() ?: 0) < 1) { { Text(stringResource(R.string.error_min_one)) } } else { null },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(onNext = { volumesFocus.requestFocus() }),
                 )
@@ -223,13 +243,16 @@ private fun AddBookDialog(
                     label = { Text(stringResource(R.string.field_volumes)) },
                     singleLine = true,
                     modifier = Modifier.focusRequester(volumesFocus),
+                    isError = (volumes.toIntOrNull() ?: 0) < 1,
+                    supportingText = if ((volumes.toIntOrNull() ?: 0) < 1) { { Text(stringResource(R.string.error_min_one)) } } else { null },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Number),
                 )
             }
         },
         confirmButton = {
             TextButton(
-                enabled = title.isNotBlank() && author.isNotBlank() && categoryCode.isNotBlank(),
+                enabled = title.isNotBlank() && author.isNotBlank() && categoryCode.isNotBlank() &&
+                    (copies.toIntOrNull() ?: 0) >= 1 && (volumes.toIntOrNull() ?: 0) >= 1,
                 onClick = {
                     onSave(
                         title.trim(),

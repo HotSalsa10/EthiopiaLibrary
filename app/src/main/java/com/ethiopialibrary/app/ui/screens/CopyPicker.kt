@@ -86,6 +86,12 @@ fun CopyPickerStep(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    } else if (query.isBlank() && results.isEmpty()) {
+        Text(
+            stringResource(R.string.checkout_copy_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     results.forEach { row ->
         CopyResultCard(row, selectable(row), onPick)

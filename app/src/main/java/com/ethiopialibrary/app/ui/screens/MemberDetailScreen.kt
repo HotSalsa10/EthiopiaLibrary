@@ -289,10 +289,24 @@ private fun MemberLoansSection(
  */
 @Composable
 private fun MemberStatusButton(member: MemberEntity, onSetStatus: (MemberStatus) -> Unit) {
+    var confirmSuspend by remember { mutableStateOf(false) }
     if (member.status == MemberStatus.ACTIVE) {
-        BigOutlinedButton(stringResource(R.string.suspend_member)) { onSetStatus(MemberStatus.SUSPENDED) }
+        BigOutlinedButton(stringResource(R.string.suspend_member)) { confirmSuspend = true }
     } else {
         BigButton(stringResource(R.string.activate_member)) { onSetStatus(MemberStatus.ACTIVE) }
+    }
+    if (confirmSuspend) {
+        AlertDialog(
+            onDismissRequest = { confirmSuspend = false },
+            title = { Text(stringResource(R.string.suspend_member)) },
+            text = { Text(stringResource(R.string.suspend_member_confirm, member.fullName)) },
+            confirmButton = {
+                TextButton(onClick = { onSetStatus(MemberStatus.SUSPENDED); confirmSuspend = false }) {
+                    Text(stringResource(R.string.suspend_member))
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmSuspend = false }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 }
 

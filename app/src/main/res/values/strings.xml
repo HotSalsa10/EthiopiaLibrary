@@ -281,4 +281,32 @@
     <string name="reprint_labels_body">አዲስ ኮዶች ተሰጥተዋል። አዲሶቹን መለያዎች አሁን አትመው በአሮጌዎቹ ላይ ይለጥፉ።</string>
     <!-- TODO: native review -->
     <string name="print_new_labels">አዲስ መለያዎችን አትም (PDF)</string>
+
+    <!-- Usability hardening pass (Run 8) -->
+    <!-- TODO: native review -->
+    <string name="books_empty">እስካሁን መጻሕፍት የሉም</string>
+    <!-- TODO: native review -->
+    <string name="books_empty_hint">የመጀመሪያውን ለመመዝገብ \'መጽሐፍ ጨምር\' ይንኩ</string>
+    <!-- TODO: native review -->
+    <string name="members_empty">እስካሁን አባላት የሉም</string>
+    <!-- TODO: native review -->
+    <string name="members_empty_hint">የመጀመሪያውን ለመመዝገብ \'አባል ጨምር\' ይንኩ</string>
+    <!-- TODO: native review -->
+    <string name="labels_none">እስካሁን የሚታተም ነገር የለም</string>
+    <!-- TODO: native review -->
+    <string name="error_min_one">ቢያንስ 1 መሆን አለበት</string>
+    <!-- TODO: native review -->
+    <string name="copy_status_confirm_title">የቅጂ ሁኔታ ይቀየር?</string>
+    <!-- TODO: native review -->
+    <string name="copy_status_confirm">%1$s እንደ %2$s ይመዝገብ?</string>
+    <!-- TODO: native review -->
+    <string name="suspend_member_confirm">%1$s ይታገድ? መጻሕፍት መዋስ አይችሉም።</string>
+    <!-- TODO: native review -->
+    <string name="settings_range_hint">የተፈቀደ፦ %1$d–%2$d</string>
+    <!-- TODO: native review -->
+    <string name="saved">ተቀምጧል</string>
+    <!-- TODO: native review -->
+    <string name="checkout_copy_hint">የመጽሐፉን QR መለያ ይቃኙ ወይም በርዕስ፣ በደራሲ ወይም በኮድ ይፈልጉ</string>
+    <!-- TODO: native review -->
+    <string name="error_already_in_basket">ይህ መጽሐፍ አስቀድሞ በቅርጫቱ ውስጥ አለ</string>
 </resources>

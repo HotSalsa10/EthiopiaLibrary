@@ -258,4 +258,32 @@
     <string name="reprint_labels_body">تم إسناد رموز جديدة. اطبع الملصقات الجديدة الآن والصقها فوق القديمة.</string>
     <!-- TODO: native review -->
     <string name="print_new_labels">طباعة الملصقات الجديدة (PDF)</string>
+
+    <!-- Usability hardening pass (Run 8) -->
+    <!-- TODO: native review -->
+    <string name="books_empty">لا توجد كتب بعد</string>
+    <!-- TODO: native review -->
+    <string name="books_empty_hint">اضغط \'إضافة كتاب\' لتسجيل أول كتاب</string>
+    <!-- TODO: native review -->
+    <string name="members_empty">لا يوجد أعضاء بعد</string>
+    <!-- TODO: native review -->
+    <string name="members_empty_hint">اضغط \'إضافة عضو\' لتسجيل أول عضو</string>
+    <!-- TODO: native review -->
+    <string name="labels_none">لا شيء للطباعة بعد</string>
+    <!-- TODO: native review -->
+    <string name="error_min_one">يجب أن يكون 1 على الأقل</string>
+    <!-- TODO: native review -->
+    <string name="copy_status_confirm_title">تغيير حالة النسخة؟</string>
+    <!-- TODO: native review -->
+    <string name="copy_status_confirm">وضع علامة %2$s على %1$s؟</string>
+    <!-- TODO: native review -->
+    <string name="suspend_member_confirm">إيقاف %1$s؟ لن يتمكن من استعارة الكتب.</string>
+    <!-- TODO: native review -->
+    <string name="settings_range_hint">المسموح: %1$d–%2$d</string>
+    <!-- TODO: native review -->
+    <string name="saved">تم الحفظ</string>
+    <!-- TODO: native review -->
+    <string name="checkout_copy_hint">امسح ملصق QR للكتاب، أو ابحث بالعنوان أو المؤلف أو الرمز</string>
+    <!-- TODO: native review -->
+    <string name="error_already_in_basket">هذا الكتاب موجود في السلة بالفعل</string>
 </resources>

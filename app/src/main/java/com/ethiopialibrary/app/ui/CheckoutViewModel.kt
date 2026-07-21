@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
 
     enum class CheckoutUiError {
-        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED, CLOCK_WRONG,
+        COPY_NOT_FOUND, COPY_NOT_AVAILABLE, MEMBER_NOT_FOUND, MEMBER_NOT_ACTIVE, LIMIT_REACHED, CLOCK_WRONG, ALREADY_IN_BASKET,
     }
 
     enum class BatchLineOutcome { SUCCESS, FAILED }
@@ -322,7 +322,7 @@ class CheckoutViewModel(private val repo: LibraryRepository) : ViewModel() {
             }
             val basketSoFar = _batchState.value.items
             if (basketSoFar.any { it.copy.copy.copyCode == found.copy.copyCode }) {
-                _batchState.update { it.copy(copyError = CheckoutUiError.COPY_NOT_AVAILABLE) }
+                _batchState.update { it.copy(copyError = CheckoutUiError.ALREADY_IN_BASKET) }
                 return@launch
             }
             val limit = repo.maxBooksPerMember()

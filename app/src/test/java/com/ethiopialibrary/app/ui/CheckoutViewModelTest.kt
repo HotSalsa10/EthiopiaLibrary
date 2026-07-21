@@ -100,6 +100,22 @@ class CheckoutViewModelTest {
     }
 
     @Test
+    fun `adding the same copy to the basket twice reports already-in-basket`() {
+        val (copyCode, memberCode) = addCopyAndMember()
+        val vm = CheckoutViewModel(repo)
+        vm.submitBatchMemberCode(memberCode)
+        awaitValue(vm.batchState) { it.member != null }
+
+        vm.addBatchCopyCode(copyCode)
+        awaitValue(vm.batchState) { it.items.isNotEmpty() }
+        vm.addBatchCopyCode(copyCode)
+
+        val state = awaitValue(vm.batchState) { it.copyError != null }
+        assertEquals(CheckoutViewModel.CheckoutUiError.ALREADY_IN_BASKET, state.copyError)
+        assertEquals(1, state.items.size)
+    }
+
+    @Test
     fun `member search lists matches and picking one adopts the member`() {
         runBlocking {
             repo.registerMember(fullName = "Abebe Kebede")

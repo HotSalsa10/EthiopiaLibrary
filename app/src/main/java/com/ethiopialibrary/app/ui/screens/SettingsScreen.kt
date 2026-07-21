@@ -209,6 +209,7 @@ private fun SettingsContent(
             NumericSettingRow(
                 label = stringResource(R.string.settings_loan_period),
                 value = daysText,
+                range = 1..LibraryRepository.MAX_LOAN_PERIOD_DAYS,
                 onValueChange = { daysText = it.filter(Char::isDigit) },
                 onSave = {
                     daysText.toIntOrNull()?.takeIf { it in 1..LibraryRepository.MAX_LOAN_PERIOD_DAYS }
@@ -219,6 +220,7 @@ private fun SettingsContent(
             NumericSettingRow(
                 label = stringResource(R.string.settings_max_books),
                 value = maxBooksText,
+                range = 0..LibraryRepository.MAX_BOOKS_PER_MEMBER_CEILING,
                 onValueChange = { maxBooksText = it.filter(Char::isDigit) },
                 onSave = {
                     maxBooksText.toIntOrNull()?.takeIf { it in 0..LibraryRepository.MAX_BOOKS_PER_MEMBER_CEILING }
@@ -229,6 +231,7 @@ private fun SettingsContent(
             NumericSettingRow(
                 label = stringResource(R.string.settings_due_soon),
                 value = dueSoonText,
+                range = 1..LibraryRepository.MAX_DUE_SOON_DAYS,
                 onValueChange = { dueSoonText = it.filter(Char::isDigit) },
                 onSave = {
                     dueSoonText.toIntOrNull()?.takeIf { it in 1..LibraryRepository.MAX_DUE_SOON_DAYS }
@@ -311,9 +314,12 @@ private fun UpdateSection(repo: LibraryRepository) {
 private fun NumericSettingRow(
     label: String,
     value: String,
+    range: IntRange,
     onValueChange: (String) -> Unit,
     onSave: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val isValid = value.toIntOrNull()?.let { it in range } == true
     SectionHeader(label)
     Spacer(Modifier.height(8.dp))
     OutlinedTextField(
@@ -321,10 +327,19 @@ private fun NumericSettingRow(
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
+        isError = value.isNotEmpty() && !isValid,
+        supportingText = if (value.isNotEmpty() && !isValid) {
+            { Text(stringResource(R.string.settings_range_hint, range.first, range.last)) }
+        } else {
+            null
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
     )
     Spacer(Modifier.height(8.dp))
-    BigButton(stringResource(R.string.save)) { onSave() }
+    BigButton(stringResource(R.string.save), enabled = isValid) {
+        onSave()
+        Toast.makeText(context, R.string.saved, Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable

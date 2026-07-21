@@ -361,6 +361,7 @@ private fun EditBookDialog(
 @Composable
 private fun CopyCard(row: CopyRow, onSetStatus: (CopyStatus) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
+    var pendingStatus by remember { mutableStateOf<CopyStatus?>(null) }
     AppCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -381,18 +382,33 @@ private fun CopyCard(row: CopyRow, onSetStatus: (CopyStatus) -> Unit) {
                     Icon(Icons.Default.MoreVert, contentDescription = null)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    CopyStatus.entries.forEach { status ->
+                    CopyStatus.entries.filter { it != row.copy.status }.forEach { status ->
                         DropdownMenuItem(
                             text = { Text(statusText(status)) },
                             onClick = {
                                 menuOpen = false
-                                onSetStatus(status)
+                                if (status == CopyStatus.LOST || status == CopyStatus.RETIRED) {
+                                    pendingStatus = status
+                                } else {
+                                    onSetStatus(status)
+                                }
                             },
                         )
                     }
                 }
             }
         }
+    }
+    if (pendingStatus != null) {
+        AlertDialog(
+            onDismissRequest = { pendingStatus = null },
+            title = { Text(stringResource(R.string.copy_status_confirm_title)) },
+            text = { Text(stringResource(R.string.copy_status_confirm, row.copy.copyCode, statusText(pendingStatus!!))) },
+            confirmButton = {
+                TextButton(onClick = { onSetStatus(pendingStatus!!); pendingStatus = null }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { pendingStatus = null }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 }
 
