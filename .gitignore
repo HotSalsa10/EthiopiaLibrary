@@ -13,3 +13,8 @@ geminiUI.txt
 keystore/
 keystore.properties
 app/google-services.json
+
+# Local device-verification screenshots/UI dumps - never actually meant for
+# the repo (may show real member data from on-device testing); was never
+# gitignored before, just never git-added by luck.
+device-screenshots/
