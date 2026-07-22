@@ -31,8 +31,8 @@ android {
         applicationId = "com.ethiopialibrary.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "2.1.0"
+        versionCode = 18
+        versionName = "2.1.1"
         // Clock-sanity gate (R3): a device clock before this build ever
         // existed means the RTC was reset (dead battery, no NTP offline),
         // not a small drift - see util/ClockSanity.kt.
