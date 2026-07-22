@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -103,5 +104,37 @@ class ReturnViewModelTest {
         // stacked over the success card from the second, redundant return.
         assertNull(state.error)
         assertFalse(state.inFlight)
+    }
+
+    @Test
+    fun `rateMember records the rating so the post-return screen can confirm it`() {
+        val copyCode = checkoutOneCopy()
+        val vm = ReturnViewModel(repo)
+        vm.submitCopyCode(copyCode)
+        awaitValue(vm.state) { it.loan != null }
+        vm.confirmReturn()
+        awaitValue(vm.state) { it.awaitingRating }
+
+        vm.rateMember(4)
+
+        val state = awaitValue(vm.state) { !it.awaitingRating }
+        assertEquals(4, state.lastRating)
+        val persisted = runBlocking { db.loanDao().byId(state.returned!!.id) }
+        assertEquals(4, persisted?.rating)
+    }
+
+    @Test
+    fun `skipRating leaves no rating recorded, distinguishing it from an actual rating`() {
+        val copyCode = checkoutOneCopy()
+        val vm = ReturnViewModel(repo)
+        vm.submitCopyCode(copyCode)
+        awaitValue(vm.state) { it.loan != null }
+        vm.confirmReturn()
+        awaitValue(vm.state) { it.awaitingRating }
+
+        vm.skipRating()
+
+        val state = awaitValue(vm.state) { !it.awaitingRating }
+        assertNull(state.lastRating)
     }
 }

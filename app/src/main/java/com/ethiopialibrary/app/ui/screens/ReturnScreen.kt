@@ -23,6 +23,7 @@ import com.ethiopialibrary.app.ui.BigOutlinedButton
 import com.ethiopialibrary.app.ui.LocalCalendarMode
 import com.ethiopialibrary.app.ui.PageColumn
 import com.ethiopialibrary.app.ui.ReturnViewModel
+import com.ethiopialibrary.app.ui.StarRatingDisplay
 import com.ethiopialibrary.app.ui.StarRatingInput
 
 @Composable
@@ -59,7 +60,15 @@ fun ReturnScreen(vm: ReturnViewModel, onBack: () -> Unit) {
             }
 
             state.returned != null -> {
-                ReturnSuccessCard(wasOverdue = state.wasOverdue == true)
+                ReturnSuccessCard(wasOverdue = state.wasOverdue == true) {
+                    // Confirms the star tap actually took effect - without this,
+                    // rating and skipping render identically and staff have no
+                    // way to tell whether their tap was recorded.
+                    state.lastRating?.let { rating ->
+                        Spacer(Modifier.height(12.dp))
+                        StarRatingDisplay(rating.toDouble())
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
                 BigButton(stringResource(R.string.new_return)) { vm.reset() }
             }

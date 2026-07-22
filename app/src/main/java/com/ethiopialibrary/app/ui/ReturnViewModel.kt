@@ -31,6 +31,10 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
         // True after a return while staff are being prompted to rate the member.
         // The step is skippable, so this can clear without a rating being stored.
         val awaitingRating: Boolean = false,
+        // The rating just given, so the post-return screen can confirm it took
+        // effect - otherwise a tap on a star and a tap on Skip render identically
+        // and staff have no way to tell the rating was actually recorded.
+        val lastRating: Int? = null,
         val error: ReturnUiError? = null,
         // True while confirmReturn()'s write is in flight - blocks a double-tap
         // from re-submitting against the (still non-null, not-yet-cleared) loan.
@@ -96,7 +100,7 @@ class ReturnViewModel(private val repo: LibraryRepository) : ViewModel() {
         val loan = _state.value.returned ?: return
         viewModelScope.safeLaunch {
             repo.rateLoan(loan.id, stars)
-            _state.update { it.copy(awaitingRating = false) }
+            _state.update { it.copy(awaitingRating = false, lastRating = stars) }
         }
     }
 
