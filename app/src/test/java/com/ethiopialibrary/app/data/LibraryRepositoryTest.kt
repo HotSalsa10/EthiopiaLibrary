@@ -66,8 +66,8 @@ class LibraryRepositoryTest {
     @Test
     fun `copies of a book get incrementing copy numbers in the code`() {
         val (_, copies) = addBookWithCopies(2)
-        assertEquals("Fiction-001-1-00", copies[0].copyCode)
-        assertEquals("Fiction-001-2-00", copies[1].copyCode)
+        assertEquals("Fiction-001-01-00", copies[0].copyCode)
+        assertEquals("Fiction-001-02-00", copies[1].copyCode)
     }
 
     @Test
@@ -79,7 +79,7 @@ class LibraryRepositoryTest {
         assertEquals(1, first.bookNumber)
         assertEquals(2, second.bookNumber)
         assertEquals(1, other.bookNumber)
-        assertEquals("TF-002-1-00", repo.addCopy(second.id).copyCode)
+        assertEquals("TF-002-01-00", repo.addCopy(second.id).copyCode)
     }
 
     @Test
@@ -121,9 +121,9 @@ class LibraryRepositoryTest {
         assertEquals(6, copies.size)
         assertEquals(
             setOf(
-                "CAT-001-1-01", "CAT-001-2-01",
-                "CAT-001-1-02", "CAT-001-2-02",
-                "CAT-001-1-03", "CAT-001-2-03",
+                "CAT-001-01-01", "CAT-001-02-01",
+                "CAT-001-01-02", "CAT-001-02-02",
+                "CAT-001-01-03", "CAT-001-02-03",
             ),
             copies.map { it.copy.copyCode }.toSet(),
         )
@@ -152,8 +152,8 @@ class LibraryRepositoryTest {
         val volZero = repo.addCopy(book.id)
         val volOne = repo.addCopy(book.id, volumeNumber = 1)
 
-        assertEquals("CAT-001-1-00", volZero.copyCode)
-        assertEquals("CAT-001-1-01", volOne.copyCode)
+        assertEquals("CAT-001-01-00", volZero.copyCode)
+        assertEquals("CAT-001-01-01", volOne.copyCode)
         assertNotEquals(volZero.copyCode, volOne.copyCode)
     }
 
@@ -1188,14 +1188,14 @@ class LibraryRepositoryTest {
     @Test
     fun `a deleted book's number and copy codes are never reused`() = runBlocking {
         val book = repo.addBook(title = "A", author = "x", categoryCode = "CAT", language = "am")
-        repo.addCopy(book.id) // CAT-001-1-00
+        repo.addCopy(book.id) // CAT-001-01-00
         repo.deleteBook(book.id)
 
         val newBook = repo.addBook(title = "B", author = "y", categoryCode = "CAT", language = "am")
 
         assertEquals(2, newBook.bookNumber)
-        val newCopy = repo.addCopy(newBook.id) // must not collide with the deleted CAT-001-1-00 copy
-        assertEquals("CAT-002-1-00", newCopy.copyCode)
+        val newCopy = repo.addCopy(newBook.id) // must not collide with the deleted CAT-001-01-00 copy
+        assertEquals("CAT-002-01-00", newCopy.copyCode)
     }
 
     @Test
@@ -1216,8 +1216,8 @@ class LibraryRepositoryTest {
     @Test
     fun `changeBookCategory assigns the next number and regenerates every copy code`() = runBlocking {
         val book = repo.addBook(title = "A", author = "x", categoryCode = "TF", language = "am")
-        repo.addCopy(book.id) // TF-001-1-00
-        repo.addCopy(book.id) // TF-001-2-00
+        repo.addCopy(book.id) // TF-001-01-00
+        repo.addCopy(book.id) // TF-001-02-00
         repo.addCategory("Aqeedah", "AQ")
 
         val result = repo.changeBookCategory(book.id, "AQ")
@@ -1228,14 +1228,14 @@ class LibraryRepositoryTest {
         assertEquals("AQ", moved.categoryCode)
         assertEquals(1, moved.bookNumber)
         val codes = repo.copiesForBook(book.id).first().map { it.copy.copyCode }.toSet()
-        assertEquals(setOf("AQ-001-1-00", "AQ-001-2-00"), codes)
+        assertEquals(setOf("AQ-001-01-00", "AQ-001-02-00"), codes)
     }
 
     @Test
     fun `changeBookCategory rewrites soft-deleted copies too`() = runBlocking {
         val book = repo.addBook(title = "A", author = "x", categoryCode = "TF", language = "am")
-        repo.addCopy(book.id) // TF-001-1-00
-        val copy2 = repo.addCopy(book.id) // TF-001-2-00
+        repo.addCopy(book.id) // TF-001-01-00
+        val copy2 = repo.addCopy(book.id) // TF-001-02-00
         db.bookCopyDao().update(copy2.copy(isDeleted = true))
         repo.addCategory("Aqeedah", "AQ")
 
@@ -1244,21 +1244,21 @@ class LibraryRepositoryTest {
         // Live copiesForBook filters isDeleted out - read the soft-deleted row directly.
         val stillDeleted = db.bookCopyDao().allForBookIncludingDeleted(book.id).first { it.id == copy2.id }
         assertTrue(stillDeleted.isDeleted)
-        assertEquals("AQ-001-2-00", stillDeleted.copyCode)
+        assertEquals("AQ-001-02-00", stillDeleted.copyCode)
     }
 
     @Test
     fun `changeBookCategory does not collide with a soft-deleted book in the target category`() = runBlocking {
         // Without Run 3's fix, maxBookNumber would ignore this soft-deleted book,
         // hand out bookNumber 1 again in AQ, and the update below would violate
-        // the unique copyCode index against the still-present AQ-001-1-00 row.
+        // the unique copyCode index against the still-present AQ-001-01-00 row.
         repo.addCategory("Aqeedah", "AQ")
         val deletedBook = repo.addBook(title = "Deleted", author = "x", categoryCode = "AQ", language = "am")
-        repo.addCopy(deletedBook.id) // AQ-001-1-00, survives as a soft-deleted row
+        repo.addCopy(deletedBook.id) // AQ-001-01-00, survives as a soft-deleted row
         repo.deleteBook(deletedBook.id)
 
         val movingBook = repo.addBook(title = "B", author = "y", categoryCode = "TF", language = "am")
-        repo.addCopy(movingBook.id) // TF-001-1-00
+        repo.addCopy(movingBook.id) // TF-001-01-00
 
         val result = repo.changeBookCategory(movingBook.id, "AQ")
 
@@ -1266,7 +1266,7 @@ class LibraryRepositoryTest {
         val moved = db.bookDao().byId(movingBook.id)!!
         assertEquals(2, moved.bookNumber)
         val codes = repo.copiesForBook(movingBook.id).first().map { it.copy.copyCode }
-        assertEquals(listOf("AQ-002-1-00"), codes)
+        assertEquals(listOf("AQ-002-01-00"), codes)
     }
 
     @Test
@@ -1295,7 +1295,7 @@ class LibraryRepositoryTest {
         // Intended: physical labels get re-stuck to match the new code, so the
         // history join (live on book_copies.copyCode) shows the NEW code even
         // for a loan that happened back when the copy had the old one.
-        assertEquals("AQ-001-1-00", hist[0].copyCode)
+        assertEquals("AQ-001-01-00", hist[0].copyCode)
     }
 
     @Test

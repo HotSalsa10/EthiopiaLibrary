@@ -4,22 +4,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale
 
-/** The physical-copy code: category · book# · copy# · volume → e.g. TF-001-1-00. */
+/** The physical-copy code: category · book# · copy# · volume → e.g. TF-001-01-00. */
 class BookCodeTest {
 
     @Test
     fun `renders the four-part code`() {
-        assertEquals("TF-001-1-00", BookCode.render("TF", bookNumber = 1, copyNumber = 1, volumeNumber = 0))
+        assertEquals("TF-001-01-00", BookCode.render("TF", bookNumber = 1, copyNumber = 1, volumeNumber = 0))
     }
 
     @Test
     fun `pads book number to 3 and volume to 2 digits`() {
-        assertEquals("AQ-045-2-13", BookCode.render("AQ", bookNumber = 45, copyNumber = 2, volumeNumber = 13))
+        assertEquals("AQ-045-02-13", BookCode.render("AQ", bookNumber = 45, copyNumber = 2, volumeNumber = 13))
     }
 
     @Test
     fun `uses the full three digit book number when large`() {
-        assertEquals("FQ-999-9-99", BookCode.render("FQ", bookNumber = 999, copyNumber = 9, volumeNumber = 99))
+        assertEquals("FQ-999-09-99", BookCode.render("FQ", bookNumber = 999, copyNumber = 9, volumeNumber = 99))
     }
 
     @Test
@@ -29,7 +29,7 @@ class BookCodeTest {
         val previous = Locale.getDefault()
         try {
             Locale.setDefault(Locale.forLanguageTag("ar"))
-            assertEquals("TF-001-1-00", BookCode.render("TF", bookNumber = 1, copyNumber = 1, volumeNumber = 0))
+            assertEquals("TF-001-01-00", BookCode.render("TF", bookNumber = 1, copyNumber = 1, volumeNumber = 0))
         } finally {
             Locale.setDefault(previous)
         }

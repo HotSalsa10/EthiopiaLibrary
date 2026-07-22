@@ -534,7 +534,7 @@ class SyncEngineTest {
             val book = repo2.booksWithCounts("").first().single().book
             // Copy number derives from restored data (3 copies -> next is 4),
             // so codes never collide even without a copy counter.
-            assertEquals("C-001-4-00", repo2.addCopy(book.id).copyCode)
+            assertEquals("C-001-04-00", repo2.addCopy(book.id).copyCode)
             assertEquals("M-0003", repo2.registerMember(fullName = "Third").memberCode)
         } finally {
             db2.close()
