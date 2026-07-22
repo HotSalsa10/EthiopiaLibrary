@@ -45,12 +45,12 @@ signed with the real release key, before Android's own checks ever run.
 - Location: `keystore/release.keystore` + `keystore.properties` (both
   gitignored - **never commit them**; a prior key was rotated and purged
   from history in 2026-07, see the `.gitignore` comment).
-- **Single copy exists, on the dev machine.** Losing it means no future
-  update can ever be signed and installed over the existing app - the
-  entire self-update mechanism depends on it. Back it up off-machine
-  (password manager attachment + private cloud + USB at a second
-  location) before the tablet ships; this has not been done yet as of
-  this writing.
+- **Backed up in the team password manager (Bitwarden) as of 2026-07.**
+  Losing every copy means no future update can ever be signed and
+  installed over the existing app - the entire self-update mechanism
+  depends on this exact key. If you're reading this because the dev
+  machine that used to hold the only local copy is gone, restore from
+  Bitwarden using the steps below.
 - Certificate SHA-256 (public - safe to share, it's a fingerprint, not a
   secret; embedded as `PINNED_RELEASE_CERT_SHA256` in
   `update/UpdateManifest.kt`):
@@ -63,6 +63,26 @@ signed with the real release key, before Android's own checks ever run.
   ```powershell
   keytool -list -v -keystore keystore/release.keystore -alias ethiopialibrary
   ```
+
+### Setting up a new dev machine
+
+Everything else in this repo is self-contained and buildable from a fresh
+clone. Only these three gitignored files (all in Bitwarden, not GitHub) need
+to be placed by hand before a release build or full sync-enabled build works:
+
+1. `keystore/release.keystore` - restore the binary file from its Bitwarden
+   attachment to that exact path.
+2. `keystore.properties` at the repo root - restore from its Bitwarden note.
+   Four lines: `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
+3. `app/google-services.json` - restore from its Bitwarden note. Only
+   needed for Firestore sync/Crashlytics to compile in; `testDebugUnitTest`
+   and `assembleDebug` both work without it.
+
+Then `keytool -list -v ...` (above) to confirm the restored keystore
+matches the pinned cert SHA-256 before trusting it, and `gh auth login` to
+re-authenticate the GitHub CLI that `scripts/release.ps1` uses to publish
+releases - that's a personal login token, not a repo file, so it isn't in
+Bitwarden and has to be re-issued per machine/account.
 
 ## Password reset (the real recovery path for "password lost")
 
